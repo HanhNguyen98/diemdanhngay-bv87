@@ -1,0 +1,24 @@
+package com.bv87.diemdanh.entity;
+
+/**
+ * Daily attendance status for an employee.
+ * Vietnamese labels are exposed via {@link #getLabel()} for API/UI consumption.
+ */
+public enum AttendanceStatus {
+
+    DI_LAM("Đi làm"),
+    NGHI_PHEP("Nghỉ phép"),
+    DI_HOC("Đi học"),
+    DI_CONG_TAC("Đi công tác");
+
+    private final String label;
+
+    AttendanceStatus(String label) {
+        this.label = label;
+    }
+
+    /** Vietnamese display label for end users. */
+    public String getLabel() {
+        return label;
+    }
+}

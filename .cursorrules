@@ -1,0 +1,144 @@
+# DIEM DANH BV87 — CURSOR RULES
+
+## 1. LANGUAGE POLICY (MANDATORY)
+
+| Layer | Language | Examples |
+|-------|----------|----------|
+| Source code | **English** | Class/method/variable names, JavaDoc, inline comments |
+| API user messages | **Vietnamese** | `BusinessException`, `AttendanceLockedException`, validation messages |
+| Frontend UI/UX | **Vietnamese** | Labels, buttons, badges, modals, toasts, empty states |
+| Dev docs (README) | **Vietnamese** | Setup guides for the team |
+| This file | **English** | AI coding conventions |
+
+**Never** mix Vietnamese in Java/React identifiers or English in end-user-facing text.
+
+---
+
+## 2. TECH STACK & LOCAL ENV
+
+- **Backend:** Spring Boot 3.x, Spring Security, Spring Data JPA, Java 17
+- **Frontend:** React 18, Vite, Tailwind CSS
+- **Database:** MySQL 8.0 on `localhost:3306` (shared instance with survey app `fm_db_bv87`)
+- **Attendance DB:** `diemdanhngay_bv87_db` (separate database, same MySQL server)
+- **Secrets:** `backend/local-secrets.yml` (gitignored) — never commit passwords
+- **Schema:** Hibernate `ddl-auto: update` + `schema.sql` / `data.sql` on startup
+- **API port (local):** 8082 · **Frontend:** 5173
+
+---
+
+## 3. DATA MODEL RULES
+
+- `dept_code`, `emp_code`: **INT / Integer** in DB and entities (index-friendly)
+- Display padding at application layer only:
+  - Backend: `CodeFormatter.formatDeptCode()` → `%02d`, `formatEmpCode()` → `%05d`
+  - Frontend: `padStart(2,'0')`, `padStart(5,'0')`
+- Do not store padded strings in the database
+
+---
+
+## 4. ENUM STANDARDS (MANDATORY)
+
+Use enums instead of magic strings for domain states. Every enum must:
+
+1. Live under `entity` or `enums` package
+2. Have a short class-level JavaDoc explaining its purpose
+3. Expose `getLabel()` returning **Vietnamese** text when shown to users
+4. Be used in `switch` / `if` checks — never compare raw string literals in business logic
+
+Current enums:
+- `AttendanceStatus` — DI_LAM, NGHI_PHEP, DI_TRE, DI_HOC, DI_CONG_TAC
+- `AccountRole` — ADMIN, HEAD
+
+---
+
+## 5. CODE COMMENT STANDARDS
+
+### Java (Backend)
+- **Class:** one-line purpose JavaDoc
+- **Public service methods:** JavaDoc with `@param`, `@return`, `@throws` in English
+- **Non-obvious business rules:** brief inline comment in English
+- **No** commented-out code blocks; **no** Vietnamese in code comments
+
+### React (Frontend)
+- UI label maps live in `src/constants/` (Vietnamese values)
+- Component props: JSDoc only when behaviour is non-obvious
+- No Vietnamese in function/variable names
+
+---
+
+## 6. BUSINESS WORKFLOW
+
+### 7 departments (dept_code 1–7)
+01 Ban Giám đốc · 02 Kế hoạch-Tổng hợp · 03 Chính trị · 04 Hậu cần-Kỹ thuật · 05 Tham mưu-Hành chính · 06 Điều dưỡng · 07 Ban Tài chính
+
+### Daily attendance window
+- **06:00–16:00** (Asia/Ho_Chi_Minh): HEAD can edit own department
+- **After 16:00:** locked for HEAD → read-only UI; API returns HTTP 403 (Vietnamese message)
+- **Admin unlock:** `POST /api/attendance/unlock` with mandatory `reason` → `attendance_unlocks`
+
+### Roles
+- **ADMIN:** all departments, unlock, full dashboard
+- **HEAD:** own department only
+
+---
+
+## 7. ARCHITECTURE
+
+```
+Controller  → validate input, map HTTP
+Service     → business logic, lock checks, authorization
+Repository  → JPA queries
+DTO         → API response; include *Formatted fields for padded codes
+Entity      → DB mapping only
+```
+
+---
+
+## 8. FRONTEND UI COLOR TOKENS (MANDATORY)
+
+All React components must use **Tailwind semantic tokens** from `frontend/tailwind.config.js`.
+Reference map: `frontend/src/constants/theme.js`. **Never** hardcode hex in JSX.
+
+### Brand (Light Mode — mockup)
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `primary` | `#2563EB` | Progress card, active date pill, links, focus ring |
+| `primary-hover` | `#1D4ED8` | Primary button hover |
+| `primary-light` | `#EFF6FF` | Sidebar active bg, info surfaces |
+| `navy` | `#001A4D` | Page titles, CTA "Gửi báo cáo", pagination active |
+| `navy-soft` | `#2A3F75` | Secondary navy hover |
+
+### Surfaces & borders
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `surface-page` | `#F8F9FA` | Main content background |
+| `surface-white` | `#FFFFFF` | Cards, table rows |
+| `line` | `#E0E0E0` | Borders, dividers |
+| `content-muted` | `#6C757D` | Secondary text |
+
+### Semantic status (badges & quick buttons)
+| Token | Background | Foreground | Maps to |
+|-------|------------|------------|---------|
+| `success` | `#DEFBE8` | `#10B981` | Có mặt / Đi làm |
+| `warning` | `#FFFBEB` | `#F59E0B` | Đi trễ |
+| `danger` | `#FEF2F2` | `#EF4444` | Vắng / Nghỉ phép |
+| `info` | `#EFF6FF` | `#3B82F6` | Đi học / Công tác / job tag |
+| `neutral` | `#F3F4F6` | `#6B7280` | Chưa chấm |
+
+### Admin portal (ADMIN role only)
+- Frontend: `components/admin/AdminApp.jsx` — lazy-loaded tabs Departments / Staff
+- API base: `/api/admin/*` (relative paths, session cookie)
+- Codes: INT in DB; display with `CodeFormatter` / `padStart` — never strip leading zeros in UI
+
+### CSS component classes (`index.css`)
+- Badges: `badge-success`, `badge-warning`, `badge-danger`, `badge-info`, `badge-neutral`
+- Buttons: `btn-primary` (blue), `btn-navy` (dark CTA)
+- Do not use Tailwind default `green-500`, `red-600`, etc. in attendance UI
+
+---
+
+## 9. INFRASTRUCTURE (PRODUCTION — REFERENCE ONLY)
+
+- Server: `192.170.182.14` · Docker Compose · LAN port `8081` (survey app uses `8080`)
+- Public access: **Cloudflare Tunnel** (free) — see `deploy/README.md`
+- Do **not** use Ngrok; secrets (`CF_TUNNEL_TOKEN`, DB passwords) stay on server env only

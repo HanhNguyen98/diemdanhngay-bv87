@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: diemdanh-bv87
+  profiles:
+    active: local
+
+server:
+  port: 8080
+
+app:
+  timezone: Asia/Ho_Chi_Minh
+  attendance:
+    open-time: "06:00"
+    lock-time: "16:00"
+    reminder-time: "08:00"
+  security:
+    cors:
+      allowed-origin-patterns:
+        - "*"
+    login-rate-limit:
+      enabled: true
+      max-attempts: 5
+      window-minutes: 15
+      lockout-minutes: 15

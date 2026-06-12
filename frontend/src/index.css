@@ -1,0 +1,251 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply font-sans antialiased;
+  }
+
+  body {
+    @apply font-sans text-base text-content-heading bg-surface-page;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  optgroup {
+    font-family: inherit;
+  }
+
+  body.dark {
+    @apply bg-dark-page text-dark-text;
+  }
+
+  /* Bỏ viền đen mặc định của trình duyệt khi click */
+  button,
+  [role='button'],
+  input,
+  select,
+  textarea,
+  a,
+  summary {
+    @apply outline-none;
+  }
+
+  button::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+  }
+
+  /* Nút/link: ring theme khi Tab (input/select dùng class riêng) */
+  button:focus-visible,
+  a:focus-visible,
+  [role='button']:focus-visible {
+    @apply ring-2 ring-primary/25 ring-offset-0;
+  }
+
+  input[type='checkbox']:focus-visible,
+  input[type='radio']:focus-visible {
+    @apply ring-2 ring-primary/30 ring-offset-0;
+  }
+
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible),
+  input:focus:not(:focus-visible),
+  select:focus:not(:focus-visible),
+  textarea:focus:not(:focus-visible) {
+    outline: none;
+    --tw-ring-shadow: 0 0 #0000;
+    box-shadow: none;
+  }
+}
+
+/* Biểu đồ Recharts — đồng bộ font với toàn hệ thống */
+.recharts-wrapper *:focus {
+  outline: none;
+}
+
+.recharts-wrapper text,
+.recharts-tooltip-wrapper {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif !important;
+}
+
+@layer components {
+  /* ── Status badges (mockup semantic colors) ── */
+  .badge-success {
+    @apply bg-success text-success-fg;
+  }
+
+  .badge-warning {
+    @apply bg-warning text-warning-fg;
+  }
+
+  .badge-danger {
+    @apply bg-danger text-danger-fg;
+  }
+
+  .badge-info {
+    @apply bg-info text-info-fg;
+  }
+
+  .badge-neutral {
+    @apply bg-neutral text-neutral-fg;
+  }
+
+  /* ── Staff table status pills (mockup 2) ── */
+  .badge-status-present {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .badge-status-duty {
+    @apply bg-amber-50 text-amber-700;
+  }
+
+  .badge-status-study {
+    @apply bg-orange-50 text-orange-700;
+  }
+
+  .badge-status-trip {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .badge-status-absent {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .badge-status-pending {
+    @apply bg-slate-100 text-slate-600;
+  }
+
+  /* Legacy aliases — prefer semantic names above */
+  .badge-present {
+    @apply badge-success;
+  }
+
+  .badge-absent {
+    @apply badge-warning;
+  }
+
+  .badge-pending {
+    @apply badge-neutral;
+  }
+
+  /* ── Quick attendance buttons ── */
+  .btn-quick {
+    @apply w-9 h-9 rounded-lg border flex items-center justify-center transition-all;
+  }
+
+  .btn-quick-active {
+    @apply ring-2 ring-offset-1;
+  }
+
+  .btn-quick-neutral {
+    @apply border-line bg-neutral text-neutral-fg hover:bg-neutral/80;
+  }
+
+  /* ── Sidebar navigation ── */
+  .sidebar-link {
+    @apply flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-content-muted transition-colors;
+  }
+
+  .sidebar-link-active {
+    @apply bg-sidebar-active text-primary rounded-lg;
+  }
+
+  .dark .sidebar-link-active {
+    @apply bg-primary/20 text-white rounded-lg;
+  }
+
+  /* ── Avatar placeholder ── */
+  .avatar-gradient {
+    @apply bg-gradient-to-br from-primary to-navy;
+  }
+
+  /* Chế độ xem: chặn click cột thao tác — màu nút do QuickActionGroup disabled xử lý */
+  .table-actions-readonly {
+    @apply pointer-events-none select-none;
+  }
+
+  /* ── Table header — đồng bộ chấm công / thống kê / admin ── */
+  .table-header-row {
+    @apply bg-table-header border-b border-slate-200;
+  }
+
+  .table-th {
+    @apply py-2 px-4 text-3xs font-bold text-content-muted uppercase tracking-wide;
+  }
+
+  .table-th-left {
+    @apply table-th text-left;
+  }
+
+  .table-th-right {
+    @apply table-th text-right;
+  }
+
+  .table-th-center {
+    @apply table-th text-center;
+  }
+
+  /* ── Primary / Navy buttons ── */
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-white font-medium transition-colors;
+  }
+
+  .btn-navy {
+    @apply bg-navy hover:bg-navy-soft text-white font-medium transition-colors;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.15s ease-out;
+  }
+
+  /*
+   * Mobile @ 100% zoom: khóa đúng visual viewport (dvh), một vùng scroll.
+   */
+  @media (max-width: 1023px) {
+    html,
+    body,
+    #root {
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+    }
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .head-main-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .head-main-page {
+    display: block;
+  }
+
+  @media (min-width: 1024px) {
+    .head-main-scroll {
+      overflow: hidden;
+    }
+  }
+}

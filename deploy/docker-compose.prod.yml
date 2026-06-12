@@ -1,0 +1,72 @@
+# Production — Bệnh viện Quân y 87
+# Chạy trên server 192.170.182.14, cùng máy với web khảo sát (:8080)
+#
+# Chuẩn bị:
+#   1. Copy backend/prod-secrets.example.yml → backend/prod-secrets.yml (hoặc set DB_* env)
+#   2. Tạo DB diemdanhngay_bv87_db + user diemdanh_user trên MySQL host
+#   3. (Tuỳ chọn) Set CF_TUNNEL_TOKEN để bật Cloudflare Tunnel
+#
+# Lệnh:
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+#   docker compose -f deploy/docker-compose.prod.yml --profile tunnel up -d --build
+
+name: diemdanh-bv87
+
+services:
+  diemdanh-backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: diemdanh-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-diemdanhngay_bv87_db}
+      DB_USER: ${DB_USER:-diemdanh_user}
+      DB_PASS: ${DB_PASS:?Set DB_PASS in .env or environment}
+      APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS:-http://192.170.182.14:8081,https://192.170.182.14:8081}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - diemdanh-net
+  diemdanh-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: diemdanh-frontend
+    restart: unless-stopped
+    ports:
+      - "${ATTENDANCE_PORT:-8081}:80"
+    depends_on:
+      diemdanh-backend:
+        condition: service_healthy
+    networks:
+      - diemdanh-net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: diemdanh-cloudflared
+    restart: unless-stopped
+    profiles:
+      - tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:?Set CF_TUNNEL_TOKEN to enable Cloudflare Tunnel}
+    depends_on:
+      - diemdanh-frontend
+    networks:
+      - diemdanh-net
+
+networks:
+  diemdanh-net:
+    driver: bridge

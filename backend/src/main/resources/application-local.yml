@@ -1,0 +1,46 @@
+# Profile: local — native MySQL on localhost:3306
+# Shares MySQL instance with survey app; uses a separate database name.
+# Credentials: backend/local-secrets.yml (gitignored)
+
+spring:
+  config:
+    import: optional:file:./local-secrets.yml
+  flyway:
+    enabled: false
+  datasource:
+    url: jdbc:mysql://localhost:3306/${DB_NAME:diemdanhngay_bv87_db}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+    username: ${DB_USER:root}
+    password: ${DB_PASS:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
+
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+
+server:
+  port: 8082
+
+logging:
+  level:
+    com.bv87.diemdanh: DEBUG
+
+app:
+  security:
+    cors:
+      allowed-origin-patterns:
+        - "*"
+    login-rate-limit:
+      enabled: false
