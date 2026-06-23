@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ADMIN_UI } from '../constants/admin';
 import {
   STAFF_EXCEL,
@@ -7,48 +7,69 @@ import {
 import { useStaff } from './useStaff';
 import { useDepartments } from './useDepartments';
 import { useFlashMessage } from './useFlashMessage';
-import { usePagination } from './usePagination';
 import { useExcelRegistryActions } from './useExcelRegistryActions';
 import { mapStaffImportRows } from '../utils/excelImport';
+import { getStaffRegistryFilterDefaults } from '../utils/filterResetDefaults';
 import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
+import { useStaffCatalogOptions } from './useStaffCatalogOptions';
 
 const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
 
 export function useStaffPage() {
   const { items: departments } = useDepartments();
+  const [page, setPage] = useState(1);
   const {
     items,
+    totalItems,
+    totalPages,
     stats,
     loading,
+    initialLoading,
+    refreshing,
     error,
     search,
     setSearch,
     deptFilter,
     setDeptFilter,
+    fetchAllFiltered,
     create,
     update,
     remove,
-  } = useStaff('');
+  } = useStaff({ page, pageSize: PAGE_SIZE });
+  const { rankNames, positionNames } = useStaffCatalogOptions();
   const { flash, showSuccess, showWarning, showError, clearFlash } = useFlashMessage();
 
   const [formStaff, setFormStaff] = useState(null);
   const [deleteStaff, setDeleteStaff] = useState(null);
+  const [historyStaff, setHistoryStaff] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [viewStaff, setViewStaff] = useState(null);
-
-  const filtered = useMemo(() => items, [items]);
-
-  const { page, totalPages, paginated, pageSize, goToPage } = usePagination(filtered, PAGE_SIZE);
 
   useEffect(() => {
-    goToPage(1);
-  }, [deptFilter, search, goToPage]);
+    setPage(1);
+  }, [deptFilter, search]);
+
+  const goToPage = useCallback(
+    (next) => {
+      setPage((current) => Math.min(Math.max(1, next), totalPages));
+    },
+    [totalPages],
+  );
+
+  const resetFilters = useCallback(() => {
+    const { search: nextSearch, deptCode } = getStaffRegistryFilterDefaults();
+    setSearch(nextSearch);
+    setDeptFilter(deptCode);
+  }, [setSearch, setDeptFilter]);
 
   const handleSave = useCallback(
     async (payload, editCode) => {
       if (editCode != null) {
         await update(editCode, payload);
-        showSuccess(ADMIN_UI.flash.staffUpdateSuccess);
+        if (payload.revokeHeadOnTransfer) {
+          showSuccess(ADMIN_UI.flash.staffTransferHeadRevokeSuccess);
+        } else {
+          showSuccess(ADMIN_UI.flash.staffUpdateSuccess);
+        }
       } else {
         await create(payload);
         showSuccess(ADMIN_UI.flash.staffCreateSuccess);
@@ -72,14 +93,14 @@ export function useStaffPage() {
     }
   }, [deleteStaff, remove, showSuccess, showError]);
 
-  const buildExportSheet = useCallback(
-    () => buildStaffExportSheet(filtered),
-    [filtered],
-  );
+  const buildExportSheet = useCallback(async () => {
+    const rows = await fetchAllFiltered();
+    return buildStaffExportSheet(rows);
+  }, [fetchAllFiltered]);
 
   const mapImportRows = useCallback(
-    (rows) => mapStaffImportRows(rows, departments),
-    [departments],
+    (rows) => mapStaffImportRows(rows, departments, { rankNames, positionNames }),
+    [departments, rankNames, positionNames],
   );
 
   const {
@@ -103,22 +124,25 @@ export function useStaffPage() {
     setSearch,
     deptFilter,
     setDeptFilter,
+    resetFilters,
     stats,
     loading,
+    initialLoading,
+    refreshing,
     error,
-    paginated,
-    filteredCount: filtered.length,
+    paginated: items,
+    filteredCount: totalItems,
     page,
     totalPages,
-    pageSize,
+    pageSize: PAGE_SIZE,
     goToPage,
     formStaff,
     setFormStaff,
     deleteStaff,
     setDeleteStaff,
+    historyStaff,
+    setHistoryStaff,
     deleteLoading,
-    viewStaff,
-    setViewStaff,
     handleSave,
     handleDelete,
     importing,
@@ -129,4 +153,3 @@ export function useStaffPage() {
     clearFlash,
   };
 }
-

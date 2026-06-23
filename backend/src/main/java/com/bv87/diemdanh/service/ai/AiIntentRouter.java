@@ -95,7 +95,7 @@ public class AiIntentRouter {
                 return AiIntent.builder()
                         .type(AiIntent.Type.ATTENDANCE_STATUS_EXECUTE)
                         .args(Map.of("date", date.toString()))
-                        .replyHint("Đang xuất báo cáo trạng thái chấm công...")
+                        .replyHint("Đang xuất báo cáo trạng thái Điểm danh...")
                         .build();
             }
             return AiIntent.builder()
@@ -123,10 +123,10 @@ public class AiIntentRouter {
 
     private boolean isAttendanceStatusQuery(String q) {
         return containsAny(q,
-                "trạng thái chấm công",
-                "báo cáo chấm công",
-                "file chấm công",
-                "xuất chấm công",
+                "trạng thái Điểm danh",
+                "báo cáo Điểm danh",
+                "file Điểm danh",
+                "xuất Điểm danh",
                 "điểm danh ngày");
     }
 

@@ -19,6 +19,13 @@ public class Department {
     @Column(name = "dept_name", nullable = false, length = 100)
     private String deptName;
 
+    @Column(name = "unit_code", length = 20)
+    private String unitCode;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "group_code", nullable = false)
+    private DepartmentGroup departmentGroup;
+
     @Column(name = "location", length = 150)
     private String location;
 
@@ -28,4 +35,7 @@ public class Department {
     @Lob
     @Column(name = "location_image_url", columnDefinition = "MEDIUMTEXT")
     private String locationImageUrl;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
 }

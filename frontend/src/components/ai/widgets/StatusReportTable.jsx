@@ -1,6 +1,22 @@
 import { AI_ASSISTANT_UI } from '../../../constants/aiAssistant';
+import { countFromBreakdown, normalizeStatusBreakdown } from '../../../utils/statusBreakdown';
 
-function ReportTable({ title, subtitle, rows, showStatus }) {
+function resolveColumns(payload, rows) {
+  const fromPayload = normalizeStatusBreakdown(payload?.statusColumns);
+  if (fromPayload.length) return fromPayload;
+
+  const map = new Map();
+  (rows ?? []).forEach((row) => {
+    normalizeStatusBreakdown(row.statusBreakdown).forEach((item) => {
+      if (!map.has(item.code)) map.set(item.code, item);
+    });
+  });
+  return [...map.values()];
+}
+
+function ReportTable({ title, subtitle, rows, showStatus, statusColumns }) {
+  const columns = resolveColumns({ statusColumns }, rows);
+
   if (!rows?.length) {
     return <p className="mt-2 text-sm text-content-muted">{AI_ASSISTANT_UI.widgets.pendingEmpty}</p>;
   }
@@ -16,10 +32,11 @@ function ReportTable({ title, subtitle, rows, showStatus }) {
           <thead className="sticky top-0 bg-white">
             <tr className="text-left text-content-muted border-b border-gray-100">
               <th className="py-2 px-2 font-semibold">{AI_ASSISTANT_UI.widgets.colDept}</th>
-              <th className="py-2 px-2 font-semibold text-right">{AI_ASSISTANT_UI.widgets.colPresent}</th>
-              <th className="py-2 px-2 font-semibold text-right">{AI_ASSISTANT_UI.widgets.colLeave}</th>
-              <th className="py-2 px-2 font-semibold text-right">{AI_ASSISTANT_UI.widgets.colStudy}</th>
-              <th className="py-2 px-2 font-semibold text-right">{AI_ASSISTANT_UI.widgets.colDuty}</th>
+              {columns.map((col) => (
+                <th key={col.code} className="py-2 px-2 font-semibold text-right">
+                  {col.label}
+                </th>
+              ))}
               {showStatus ? (
                 <>
                   <th className="py-2 px-2 font-semibold text-right">{AI_ASSISTANT_UI.widgets.colProgress}</th>
@@ -36,10 +53,11 @@ function ReportTable({ title, subtitle, rows, showStatus }) {
                 <td className="py-2 px-2 text-gray-800 whitespace-nowrap">
                   [{row.deptCodeFormatted}] {row.deptName}
                 </td>
-                <td className="py-2 px-2 text-right tabular-nums">{row.diLam}</td>
-                <td className="py-2 px-2 text-right tabular-nums">{row.nghiPhep}</td>
-                <td className="py-2 px-2 text-right tabular-nums">{row.diHoc}</td>
-                <td className="py-2 px-2 text-right tabular-nums">{row.diCongTac}</td>
+                {columns.map((col) => (
+                  <td key={col.code} className="py-2 px-2 text-right tabular-nums">
+                    {countFromBreakdown(row.statusBreakdown, col.code)}
+                  </td>
+                ))}
                 {showStatus ? (
                   <>
                     <td className="py-2 px-2 text-right tabular-nums">{row.progressPercent}%</td>
@@ -76,6 +94,7 @@ export function WorkStatusReportTable({ payload }) {
       subtitle={`${payload?.scopeLabel || ''} · ${subtitle}`}
       rows={payload?.rows}
       showStatus={false}
+      statusColumns={payload?.statusColumns}
     />
   );
 }
@@ -87,6 +106,7 @@ export function AttendanceStatusReportTable({ payload }) {
       subtitle={payload?.dateFormatted}
       rows={payload?.rows}
       showStatus
+      statusColumns={payload?.statusColumns}
     />
   );
 }

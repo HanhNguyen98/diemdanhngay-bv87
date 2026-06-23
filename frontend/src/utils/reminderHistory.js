@@ -13,3 +13,10 @@ export function formatLogDateTime(iso) {
   const time = timePart ? timePart.slice(0, 5) : '';
   return `${d}/${m}/${y}${time ? ` ${time}` : ''}`;
 }
+
+/** Time portion only (HH:mm) for mobile reminder cards. */
+export function formatLogTimeHM(iso) {
+  if (!iso) return '';
+  const timePart = iso.split('T')[1];
+  return timePart ? timePart.slice(0, 5) : '';
+}

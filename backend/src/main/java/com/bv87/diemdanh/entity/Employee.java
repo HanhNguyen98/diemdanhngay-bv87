@@ -23,10 +23,10 @@ public class Employee {
     @JoinColumn(name = "dept_code", nullable = false)
     private Department department;
 
-    @Column(name = "rank_name", length = 50)
+    @Column(name = "rank_name", length = 100)
     private String rankName;
 
-    @Column(name = "position_name", length = 50)
+    @Column(name = "position_name", length = 150)
     private String positionName;
 
     @Column(name = "is_active", nullable = false, columnDefinition = "TINYINT(1) NOT NULL DEFAULT 1")

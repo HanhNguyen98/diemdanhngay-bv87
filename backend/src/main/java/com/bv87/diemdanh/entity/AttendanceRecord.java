@@ -25,9 +25,8 @@ public class AttendanceRecord {
     @JoinColumn(name = "emp_code", nullable = false)
     private Employee employee;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
-    private AttendanceStatus status;
+    private String status;
 
     @Column(name = "note", length = 255)
     private String note;

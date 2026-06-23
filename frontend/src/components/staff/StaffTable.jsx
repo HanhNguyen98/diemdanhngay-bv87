@@ -1,18 +1,26 @@
 import { memo } from 'react';
 import { ADMIN_UI } from '../../constants/admin';
+import RegistryTableEmptyRow from '../admin/sections/RegistryTableEmptyRow';
 import StaffRow from './StaffRow';
 
-const StaffTable = memo(function StaffTable({ items, onView, onEdit, onDelete, avatarOnly = false }) {
-  if (!items.length) {
-    return <div className="text-center py-16 text-content-muted">{ADMIN_UI.empty}</div>;
-  }
+const StaffTable = memo(function StaffTable({
+  items,
+  onEdit,
+  onDelete,
+  onHistory,
+  avatarOnly = false,
+  hideDeptColumn = false,
+}) {
+  const colSpan = hideDeptColumn ? 6 : 7;
 
   return (
     <table className="w-full text-sm">
         <thead className="sticky top-0 z-10">
           <tr className="table-header-row">
             <th className="table-th-left">{ADMIN_UI.staff.columns.code}</th>
-            <th className="table-th-left">{ADMIN_UI.staff.columns.dept}</th>
+            {!hideDeptColumn && (
+              <th className="table-th-left">{ADMIN_UI.staff.columns.dept}</th>
+            )}
             <th className="table-th-left">{ADMIN_UI.staff.columns.name}</th>
             <th className="table-th-left">{ADMIN_UI.staff.columns.rank}</th>
             <th className="table-th-left">{ADMIN_UI.staff.columns.position}</th>
@@ -21,16 +29,21 @@ const StaffTable = memo(function StaffTable({ items, onView, onEdit, onDelete, a
           </tr>
         </thead>
         <tbody>
-          {items.map((staff) => (
-            <StaffRow
-              key={staff.empCode}
-              staff={staff}
-              avatarOnly={avatarOnly}
-              onView={onView}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
+          {items.length === 0 ? (
+            <RegistryTableEmptyRow colSpan={colSpan} />
+          ) : (
+            items.map((staff) => (
+              <StaffRow
+                key={staff.empCode}
+                staff={staff}
+                avatarOnly={avatarOnly}
+                hideDeptColumn={hideDeptColumn}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onHistory={onHistory}
+              />
+            ))
+          )}
         </tbody>
     </table>
   );

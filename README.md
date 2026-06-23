@@ -1,4 +1,4 @@
-# Hệ thống Hệ thống chấm công
+# Hệ thống Chương trình điểm danh
 
 ## Cấu trúc dự án
 
@@ -19,7 +19,7 @@ diemdanhngay-bv87/
 ## Yêu cầu
 
 - Java 17+, Maven 3.8+, Node.js 18+
-- MySQL 8.x cổng **3306** (cùng server với web khảo sát)
+- MySQL 8.x cổng **3306D** (cùng server với web khảo sát)
 - Database: **`diemdanhngay_bv87_db`**
 
 ### DBeaver

@@ -1,35 +1,70 @@
 import { memo, useMemo } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { ADMIN_UI } from '../../../constants/admin';
-import { STATISTICS_CHART_COLORS, UI } from '../../../constants/attendance';
+import { getChartColor, normalizeStatusBreakdown } from '../../../utils/statusBreakdown';
 
-const SLICES = [
-  { key: 'diLam', label: UI.kpiPresent, color: STATISTICS_CHART_COLORS.diLam },
-  { key: 'nghiPhep', label: UI.kpiAbsent, color: STATISTICS_CHART_COLORS.nghiPhep },
-  { key: 'diHoc', label: UI.kpiStudy, color: STATISTICS_CHART_COLORS.diHoc },
-  { key: 'diCongTac', label: UI.kpiDuty, color: STATISTICS_CHART_COLORS.diCongTac },
-  { key: 'unchecked', label: ADMIN_UI.dashboard.chartUnchecked, color: '#D1D5DB' },
-];
+const PresenceDonutChart = memo(function PresenceDonutChart({ kpi, scopeLabel, compact = false }) {
+  const breakdown = normalizeStatusBreakdown(kpi?.statusBreakdown);
 
-const PresenceDonutChart = memo(function PresenceDonutChart({ kpi }) {
-  const data = useMemo(
-    () =>
-      SLICES.map((s) => ({
-        name: s.label,
-        value: s.key === 'unchecked' ? kpi?.unchecked ?? 0 : kpi?.[s.key] ?? 0,
-        color: s.color,
-      })).filter((d) => d.value > 0),
-    [kpi],
-  );
+  const data = useMemo(() => {
+    const slices = breakdown
+      .filter((item) => (item.count ?? 0) > 0)
+      .map((item, index) => ({
+        name: item.label,
+        value: item.count,
+        color: getChartColor(item.colorKey, index),
+      }));
+    const unchecked = kpi?.unchecked ?? 0;
+    if (unchecked > 0) {
+      slices.push({
+        name: ADMIN_UI.dashboard.chartUnchecked,
+        value: unchecked,
+        color: '#D1D5DB',
+      });
+    }
+    return slices;
+  }, [breakdown, kpi?.unchecked]);
 
   const total = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
   const marked = total - (kpi?.unchecked ?? 0);
   const percent = total > 0 ? Math.round((marked / total) * 1000) / 10 : 0;
 
+  const legendItems = useMemo(
+    () => [
+      ...breakdown.map((item, index) => ({
+        key: item.code,
+        label: item.label,
+        value: item.count ?? 0,
+        color: getChartColor(item.colorKey, index),
+      })),
+      {
+        key: 'unchecked',
+        label: ADMIN_UI.dashboard.chartUnchecked,
+        value: kpi?.unchecked ?? 0,
+        color: '#D1D5DB',
+      },
+    ],
+    [breakdown, kpi?.unchecked],
+  );
+
   return (
-    <section className="bg-surface-white border border-gray-200 rounded-xl shadow-card p-4 h-full flex flex-col">
-      <h3 className="text-sm font-bold text-gray-800 mb-3">{ADMIN_UI.dashboard.presenceTitle}</h3>
-      <div className="flex-1 min-h-[220px] relative">
+    <section
+      className={`bg-surface-white border border-line rounded-xl shadow-card min-h-0 ${
+        compact ? 'lg:hidden p-3' : 'p-4 h-full flex flex-col flex-1'
+      }`}
+    >
+      <h3 className="admin-section-title">
+        {ADMIN_UI.dashboard.presenceTitle}
+      </h3>
+      {scopeLabel && (
+        <p
+          className={`text-content-muted truncate ${compact ? 'text-4xs mt-0.5' : 'text-2xs mt-0.5'}`}
+          title={scopeLabel}
+        >
+          {scopeLabel}
+        </p>
+      )}
+      <div className={`relative shrink-0 ${compact ? 'h-[140px]' : 'flex-1 min-h-[220px]'}`}>
         {total === 0 ? (
           <div className="h-full flex items-center justify-center text-sm text-content-muted">Chưa có dữ liệu</div>
         ) : (
@@ -53,23 +88,35 @@ const PresenceDonutChart = memo(function PresenceDonutChart({ kpi }) {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-bold text-primary">{percent}%</span>
-              <span className="text-2xs text-content-muted uppercase">đã chấm</span>
+              <span className={`font-bold text-primary ${compact ? 'text-lg' : 'text-2xl'}`}>{percent}%</span>
+              <span className="text-4xs font-semibold text-content-muted uppercase">đã chấm</span>
             </div>
           </>
         )}
       </div>
-      <ul className="mt-3 space-y-1.5">
-        {SLICES.map((s) => {
-          const val = s.key === 'unchecked' ? kpi?.unchecked ?? 0 : kpi?.[s.key] ?? 0;
-          return (
-            <li key={s.key} className="flex items-center gap-2 text-xs">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-              <span className="text-content-muted">{s.label}</span>
-              <span className="font-semibold text-gray-800 tabular-nums">{val}</span>
-            </li>
-          );
-        })}
+      <ul
+        className={`shrink-0 overflow-y-auto ${
+          compact ? 'mt-1.5 max-h-[5.5rem] space-y-1' : 'mt-3 max-h-40 space-y-1.5'
+        }`}
+      >
+        {legendItems.map((s) => (
+          <li
+            key={s.key}
+            className={`flex items-center ${compact ? 'gap-1.5 text-4xs' : 'gap-2 text-xs'}`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+            <span className={compact ? 'text-content-muted' : 'text-content-muted truncate min-w-0 flex-1'}>
+              {s.label}
+            </span>
+            <span
+              className={`font-semibold text-content-heading tabular-nums shrink-0 ${
+                compact ? '' : 'ml-auto'
+              }`}
+            >
+              {s.value}
+            </span>
+          </li>
+        ))}
       </ul>
     </section>
   );

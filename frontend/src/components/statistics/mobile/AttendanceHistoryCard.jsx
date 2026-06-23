@@ -16,7 +16,7 @@ const AttendanceHistoryCard = memo(function AttendanceHistoryCard({ item, deptNa
 
   const noteText = item.note?.trim();
   const msnvLine = deptName
-    ? `${STATISTICS_UI.mobileMsnvPrefix} ${item.empCodeFormatted} • ${deptName}`
+    ? `${STATISTICS_UI.mobileMsnvPrefix} ${item.empCodeFormatted}`
     : `${STATISTICS_UI.mobileMsnvPrefix} ${item.empCodeFormatted}`;
 
   return (

@@ -1,0 +1,136 @@
+import { isAttendanceUnchecked } from '../constants/attendance';
+import { STATUS_KPI_ICON_MAP as KPI_ICON_MAP } from './statusIcons.jsx';
+
+export const KPI_TILE_ICON_BG = {
+  green: 'bg-emerald-500',
+  red: 'bg-red-500',
+  yellow: 'bg-amber-500',
+  blue: 'bg-blue-600',
+  teal: 'bg-teal-500',
+  purple: 'bg-violet-500',
+  amber: 'bg-orange-500',
+};
+
+export const KPI_BG_BY_COLOR = {
+  green: 'bg-kpi-present',
+  red: 'bg-kpi-absent',
+  yellow: 'bg-kpi-duty',
+  blue: 'bg-info',
+  teal: 'bg-info',
+  purple: 'bg-violet-50',
+  amber: 'bg-kpi-duty',
+};
+
+export const KPI_LABEL_CLASS_BY_COLOR = {
+  green: 'text-success-dark',
+  red: 'text-danger-dark',
+  yellow: 'text-warning-dark',
+  blue: 'text-primary',
+  teal: 'text-primary',
+  purple: 'text-violet-700',
+  amber: 'text-warning-dark',
+};
+
+export const CHART_COLOR_BY_COLOR_KEY = {
+  green: '#2563EB',
+  red: '#14B8A6',
+  yellow: '#F59E0B',
+  blue: '#047857',
+  teal: '#0D9488',
+  purple: '#7C3AED',
+  amber: '#EA580C',
+};
+
+export function getChartColor(colorKey, index = 0) {
+  if (colorKey && CHART_COLOR_BY_COLOR_KEY[colorKey]) {
+    return CHART_COLOR_BY_COLOR_KEY[colorKey];
+  }
+  const fallback = ['#2563EB', '#14B8A6', '#F59E0B', '#047857', '#7C3AED', '#EA580C'];
+  return fallback[index % fallback.length];
+}
+
+export function countFromBreakdown(breakdown, code) {
+  const item = (breakdown ?? []).find((entry) => entry.code === code);
+  return item?.count ?? 0;
+}
+
+export function normalizeStatusBreakdown(breakdown) {
+  if (!Array.isArray(breakdown)) return [];
+  return [...breakdown].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+}
+
+/**
+ * Rebuild KPI breakdown from current staff rows (keeps catalog order/labels).
+ * @param {Array} staffList
+ * @param {Array} catalogItems - active status types from API
+ */
+export function buildBreakdownFromStaff(staffList, catalogItems) {
+  if (!catalogItems?.length) return [];
+
+  const counts = {};
+  for (const staff of staffList ?? []) {
+    if (!isAttendanceUnchecked(staff) && staff.status) {
+      counts[staff.status] = (counts[staff.status] || 0) + 1;
+    }
+  }
+
+  return catalogItems
+    .map((item) => ({
+      code: item.code,
+      label: item.label,
+      badgeLabel: item.badgeLabel,
+      colorKey: item.colorKey,
+      iconKey: item.iconKey,
+      sortOrder: item.sortOrder ?? 0,
+      count: counts[item.code] ?? 0,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function mergeBreakdownWithCatalog(breakdown, catalogItems) {
+  if (!catalogItems?.length) {
+    return normalizeStatusBreakdown(breakdown);
+  }
+
+  const counts = {};
+  for (const item of breakdown ?? []) {
+    if (item?.code) {
+      counts[item.code] = item.count ?? 0;
+    }
+  }
+
+  return catalogItems
+    .map((item) => ({
+      code: item.code,
+      label: item.label,
+      badgeLabel: item.badgeLabel,
+      colorKey: item.colorKey,
+      iconKey: item.iconKey,
+      sortOrder: item.sortOrder ?? 0,
+      count: counts[item.code] ?? 0,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function breakdownToChartSeries(breakdown) {
+  return normalizeStatusBreakdown(breakdown).map((item, index) => ({
+    key: item.code,
+    label: item.label,
+    color: getChartColor(item.colorKey, index),
+  }));
+}
+
+export function trendToChartData(trend) {
+  return (trend ?? []).map((point) => {
+    const row = { label: point.label };
+    normalizeStatusBreakdown(point.statusBreakdown).forEach((item) => {
+      row[item.code] = item.count ?? 0;
+    });
+    return row;
+  });
+}
+
+export function trendHasData(chartData, series) {
+  if (!chartData?.length || !series?.length) return false;
+  return chartData.some((row) => series.some((s) => row[s.key] > 0));
+}

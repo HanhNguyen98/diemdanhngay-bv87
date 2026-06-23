@@ -1,15 +1,19 @@
 -- Dữ liệu mẫu Local Dev (INSERT IGNORE — an toàn khi khởi chạy lại)
 SET NAMES utf8mb4;
 
+-- Nhóm Đơn vị mặc định
+INSERT IGNORE INTO department_groups (group_code, group_name, sort_order, is_active) VALUES
+    (1, 'CƠ QUAN', 1, 1);
+
 -- 7 Đơn vị (mã INT 1-7, hiển thị 01-07 ở tầng ứng dụng)
-INSERT IGNORE INTO departments (dept_code, dept_name) VALUES
-    (1, 'Ban Giám đốc'),
-    (2, 'Phòng Kế hoạch - Tổng hợp'),
-    (3, 'Phòng Chính trị'),
-    (4, 'Phòng Hậu cần - Kỹ thuật'),
-    (5, 'Phòng Tham mưu - Hành chính'),
-    (6, 'Phòng Điều dưỡng'),
-    (7, 'Ban Tài chính');
+INSERT IGNORE INTO departments (dept_code, dept_name, group_code) VALUES
+    (1, 'Ban Giám đốc', 1),
+    (2, 'Phòng Kế hoạch - Tổng hợp', 1),
+    (3, 'Phòng Chính trị', 1),
+    (4, 'Phòng Hậu cần - Kỹ thuật', 1),
+    (5, 'Phòng Tham mưu - Hành chính', 1),
+    (6, 'Phòng Điều dưỡng', 1),
+    (7, 'Ban Tài chính', 1);
 
 -- Nhân viên mẫu: mã emp_code theo quy tắc dept*1000 + seq ( %05d)
 INSERT IGNORE INTO employees (emp_code, fullname, dept_code, rank_name, position_name) VALUES
@@ -42,7 +46,7 @@ INSERT IGNORE INTO employees (emp_code, fullname, dept_code, rank_name, position
 -- Tài khoản đăng nhập (BCrypt: admin123 / head123)
 -- is_active phải = 1; Hibernate tạo cột trước schema.sql nên default có thể là 0
 INSERT IGNORE INTO accounts (username, password_hash, role, dept_code, emp_code, fullname, is_active) VALUES
-    ('admin',         '$2b$10$BaHCNaTF4.dilc6sgHGlcuHV3ihn.NjO62AihUjutjkp9JEh8ui3y', 'ADMIN', NULL, NULL, 'Quản trị viên Hệ thống', 1),
+    ('admin',         '$2b$10$BaHCNaTF4.dilc6sgHGlcuHV3ihn.NjO62AihUjutjkp9JEh8ui3y', 'ADMIN', NULL, NULL, 'Amin', 1),
     ('truongban01',   '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  1, 1001, 'Nguyễn Văn An', 1),
     ('truongphong02', '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  2, 2001, 'Trần Thị Bình', 1),
     ('truongphong03', '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  3, 3001, 'Lê Văn Cường', 1),
@@ -53,12 +57,42 @@ INSERT IGNORE INTO accounts (username, password_hash, role, dept_code, emp_code,
 
 UPDATE accounts SET is_active = 1 WHERE is_active = 0;
 
+UPDATE departments SET is_active = 1 WHERE is_active = 0;
+
+-- Gán nhóm CƠ QUAN cho Đơn vị cũ (DB đã tồn tại trước khi có nhóm)
+INSERT IGNORE INTO department_groups (group_code, group_name, sort_order, is_active) VALUES
+    (1, 'CƠ QUAN', 1, 1);
+UPDATE departments SET group_code = 1 WHERE group_code IS NULL OR group_code = 0;
+
 -- ADMIN không gắn nhân viên; sửa dữ liệu cũ nếu admin trùng emp_code với HEAD
 UPDATE accounts SET emp_code = NULL, dept_code = NULL WHERE username = 'admin';
 
--- Loại bỏ trạng thái DI_TRE (đi trễ) — chỉ giữ 4 trạng thái chấm công
+-- Mỗi đơn vị chỉ một tài khoản HEAD (giữ bản active trước, rồi id nhỏ nhất)
+DELETE a
+FROM accounts a
+INNER JOIN (
+    SELECT dept_code,
+           CAST(SUBSTRING_INDEX(GROUP_CONCAT(id ORDER BY is_active DESC, id ASC), ',', 1) AS UNSIGNED) AS keep_id
+    FROM accounts
+    WHERE role = 'HEAD' AND dept_code IS NOT NULL
+    GROUP BY dept_code
+    HAVING COUNT(*) > 1
+) keeper ON a.dept_code = keeper.dept_code
+WHERE a.role = 'HEAD'
+  AND a.id <> keeper.keep_id;
+
+-- Loại bỏ trạng thái DI_TRE (đi trễ) — chỉ giữ 4 trạng thái Điểm danh
 UPDATE attendance_records SET status = 'DI_LAM' WHERE status = 'DI_TRE';
 
 -- Đồng bộ tên hệ thống in hoa
 UPDATE system_settings SET portal_title = 'BỆNH VIỆN QUÂN Y 87'
 WHERE portal_title = 'Bệnh viện Quân y 87' OR portal_title IS NULL OR portal_title = '';
+
+-- Backfill lịch sử đơn vị cho nhân viên hiện có (một bản ghi đang hiệu lực)
+INSERT INTO employee_department_assignments (emp_code, dept_code, from_date, created_by, created_at)
+SELECT e.emp_code, e.dept_code, '2020-01-01', 'system', NOW()
+FROM employees e
+WHERE NOT EXISTS (
+    SELECT 1 FROM employee_department_assignments a
+    WHERE a.emp_code = e.emp_code AND a.to_date IS NULL
+);

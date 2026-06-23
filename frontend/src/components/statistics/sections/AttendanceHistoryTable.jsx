@@ -5,6 +5,7 @@ import {
   STATISTICS_UI,
   UI,
 } from '../../../constants/attendance';
+import RefreshOverlay from '../../shared/RefreshOverlay';
 import DesktopPagination from '../../shared/DesktopPagination';
 import AttendanceHistoryRow from '../table/AttendanceHistoryRow';
 
@@ -15,7 +16,8 @@ const AttendanceHistoryTable = memo(function AttendanceHistoryTable({
   totalItems,
   pageSize,
   onPageChange,
-  loading,
+  initialLoading,
+  refreshing = false,
   exporting,
   onExport,
   showPagination = true,
@@ -32,7 +34,7 @@ const AttendanceHistoryTable = memo(function AttendanceHistoryTable({
         <button
           type="button"
           onClick={onExport}
-          disabled={exporting || totalItems === 0}
+          disabled={exporting || initialLoading || totalItems === 0}
           className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-slate-200 text-sm font-medium text-primary hover:bg-slate-50 bg-white transition-colors disabled:opacity-50 shrink-0"
         >
           <Download className="w-3.5 h-3.5" />
@@ -40,7 +42,8 @@ const AttendanceHistoryTable = memo(function AttendanceHistoryTable({
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto min-h-[28rem]">
+        {refreshing && <RefreshOverlay />}
         <table className="w-full min-w-[640px] table-fixed text-sm">
           <colgroup>
             {STATISTICS_HISTORY_COLUMNS.map((col) => (
@@ -51,13 +54,13 @@ const AttendanceHistoryTable = memo(function AttendanceHistoryTable({
             <tr className="table-header-row">
               {STATISTICS_HISTORY_COLUMNS.map((col) => {
                 const thClass =
-                  col.align === 'right' ? 'table-th-right' : col.align === 'center' ? 'table-th-center' : 'table-th-left';
+                  col.align === 'right'
+                    ? 'table-th-right'
+                    : col.align === 'center'
+                      ? 'table-th-center'
+                      : 'table-th-left';
                 return (
-                  <th
-                    key={col.key}
-                    scope="col"
-                    className={thClass}
-                  >
+                  <th key={col.key} scope="col" className={thClass}>
                     {col.label}
                   </th>
                 );
@@ -65,7 +68,7 @@ const AttendanceHistoryTable = memo(function AttendanceHistoryTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
-            {loading ? (
+            {initialLoading ? (
               <tr>
                 <td colSpan={colCount} className="py-16 text-center text-content-muted animate-pulse">
                   {UI.loading}
@@ -84,7 +87,7 @@ const AttendanceHistoryTable = memo(function AttendanceHistoryTable({
         </table>
       </div>
 
-      {showPagination && !loading && totalItems > 0 && (
+      {showPagination && !initialLoading && totalItems > 0 && (
         <DesktopPagination
           embedded
           page={page}

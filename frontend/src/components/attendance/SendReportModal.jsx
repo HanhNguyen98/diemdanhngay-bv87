@@ -27,7 +27,7 @@ const SendReportModal = memo(function SendReportModal({ onConfirm, onClose, load
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="w-full h-11 rounded-xl bg-[#204FC2] hover:bg-[#1A42A8] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+            className="w-full h-11 rounded-xl bg-attendance-report hover:bg-attendance-report-hover text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
           >
             {loading ? 'Đang gửi...' : UI.sendReportButton}
             {!loading && <Check className="w-4 h-4" />}
@@ -36,7 +36,7 @@ const SendReportModal = memo(function SendReportModal({ onConfirm, onClose, load
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="w-full h-11 rounded-xl border border-gray-200 bg-white text-navy text-sm font-medium hover:bg-neutral transition-colors disabled:opacity-60"
+            className="w-full h-11 rounded-xl border border-line bg-surface-white text-navy text-sm font-medium hover:bg-neutral transition-colors disabled:opacity-60"
           >
             Hủy
           </button>

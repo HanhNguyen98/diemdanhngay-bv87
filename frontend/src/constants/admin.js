@@ -1,14 +1,14 @@
 export const ADMIN_UI = {
   portalTitle: 'BỆNH VIỆN QUÂN Y 87',
-  portalSubtitle: 'HỆ THỐNG CHẤM CÔNG',
+  portalSubtitle: 'Chương trình điểm danh',
   roleLabel: 'QUẢN TRỊ VIÊN',
   searchPlaceholder: 'Tìm Đơn vị, Nhân viên, vị trí...',
-  searchPlaceholderStaff: 'Tìm nhân viên theo tên hoặc mã...',
+  searchPlaceholderStaff: 'Tìm nhân viên theo tên...',
   searchPlaceholderDepartments: 'Tìm theo tên, mã, vị trí...',
   support: 'Hỗ trợ',
   logout: 'Đăng xuất',
   footer: {
-    copyright: '© 2026 BỆNH VIỆN QUÂN Y 87 — Hệ thống Chấm công phát triển bởi Tham mưu - Hành chính',
+    copyright: '© 2026 BỆNH VIỆN QUÂN Y 87 — Chương trình điểm danh phát triển bởi Tham mưu - Hành chính',
 
   },
 
@@ -25,14 +25,28 @@ export const ADMIN_UI = {
   },
 
   dashboard: {
-    searchPlaceholder: 'Tìm theo tên ĐƠN VỊ...',
+    deptFilterLabel: 'Lọc theo Đơn vị',
+    deptFilterAll: 'Tất cả Đơn vị',
     sendReminder: 'Gửi nhắc nhở',
     progressTitle: 'Tiến độ điểm danh',
-    presenceTitle: 'Tỷ lệ hiện diện toàn viện',
+    presenceTitle: 'Tỷ lệ hiện diện',
+    kpiScopeHospital: 'Phạm vi: Toàn viện',
+    kpiScopeDept: (deptLabel) => `Phạm vi: ${deptLabel}`,
+    refreshDashboard: 'Làm mới',
+    colActions: 'THAO TÁC',
     colDept: 'Đơn vị',
     colProgress: 'TIẾN ĐỘ',
     colRate: 'TỶ LỆ',
     colStatus: 'TRẠNG THÁI',
+    reportStatusBlocked: 'Đã khóa gửi báo cáo — bấm để mở',
+    reportStatusOpen: 'Cho phép gửi báo cáo — bấm để khóa',
+    reportStatusSubmitted: 'Đã gửi báo cáo hôm nay',
+    reportStatusProcessing: 'Đang xử lý...',
+    lockStatusLocked: 'Đã khóa sổ — bấm để mở khóa',
+    lockStatusManualLocked: 'Admin đã khóa sổ sớm — bấm để mở khóa',
+    lockStatusOpen: 'Đang mở — bấm để khóa sổ',
+    lockStatusUnlocked: 'Đã mở khóa đặc cách — bấm để khóa sổ lại',
+    lockStatusProcessing: 'Đang xử lý...',
     completed: 'HOÀN THÀNH',
     incomplete: 'CHƯA XONG',
     kpiTotal: 'Tổng quân số',
@@ -40,11 +54,16 @@ export const ADMIN_UI = {
     kpiAbsent: 'Nghỉ phép',
     kpiStudy: 'Đi học',
     kpiDuty: 'Đi công tác',
-    chartUnchecked: 'CHƯA CHẤM',
-    reminderModalTitle: 'Gửi nhắc nhở chấm công',
-    reminderModalHint: 'Chỉ hiển thị các ĐƠN VỊ chưa hoàn thành điểm danh hôm nay.',
-    reminderSend: 'Gửi nhắc nhở',
-    reminderSelectAll: 'Chọn tất cả',
+    chartUnchecked: 'Chưa chấm',
+    reminderModalTitle: 'Gửi nhắc nhở Điểm danh',
+    reminderModalHint:
+      'Nhắc nhở gửi tới tài khoản đăng nhập Trưởng phòng (HEAD). Gán Trưởng đơn vị ở màn Đơn vị chưa đủ — cần thêm tài khoản tại Phân quyền người dùng.',
+    reminderReadyBadge: 'Sẵn sàng gửi',
+    reminderNoHeadBadge: 'Chưa có tài khoản HEAD',
+    reminderNoHeadHint:
+      'Thêm tài khoản vai trò Trưởng phòng tại Cài đặt → Phân quyền người dùng, gắn nhân viên thuộc đơn vị này.',
+    reminderSend: 'Gửi',
+    reminderSelectAll: 'Chọn tất cả đơn vị có thể gửi',
     actionUnlock: 'Mở khóa chỉnh sửa',
     actionBlockReport: 'Khóa gửi báo cáo',
     actionUnblockReport: 'Mở khóa gửi báo cáo',
@@ -54,28 +73,34 @@ export const ADMIN_UI = {
     reminderHistoryTitle: 'Lịch sử gửi nhắc nhở',
     reminderFilterFrom: 'Từ ngày',
     reminderFilterTo: 'Đến ngày',
-    reminderApplyFilter: 'Lọc dữ liệu',
+    reminderFilterRange: 'Ngày điểm danh',
+    reminderApplyFilter: 'Tìm kiếm',
     reminderStatsTitle: 'Thống kê theo ĐƠN VỊ',
     reminderStatsTotalLabel: 'Tổng lần nhắc',
-    reminderListTitle: 'Lịch sử gửi nhắc nhở',
+    reminderListTitle: 'CHI TIẾT',
     reminderStatsColDept: 'ĐƠN VỊ',
     reminderStatsColCount: 'SỐ LẦN NHẮC',
-    reminderHistoryColDate: 'NGÀY CHẤM CÔNG',
+    reminderHistoryColDate: 'NGÀY Điểm danh',
     reminderHistoryColDept: 'ĐƠN VỊ',
     reminderHistoryColType: 'LOẠI',
     reminderHistoryColTime: 'THỜI GIAN GỬI',
-    reminderHistoryEmpty: 'Chưa có lịch sử gửi nhắc nhở.',
-    reminderStatsEmpty: 'Chưa có dữ liệu thống kê.',
+    reminderHistoryEmpty: 'Không có dữ liệu!',
+    reminderStatsEmpty: 'Không có dữ liệu!',
     reminderTriggerManual: 'Thủ công',
     reminderTriggerAuto: 'Tự động',
     reminderExportExcel: 'Xuất Excel',
     reminderHistoryExportSheet: 'Lịch sử nhắc nhở',
+    reminderHistoryMobile: {
+      searchPlaceholder: 'Tìm kiếm đơn vị...',
+      filter: 'Bộ lọc',
+      sentAtLabel: 'Gửi lúc:',
+    },
     deptDetailSelectDept: 'Chọn ĐƠN VỊ',
     deptDetailSelectDate: 'Chọn ngày',
-    deptDetailApplyFilter: 'Lọc dữ liệu',
+    deptDetailApplyFilter: 'Tìm kiếm',
     deptDetailExportReport: 'Xuất báo cáo',
     deptDetailLoading: 'Đang tải chi tiết điểm danh...',
-    deptDetailEmpty: 'Không có dữ liệu nhân sự trong ngày đã chọn.',
+    deptDetailEmpty: 'Không có dữ liệu!',
     deptDetailExportSheet: 'Chi tiết điểm danh',
     deptDetailExportFilename: 'chi-tiet-diem-danh.xlsx',
     deptDetailColStaff: 'nhân viên',
@@ -84,6 +109,8 @@ export const ADMIN_UI = {
     deptDetailColNote: 'GHI CHÚ / LÝ DO',
     deptDetailShowing: (from, to, total) =>
       `Hiển thị ${from} - ${to} trên tổng số ${total} nhân viên`,
+    deptDetailMobileTitle: 'Danh sách nhân viên',
+    deptDetailMobileResultsCount: (total) => `${total} nhân viên`,
   },
 
   nav: {
@@ -93,6 +120,9 @@ export const ADMIN_UI = {
     catalog: 'Danh mục hành chính',
     departments: 'Đơn vị',
     staff: 'Nhân viên',
+    staffRanks: 'Cấp bậc',
+    staffPositions: 'Chức vụ',
+    statusCatalog: 'Trạng thái làm việc',
     utilities: 'Tiện ích',
     reminderHistory: 'Lịch sử gửi nhắc nhở',
     settings: 'Cài đặt',
@@ -115,11 +145,11 @@ export const ADMIN_UI = {
       logoRemove: 'Xóa logo',
       loginAvatar: 'Ảnh nền đăng nhập',
       loginAvatarUpload: 'Tải ảnh nền đăng nhập',
-      loginAvatarSelected: 'Đã chọn ảnh nền đăng nhập',
+      loginAvatarSelected: 'Đã chọn ảnh nền',
       loginAvatarRemove: 'Xóa ảnh nền đăng nhập',
       lockTime: 'Giờ chốt sổ',
       lockTimeHint:
-        'Sau giờ này, trưởng ban không thể chỉnh sửa hoặc gửi báo cáo trên màn chấm công. Admin có thể mở khóa ngày nếu cần.',
+        'Sau giờ này, trưởng ban không thể chỉnh sửa hoặc gửi báo cáo trên màn Điểm danh. Admin có thể mở khóa ngày nếu cần.',
       saving: 'Đang lưu...',
       titleRequired: 'Tên hệ thống không được để trống.',
       lockTimeRequired: 'Giờ chốt sổ không được để trống.',
@@ -129,6 +159,9 @@ export const ADMIN_UI = {
   accounts: {
     newButton: 'Thêm tài khoản',
     searchPlaceholder: 'Tìm tên đăng nhập, họ tên, mã NV, phòng ...',
+    searchPlaceholderMobile: 'Tìm theo tên, mã hoặc đơn vị...',
+    roleFilterPlaceholder: 'Lọc theo vai trò...',
+    statusFilterPlaceholder: 'Lọc theo trạng thái...',
     active: 'Đang hoạt động',
     inactive: 'Ngưng hoạt động',
     formTitleCreate: 'Thêm tài khoản',
@@ -138,9 +171,8 @@ export const ADMIN_UI = {
       `Bạn có chắc muốn xóa tài khoản "${username}"? Thao tác không thể hoàn tác.`,
     stats: {
       total: 'Tổng tài khoản',
-      active: 'Đang hoạt động',
-      admin: 'Quản trị viên',
-      head: 'Trưởng phòng',
+      active: 'Đang sử dụng',
+      inactive: 'Ngưng sử dụng',
     },
     columns: {
       username: 'TÊN ĐĂNG NHẬP',
@@ -162,6 +194,10 @@ export const ADMIN_UI = {
       employeeSelectPlaceholder: '— Chọn nhân viên trong danh mục —',
       employeeRequired: 'Vui lòng chọn nhân viên cho tài khoản Trưởng phòng',
       deptFromEmployee: 'Đơn vị (theo nhân viên)',
+      headDeptTaken:
+        'Đơn vị này đã có tài khoản Trưởng đơn vị. Vui lòng sửa hoặc xóa tài khoản hiện có trước khi tạo mới.',
+      headDeptNote:
+        'Mỗi đơn vị chỉ được một tài khoản Trưởng đơn vị. Muốn thay người, hãy sửa hoặc xóa tài khoản hiện có.',
     },
     resetPasswordTitle: 'Đặt lại mật khẩu',
     resetPasswordDesc: (fullname, username) =>
@@ -171,12 +207,27 @@ export const ADMIN_UI = {
     resetPasswordMinLength: 'Mật khẩu mới phải có ít nhất 6 ký tự',
     resetPasswordMismatch: 'Xác nhận mật khẩu không khớp',
     resetPasswordAction: 'Đặt lại MK',
+    mobile: {
+      listTitle: (count) => `Tài khoản (${count})`,
+      filter: 'Bộ lọc',
+      filterRole: 'Vai trò',
+      filterStatus: 'Trạng thái',
+      filterAll: 'Tất cả',
+      roleAdmin: 'Quản trị viên',
+      roleHead: 'Trưởng đơn vị',
+      edit: 'Sửa',
+      resetPassword: 'Đặt lại MK',
+      delete: 'Xóa',
+    },
   },
 
   departments: {
     newButton: 'Thêm Đơn vị',
-
+    manageGroupsButton: 'Quản lý nhóm',
     filter: 'Bộ lọc',
+    groupFilterAll: 'Tất cả',
+    groupFilterLabel: 'Lọc theo nhóm',
+    groupFilterPlaceholder: 'Tìm theo khối...',
     stats: {
       totalDepts: 'Tổng Đơn vị',
       totalStaff: 'Tổng Nhân viên',
@@ -185,9 +236,11 @@ export const ADMIN_UI = {
     },
     columns: {
       code: 'MÃ Đơn vị',
+      group: 'NHÓM',
+      unitCode: 'MÃ đơn vị',
       name: 'TÊN Đơn vị',
       location: 'VỊ TRÍ',
-      head: 'TRƯỞNG Đơn vị',
+      head: 'Trưởng đơn vị',
       staff: 'QUÂN SỐ',
       actions: 'THAO TÁC',
     },
@@ -199,6 +252,40 @@ export const ADMIN_UI = {
     locationMapTitle: 'Sơ đồ vị trí',
     locationMapEmpty: 'Chưa có sơ đồ vị trí',
     viewLocationMap: 'Xem sơ đồ vị trí',
+    mobile: {
+      statusActive: 'Hoạt động',
+      statusDeleted: 'Đã xóa',
+      statusEmpty: 'Chưa có nhân sự',
+      headRole: 'Trưởng đơn vị',
+      staffLabel: 'Nhân sự',
+    },
+  },
+
+  departmentGroups: {
+    manageTitle: 'Quản lý nhóm Đơn vị',
+    newButton: 'Thêm nhóm',
+    formTitleCreate: 'Thêm nhóm mới',
+    formTitleEdit: 'Cập nhật nhóm',
+    deleteTitle: 'Xóa nhóm',
+    deleteMessage: (name) =>
+      `Bạn có chắc muốn xóa nhóm "${name}"? Chỉ xóa được khi nhóm không còn Đơn vị.`,
+    columns: {
+      code: 'MÃ NHÓM',
+      name: 'TÊN NHÓM',
+      sortOrder: 'THỨ TỰ',
+      deptCount: 'SỐ ĐƠN VỊ',
+      actions: 'THAO TÁC',
+    },
+    form: {
+      groupName: 'Tên nhóm',
+      sortOrder: 'Thứ tự sắp xếp',
+      groupNameRequired: 'Tên nhóm là bắt buộc',
+    },
+    mobile: {
+      codePrefix: 'MÃ',
+      sortOrderLabel: 'Thứ tự',
+      deptCountLabel: 'Số đơn vị',
+    },
   },
 
   staff: {
@@ -206,6 +293,7 @@ export const ADMIN_UI = {
     filter: 'Bộ lọc',
     deptFilterAll: 'Tất cả Đơn vị',
     deptFilterLabel: 'Lọc theo Đơn vị',
+    deptFilterPlaceholder: 'Tìm theo đơn vị...',
     stats: {
       totalStaff: 'Tổng Nhân viên',
       activeStaff: 'Đang hoạt động',
@@ -223,23 +311,191 @@ export const ADMIN_UI = {
     },
     formTitleCreate: 'Thêm mới Nhân viên',
     formTitleEdit: 'Cập nhật Nhân viên',
+    formSubtitleEditTransfer: 'Chỉnh sửa thông tin hồ sơ và điều chuyển nhân sự',
+    formSaveChanges: 'Lưu thay đổi',
+    basicSectionTitle: 'Thông tin cơ bản',
     deleteTitle: 'Xóa Nhân viên',
     deleteMessage: (name) =>
       `Bạn có chắc muốn xóa Nhân viên "${name}"? Thao tác không thể hoàn tác.`,
     active: 'Đang hoạt động',
     inactive: 'Ngưng hoạt động',
+    transferReason: 'Lý do',
+    transferReasonPlaceholder: 'Nhập lý do luân chuyển Đơn vị...',
+    transferReasonRequired: 'Vui lòng nhập lý do luân chuyển Đơn vị',
+    transferHeadRevokeTitle: (deptLabel) =>
+      `Nhân viên đang là Trưởng đơn vị tại ${deptLabel}`,
+    transferHeadRevokeSummary: (deptLabel) =>
+      `Khi luân chuyển sẽ gỡ Trưởng đơn vị ${deptLabel} và thu hồi quyền Điểm danh.`,
+    transferHeadRevokeAccountLabel: 'Tài khoản đăng nhập:',
+    transferHeadRevokeDetailsToggle: 'Xem chi tiết',
+    transferHeadRevokeDetailsHide: 'Thu gọn',
+    transferHeadRevokeHint: (deptLabel, username) => {
+      const accountLine = username
+        ? ` Tài khoản đăng nhập: ${username}.`
+        : '';
+      return `Khi luân chuyển, hệ thống sẽ gỡ Trưởng đơn vị ${deptLabel} và ngưng quyền Điểm danh Trưởng đơn vị.${accountLine} Đơn vị cũ cần được gán Trưởng đơn vị mới sau đó.`;
+    },
+    transferHeadRevokeHintBody: (deptLabel) =>
+      `Khi luân chuyển, hệ thống sẽ gỡ Trưởng đơn vị ${deptLabel} và ngưng quyền Điểm danh Trưởng đơn vị. Đơn vị cũ cần được gán Trưởng đơn vị mới sau đó.`,
+    transferHeadRevokeCheckbox: 'Thu hồi quyền Trưởng đơn vị tại đơn vị cũ',
+    transferHeadRevokeRequired:
+      'Vui lòng tick xác nhận thu hồi quyền Trưởng đơn vị tại đơn vị cũ',
+    transferSectionTitle: 'Thông tin luân chuyển',
+    transferHistoryView: 'Lịch sử',
+    transferHistoryTitle: (name, code) => `Lịch sử luân chuyển — ${name} (${code})`,
+    transferHistoryEmpty: 'Chưa có lịch sử luân chuyển Đơn vị',
+    transferHistoryCurrent: 'Hiện tại',
+    transferHistoryColumns: {
+      dept: 'Đơn vị',
+      fromDate: 'Từ ngày',
+      toDate: 'Đến ngày',
+      reason: 'Lý do',
+      createdBy: 'Người ghi',
+      createdAt: 'Thời điểm ghi',
+    },
+    mobile: {
+      deptLabel: 'Đơn vị',
+      rankLabel: 'Cấp bậc',
+      view: 'Xem',
+      edit: 'Sửa',
+      delete: 'Xóa',
+      avatar: 'Ảnh',
+      changeAvatar: 'Đổi ảnh đại diện',
+    },
+  },
+
+  catalog: {
+    deleteBlockedStaff: (count) =>
+      `Đang có ${count} nhân viên sử dụng — hãy Ngưng hoạt động thay vì xóa`,
+    deleteBlockedDept: (count) =>
+      `Đang có ${count} nhân viên — không thể xóa Đơn vị`,
+    deleteBlockedGroup: (count) =>
+      `Đang có ${count} đơn vị — không thể xóa nhóm`,
+    deleteBlockedStatus: (count) =>
+      `Đang có ${count} bản ghi điểm danh — hãy Ngưng hoạt động thay vì xóa`,
+  },
+
+  staffRanks: {
+    newButton: 'Thêm cấp bậc',
+    searchPlaceholder: 'Tìm theo mã, tên cấp bậc...',
+    unitLabel: 'cấp bậc',
+    active: 'Đang sử dụng',
+    inactive: 'Ngưng sử dụng',
+    stats: {
+      total: 'Tổng cấp bậc',
+      active: 'Đang sử dụng',
+      inactive: 'Ngưng sử dụng',
+      inUse: 'Đang có nhân viên',
+    },
+    columns: {
+      code: 'MÃ',
+      name: 'TÊN CẤP BẬC',
+      sort: 'THỨ TỰ',
+      usage: 'NHÂN VIÊN',
+      status: 'TRẠNG THÁI',
+      actions: 'THAO TÁC',
+    },
+    formTitleCreate: 'Thêm cấp bậc mới',
+    formTitleEdit: 'Cập nhật cấp bậc',
+    deleteTitle: 'Xóa cấp bậc',
+    deleteMessage: (name) =>
+      `Bạn có chắc muốn xóa cấp bậc "${name}"? Chỉ xóa được khi không còn nhân viên sử dụng.`,
+    form: {
+      code: 'Mã cấp bậc',
+      name: 'Tên cấp bậc',
+      sortOrder: 'Thứ tự sắp xếp',
+      active: 'Trạng thái sử dụng',
+      nameRequired: 'Tên cấp bậc là bắt buộc',
+    },
+  },
+
+  staffPositions: {
+    newButton: 'Thêm chức vụ',
+    searchPlaceholder: 'Tìm theo mã, tên chức vụ...',
+    unitLabel: 'chức vụ',
+    active: 'Đang sử dụng',
+    inactive: 'Ngưng sử dụng',
+    stats: {
+      total: 'Tổng chức vụ',
+      active: 'Đang sử dụng',
+      inactive: 'Ngưng sử dụng',
+      inUse: 'Đang có nhân viên',
+    },
+    columns: {
+      code: 'MÃ',
+      name: 'TÊN CHỨC VỤ',
+      sort: 'THỨ TỰ',
+      usage: 'NHÂN VIÊN',
+      status: 'TRẠNG THÁI',
+      actions: 'THAO TÁC',
+    },
+    formTitleCreate: 'Thêm chức vụ mới',
+    formTitleEdit: 'Cập nhật chức vụ',
+    deleteTitle: 'Xóa chức vụ',
+    deleteMessage: (name) =>
+      `Bạn có chắc muốn xóa chức vụ "${name}"? Chỉ xóa được khi không còn nhân viên sử dụng.`,
+    form: {
+      code: 'Mã chức vụ',
+      name: 'Tên chức vụ',
+      sortOrder: 'Thứ tự sắp xếp',
+      active: 'Trạng thái sử dụng',
+      nameRequired: 'Tên chức vụ là bắt buộc',
+    },
+  },
+
+  statusCatalog: {
+    newButton: 'Thêm trạng thái',
+    searchPlaceholder: 'Tìm theo mã, tên...',
+    unitLabel: 'trạng thái',
+    active: 'Đang sử dụng',
+    inactive: 'Ngưng sử dụng',
+    stats: {
+      total: 'Tổng trạng thái',
+      active: 'Đang sử dụng',
+      inactive: 'Ngưng sử dụng',
+      inUse: 'Đang có bản ghi',
+    },
+    columns: {
+      code: 'MÃ',
+      label: 'TÊN HIỂN THỊ',
+      badge: 'NHÃN BADGE',
+      sort: 'THỨ TỰ',
+      usage: 'SỬ DỤNG',
+      status: 'TRẠNG THÁI',
+      actions: 'THAO TÁC',
+    },
+    formTitleCreate: 'Thêm trạng thái mới',
+    formTitleEdit: 'Cập nhật trạng thái',
+    deleteTitle: 'Xóa trạng thái',
+    deleteMessage: (name) =>
+      `Bạn có chắc muốn xóa trạng thái "${name}"? Thao tác không thể hoàn tác.`,
+    form: {
+      code: 'Mã trạng thái',
+      label: 'Tên hiển thị',
+      badgeLabel: 'Nhãn badge',
+      color: 'Màu hiển thị',
+      icon: 'Biểu tượng',
+      sortOrder: 'Thứ tự sắp xếp',
+      active: 'Trạng thái sử dụng',
+    },
   },
 
   form: {
     save: 'Lưu',
     cancel: 'Hủy',
-    confirmDelete: 'Xác nhận xóa',
+    confirmDelete: 'Xóa',
     loadingCode: 'Đang lấy mã...',
     deptCode: 'Mã Đơn vị',
+    groupCode: 'Nhóm Đơn vị',
+    groupSelectPlaceholder: '— Chọn nhóm —',
+    groupName: 'Tên nhóm',
     deptName: 'Tên Đơn vị',
+    unitCode: 'Mã đơn vị (vd: C11)',
     location: 'Vị trí / Tòa nhà',
-    headName: 'Tên TRƯỞNG Đơn vị',
-    headSelectPlaceholder: '— Chọn TRƯỞNG Đơn vị —',
+    headName: 'Tên Trưởng đơn vị',
+    headSelectPlaceholder: '— Chọn Trưởng đơn vị —',
+    headSelectHintCreate:
+      'Thêm nhân viên vào Đơn vị trước, sau đó cấu hình Trưởng đơn vị khi chỉnh sửa.',
     empCode: 'Mã Nhân viên',
     fullname: 'Họ và tên',
     rank: 'Cấp bậc',
@@ -269,6 +525,7 @@ export const ADMIN_UI = {
 
   excel: {
     menuLabel: 'Tác vụ Excel',
+    menuLabelShort: 'Excel',
     template: 'Excel mẫu',
     import: 'Import Excel',
     export: 'Xuất Excel',
@@ -283,17 +540,36 @@ export const ADMIN_UI = {
 
   loading: 'Đang tải dữ liệu...',
   empty: 'Không có dữ liệu',
+  resetFilters: 'Xóa bộ lọc',
   showing: (from, to, total) => `Hiển thị ${from} - ${to} của ${total}`,
 
   flash: {
     deptCreateSuccess: 'Đã thêm Đơn vị thành công.',
     deptUpdateSuccess: 'Đã cập nhật Đơn vị thành công.',
+    groupCreateSuccess: 'Đã thêm nhóm thành công.',
+    groupUpdateSuccess: 'Đã cập nhật nhóm thành công.',
+    groupDeleteSuccess: (name) => `Đã xóa nhóm "${name}" thành công.`,
+    groupDeleteFail: 'Không thể xóa nhóm. Vui lòng thử lại.',
     deptDeleteSuccess: (name) => `Đã xóa "${name}" thành công.`,
     deptDeleteFail: 'Không thể xóa Đơn vị. Vui lòng thử lại.',
     staffCreateSuccess: 'Đã thêm Nhân viên thành công.',
     staffUpdateSuccess: 'Đã cập nhật Nhân viên thành công.',
+    staffTransferHeadRevokeSuccess:
+      'Đã luân chuyển Nhân viên và thu hồi quyền Trưởng đơn vị tại đơn vị cũ. Vui lòng gán Trưởng đơn vị mới cho đơn vị cũ.',
     staffDeleteSuccess: (name) => `Đã xóa Nhân viên "${name}" thành công.`,
     staffDeleteFail: 'Không thể xóa Nhân viên. Vui lòng thử lại.',
+    statusCreateSuccess: 'Đã thêm trạng thái thành công.',
+    statusUpdateSuccess: 'Đã cập nhật trạng thái thành công.',
+    statusDeleteSuccess: (name) => `Đã xóa trạng thái "${name}" thành công.`,
+    statusDeleteFail: 'Không thể xóa trạng thái. Vui lòng thử lại.',
+    rankCreateSuccess: 'Đã thêm cấp bậc thành công.',
+    rankUpdateSuccess: 'Đã cập nhật cấp bậc thành công.',
+    rankDeleteSuccess: (name) => `Đã xóa cấp bậc "${name}" thành công.`,
+    rankDeleteFail: 'Không thể xóa cấp bậc. Vui lòng thử lại.',
+    positionCreateSuccess: 'Đã thêm chức vụ thành công.',
+    positionUpdateSuccess: 'Đã cập nhật chức vụ thành công.',
+    positionDeleteSuccess: (name) => `Đã xóa chức vụ "${name}" thành công.`,
+    positionDeleteFail: 'Không thể xóa chức vụ. Vui lòng thử lại.',
     settingsSaveSuccess: 'Đã lưu cấu hình hệ thống thành công.',
     accountCreateSuccess: 'Đã thêm tài khoản thành công.',
     accountUpdateSuccess: 'Đã cập nhật tài khoản thành công.',
@@ -304,58 +580,5 @@ export const ADMIN_UI = {
   },
 };
 
-/** Khóa tab cổng Admin — mirror TAB_COMPONENTS trong AdminApp */
-export const ADMIN_TAB_IDS = {
-  PASSWORD: 'password',
-  DEPARTMENTS: 'departments',
-  STAFF: 'staff',
-  DASHBOARD_OVERVIEW: 'dashboard-overview',
-  DASHBOARD_DEPT_DETAIL: 'dashboard-dept-detail',
-  SETTINGS_SYSTEM: 'settings-system',
-  SETTINGS_USERS: 'settings-users',
-  UTILITIES_REMINDER_HISTORY: 'utilities-reminder-history',
-};
-
-export const ADMIN_DEFAULT_TAB = ADMIN_TAB_IDS.DASHBOARD_OVERVIEW;
-
-export const DASHBOARD_TAB_IDS = [
-  ADMIN_TAB_IDS.DASHBOARD_OVERVIEW,
-  ADMIN_TAB_IDS.DASHBOARD_DEPT_DETAIL,
-];
-
-export const CATALOG_TAB_IDS = [ADMIN_TAB_IDS.DEPARTMENTS, ADMIN_TAB_IDS.STAFF];
-
-export const UTILITIES_TAB_IDS = [ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY];
-
-export const SETTINGS_TAB_IDS = [ADMIN_TAB_IDS.SETTINGS_SYSTEM, ADMIN_TAB_IDS.SETTINGS_USERS];
-
-/** Submenu Bảng điều khiển */
-export const DASHBOARD_NAV = [
-  { id: ADMIN_TAB_IDS.DASHBOARD_OVERVIEW, labelKey: 'dashboardOverview' },
-  { id: ADMIN_TAB_IDS.DASHBOARD_DEPT_DETAIL, labelKey: 'dashboardDeptDetail' },
-];
-
-/** Submenu Danh mục hành chính */
-export const CATALOG_NAV = [
-  { id: ADMIN_TAB_IDS.DEPARTMENTS, labelKey: 'departments' },
-  { id: ADMIN_TAB_IDS.STAFF, labelKey: 'staff' },
-];
-
-/** Submenu Tiện ích */
-export const UTILITIES_NAV = [
-  { id: ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY, labelKey: 'reminderHistory' },
-];
-
-/** Submenu Cài đặt */
-export const SETTINGS_NAV = [
-  { id: ADMIN_TAB_IDS.SETTINGS_SYSTEM, labelKey: 'settingsSystem' },
-  { id: ADMIN_TAB_IDS.SETTINGS_USERS, labelKey: 'settingsUsers' },
-];
-
-/** Cấu hình breadcrumb cho các nhóm submenu */
-export const ADMIN_SUBMENU_GROUPS = [
-  { parentLabelKey: 'dashboard', tabIds: DASHBOARD_TAB_IDS, items: DASHBOARD_NAV },
-  { parentLabelKey: 'catalog', tabIds: CATALOG_TAB_IDS, items: CATALOG_NAV },
-  { parentLabelKey: 'utilities', tabIds: UTILITIES_TAB_IDS, items: UTILITIES_NAV },
-  { parentLabelKey: 'settings', tabIds: SETTINGS_TAB_IDS, items: SETTINGS_NAV },
-];
+export * from './adminTabs';
+export * from './adminFilters';

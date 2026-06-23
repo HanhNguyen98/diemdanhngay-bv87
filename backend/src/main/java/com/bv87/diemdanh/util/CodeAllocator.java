@@ -1,7 +1,10 @@
 package com.bv87.diemdanh.util;
 
+import com.bv87.diemdanh.repository.DepartmentGroupRepository;
 import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.repository.EmployeeRepository;
+import com.bv87.diemdanh.repository.StaffPositionRepository;
+import com.bv87.diemdanh.repository.StaffRankRepository;
 
 /**
  * Quy tắc cấp mã:
@@ -15,6 +18,18 @@ public final class CodeAllocator {
 
     public static int nextDeptCode(DepartmentRepository departmentRepository) {
         return departmentRepository.findMaxDeptCode().orElse(0) + 1;
+    }
+
+    public static int nextGroupCode(DepartmentGroupRepository departmentGroupRepository) {
+        return departmentGroupRepository.findMaxGroupCode().orElse(0) + 1;
+    }
+
+    public static int nextRankCode(StaffRankRepository staffRankRepository) {
+        return staffRankRepository.findMaxRankCode().orElse(0) + 1;
+    }
+
+    public static int nextPositionCode(StaffPositionRepository staffPositionRepository) {
+        return staffPositionRepository.findMaxPositionCode().orElse(0) + 1;
     }
 
     public static int nextEmpCode(EmployeeRepository employeeRepository, int deptCode) {

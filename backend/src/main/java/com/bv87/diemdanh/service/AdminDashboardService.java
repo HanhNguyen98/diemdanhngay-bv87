@@ -3,6 +3,7 @@ package com.bv87.diemdanh.service;
 import com.bv87.diemdanh.dto.AdminDashboardDto;
 import com.bv87.diemdanh.dto.AdminDashboardKpiDto;
 import com.bv87.diemdanh.dto.AttendanceSummaryDto;
+import com.bv87.diemdanh.dto.StatusBreakdownItemDto;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.util.VietnamTimeService;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -18,6 +20,7 @@ import java.util.List;
 public class AdminDashboardService {
 
     private final AttendanceService attendanceService;
+    private final AttendanceStatusCatalogService statusCatalogService;
     private final VietnamTimeService timeService;
 
     @Transactional(readOnly = true)
@@ -28,22 +31,20 @@ public class AdminDashboardService {
         LocalDate today = timeService.today();
         List<AttendanceSummaryDto> departments = attendanceService.getAllSummaries(authUser, today);
 
-        long total = 0, diLam = 0, nghiPhep = 0, diHoc = 0, diCongTac = 0, unchecked = 0;
+        long total = 0;
+        long unchecked = 0;
+        List<List<StatusBreakdownItemDto>> breakdownParts = new ArrayList<>();
         for (AttendanceSummaryDto s : departments) {
             total += s.getTotal();
-            diLam += s.getDiLam();
-            nghiPhep += s.getNghiPhep();
-            diHoc += s.getDiHoc();
-            diCongTac += s.getDiCongTac();
             unchecked += s.getUncheckedCount();
+            if (s.getStatusBreakdown() != null) {
+                breakdownParts.add(s.getStatusBreakdown());
+            }
         }
 
         AdminDashboardKpiDto kpi = AdminDashboardKpiDto.builder()
                 .total(total)
-                .diLam(diLam)
-                .nghiPhep(nghiPhep)
-                .diHoc(diHoc)
-                .diCongTac(diCongTac)
+                .statusBreakdown(statusCatalogService.mergeBreakdowns(breakdownParts))
                 .unchecked(unchecked)
                 .build();
 

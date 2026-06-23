@@ -28,8 +28,7 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     createMessage('assistant', {
-      content:
-        'Chào Trưởng đơn vị, tôi có thể giúp bạn chấm công hàng loạt cho nhân viên chưa xác nhận.',
+      content: HEAD_AI_ASSISTANT_UI.welcomeMessage,
       streaming: false,
     }),
   ]);
@@ -197,7 +196,7 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
         setMessages((prev) => [
           ...prev,
           createMessage('assistant', {
-            content: result.message || `Đã chấm công cho ${result.updated} nhân viên.`,
+            content: result.message || `Đã Điểm danh cho ${result.updated} nhân viên.`,
             streaming: false,
           }),
         ]);

@@ -1,16 +1,22 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../api/client';
 import {
+  MOBILE_STATISTICS_HISTORY_PAGE_SIZE,
   STATISTICS_HISTORY_EXCEL_HEADERS,
   STATISTICS_HISTORY_PAGE_SIZE,
   STATISTICS_UI,
 } from '../constants/attendance';
 import { downloadExcel } from '../utils/exportExcel';
-import { getStatisticsDateRange, todayISO } from '../utils/formatters';
+import { daysBetweenInclusive, getStatisticsDateRange, todayISO } from '../utils/formatters';
+import { getStatisticsFilterDefaults } from '../utils/filterResetDefaults';
+import { useCommittedSnapshot } from './useCommittedSnapshot';
 import { useFlashMessage } from './useFlashMessage';
+import { useIsMobile } from './useIsMobile';
+import { useLoadingPhase } from './useLoadingPhase';
 
 function initialRange() {
-  return getStatisticsDateRange('THIS_MONTH', todayISO());
+  const { dateFrom, dateTo } = getStatisticsFilterDefaults();
+  return { from: dateFrom, to: dateTo };
 }
 
 /**
@@ -21,46 +27,111 @@ function initialRange() {
  */
 export function useStatisticsPage(user) {
   const deptCode = user.deptCode;
+  const isMobile = useIsMobile();
+  const historyPageSize = isMobile ? MOBILE_STATISTICS_HISTORY_PAGE_SIZE : STATISTICS_HISTORY_PAGE_SIZE;
   const defaultRange = useMemo(() => initialRange(), []);
   const { flash, showWarning, showError, clearFlash } = useFlashMessage();
 
-  const [timePreset, setTimePreset] = useState('THIS_MONTH');
+  const [timePreset, setTimePreset] = useState(() => getStatisticsFilterDefaults().timePreset);
   const [dateFrom, setDateFrom] = useState(defaultRange.from);
   const [dateTo, setDateTo] = useState(defaultRange.to);
   const [appliedFrom, setAppliedFrom] = useState(defaultRange.from);
   const [appliedTo, setAppliedTo] = useState(defaultRange.to);
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [historyPage, setHistoryPage] = useState(1);
   const [historyData, setHistoryData] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [statsReady, setStatsReady] = useState(false);
+
+  const statsFetchIdRef = useRef(0);
+  const historyFetchIdRef = useRef(0);
+  const hasStatsLoadedRef = useRef(false);
+  const hasHistoryLoadedRef = useRef(false);
+
+  const {
+    snapshot: displayStatusBreakdown,
+    commit: commitStatusBreakdown,
+    reset: resetStatusBreakdown,
+  } = useCommittedSnapshot([]);
+
+  const {
+    snapshot: displayTrend,
+    commit: commitTrend,
+    reset: resetTrend,
+  } = useCommittedSnapshot([]);
+
+  const {
+    snapshot: displayDeptName,
+    commit: commitDeptName,
+    reset: resetDeptName,
+  } = useCommittedSnapshot('');
+
+  const commitStatsDisplay = useCallback(
+    (result) => {
+      commitStatusBreakdown(result?.summary?.statusBreakdown ?? []);
+      commitTrend(result?.trend ?? []);
+      commitDeptName(result?.deptName ?? '');
+    },
+    [commitDeptName, commitStatusBreakdown, commitTrend],
+  );
+
+  const resetStatsDisplay = useCallback(() => {
+    resetStatusBreakdown([]);
+    resetTrend([]);
+    resetDeptName('');
+  }, [resetDeptName, resetStatusBreakdown, resetTrend]);
+
+  const validateRange = useCallback(
+    (from, to) => {
+      if (from > to) {
+        showWarning('Ngày bắt đầu phải trước ngày kết thúc');
+        return false;
+      }
+      if (daysBetweenInclusive(from, to) > STATISTICS_UI.maxRangeDays) {
+        showWarning(STATISTICS_UI.maxRangeExceeded);
+        return false;
+      }
+      return true;
+    },
+    [showWarning],
+  );
 
   const fetchStatistics = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await api.getStatistics(
-        deptCode,
-        appliedFrom,
-        appliedTo,
-        appliedSearch,
-      );
-      setData(result);
-    } catch (err) {
-      showError(err.message);
-      setData(null);
-    } finally {
-      setLoading(false);
+    const requestId = ++statsFetchIdRef.current;
+    const silent = hasStatsLoadedRef.current;
+    if (!silent) {
+      setLoading(true);
     }
-  }, [deptCode, appliedFrom, appliedTo, appliedSearch, showError]);
+    try {
+      const result = await api.getStatistics(deptCode, appliedFrom, appliedTo, appliedSearch);
+      if (requestId !== statsFetchIdRef.current) return;
+      commitStatsDisplay(result);
+      hasStatsLoadedRef.current = true;
+      setStatsReady(true);
+    } catch (err) {
+      if (requestId !== statsFetchIdRef.current) return;
+      showError(err.message);
+      if (!hasStatsLoadedRef.current) {
+        resetStatsDisplay();
+      }
+    } finally {
+      if (requestId === statsFetchIdRef.current && !silent) {
+        setLoading(false);
+      }
+    }
+  }, [deptCode, appliedFrom, appliedTo, appliedSearch, showError, commitStatsDisplay, resetStatsDisplay]);
 
   const fetchHistory = useCallback(async () => {
-    setHistoryLoading(true);
+    const requestId = ++historyFetchIdRef.current;
+    const silent = hasHistoryLoadedRef.current;
+    if (!silent) {
+      setHistoryLoading(true);
+    }
     try {
-      const pageSize = STATISTICS_HISTORY_PAGE_SIZE;
       const page = historyPage;
       const result = await api.getStatisticsHistory(
         deptCode,
@@ -68,16 +139,23 @@ export function useStatisticsPage(user) {
         appliedTo,
         appliedSearch,
         page,
-        pageSize,
+        historyPageSize,
       );
+      if (requestId !== historyFetchIdRef.current) return;
       setHistoryData(result);
+      hasHistoryLoadedRef.current = true;
     } catch (err) {
+      if (requestId !== historyFetchIdRef.current) return;
       showError(err.message);
-      setHistoryData(null);
+      if (!hasHistoryLoadedRef.current) {
+        setHistoryData(null);
+      }
     } finally {
-      setHistoryLoading(false);
+      if (requestId === historyFetchIdRef.current && !silent) {
+        setHistoryLoading(false);
+      }
     }
-  }, [deptCode, appliedFrom, appliedTo, appliedSearch, historyPage, showError]);
+  }, [deptCode, appliedFrom, appliedTo, appliedSearch, historyPage, historyPageSize, showError]);
 
   useEffect(() => {
     fetchStatistics();
@@ -87,23 +165,24 @@ export function useStatisticsPage(user) {
     fetchHistory();
   }, [fetchHistory]);
 
-  const applyDateRange = useCallback((from, to, searchVal = appliedSearch) => {
-    if (from > to) {
-      showWarning('Ngày bắt đầu phải trước ngày kết thúc');
-      return false;
-    }
-    setAppliedFrom(from);
-    setAppliedTo(to);
-    setAppliedSearch(searchVal);
-    setHistoryPage(1);
-    return true;
-  }, [appliedSearch, showWarning]);
+  const applyDateRange = useCallback(
+    (from, to, searchVal = appliedSearch) => {
+      if (!validateRange(from, to)) return false;
+      setAppliedFrom(from);
+      setAppliedTo(to);
+      setAppliedSearch(searchVal);
+      setHistoryPage(1);
+      return true;
+    },
+    [appliedSearch, validateRange],
+  );
 
   const handlePresetChange = (preset) => {
     setTimePreset(preset);
     const range = getStatisticsDateRange(preset, todayISO());
     setDateFrom(range.from);
     setDateTo(range.to);
+    applyDateRange(range.from, range.to);
   };
 
   const handleMobilePresetChange = (preset) => {
@@ -115,17 +194,15 @@ export function useStatisticsPage(user) {
     applyDateRange(range.from, range.to);
   };
 
-  const handleMobileDateFromChange = (value) => {
-    setTimePreset('CUSTOM');
-    setDateFrom(value);
-    if (value && dateTo) applyDateRange(value, dateTo);
-  };
-
-  const handleMobileDateToChange = (value) => {
-    setTimePreset('CUSTOM');
-    setDateTo(value);
-    if (dateFrom && value) applyDateRange(dateFrom, value);
-  };
+  const handleMobileDateRangeChange = useCallback(
+    (from, to) => {
+      setTimePreset('CUSTOM');
+      setDateFrom(from);
+      setDateTo(to);
+      applyDateRange(from, to);
+    },
+    [applyDateRange],
+  );
 
   const handleApplyFilter = () => {
     applyDateRange(dateFrom, dateTo, search);
@@ -135,15 +212,19 @@ export function useStatisticsPage(user) {
     applyDateRange(appliedFrom, appliedTo, search);
   };
 
+  const resetFilters = useCallback(() => {
+    const defaults = getStatisticsFilterDefaults();
+    setTimePreset(defaults.timePreset);
+    setDateFrom(defaults.dateFrom);
+    setDateTo(defaults.dateTo);
+    setSearch(defaults.search);
+    applyDateRange(defaults.dateFrom, defaults.dateTo, defaults.search);
+  }, [applyDateRange]);
+
   const handleExportExcel = async () => {
     setExporting(true);
     try {
-      const rows = await api.exportStatisticsHistory(
-        deptCode,
-        appliedFrom,
-        appliedTo,
-        appliedSearch,
-      );
+      const rows = await api.exportStatisticsHistory(deptCode, appliedFrom, appliedTo, appliedSearch);
       if (!rows.length) {
         showWarning(STATISTICS_UI.noHistory);
         return;
@@ -167,29 +248,22 @@ export function useStatisticsPage(user) {
     }
   };
 
-  const stats = useMemo(
-    () => ({
-      diLam: data?.summary?.diLam ?? 0,
-      nghiPhep: data?.summary?.nghiPhep ?? 0,
-      diHoc: data?.summary?.diHoc ?? 0,
-      diCongTac: data?.summary?.diCongTac ?? 0,
-    }),
-    [data],
-  );
+  const { initialLoading: statsInitialLoading, refreshing: statsRefreshing } = useLoadingPhase(loading);
+  const { initialLoading: historyInitialLoading, refreshing: historyRefreshing } =
+    useLoadingPhase(historyLoading);
 
-  const trend = data?.trend ?? [];
-  const deptName = data?.deptName ?? '';
-  const showSpinner = loading && !data;
+  const showSpinner = !statsReady && loading;
 
   return {
     flash,
     clearFlash,
     showSpinner,
+    statsInitialLoading,
+    statsReady,
     timePreset,
     handlePresetChange,
     handleMobilePresetChange,
-    handleMobileDateFromChange,
-    handleMobileDateToChange,
+    handleMobileDateRangeChange,
     dateFrom,
     setDateFrom,
     dateTo,
@@ -198,17 +272,19 @@ export function useStatisticsPage(user) {
     setSearch,
     handleApplyFilter,
     handleApplySearch,
-    stats,
-    trend,
-    deptName,
-    loading,
+    resetFilters,
+    displayStatusBreakdown,
+    displayTrend,
+    displayDeptName,
+    loading: showSpinner,
     historyItems: historyData?.items ?? [],
     historyPage,
     setHistoryPage,
     historyTotalPages: historyData?.totalPages ?? 1,
     historyTotalItems: historyData?.totalItems ?? 0,
-    historyPageSize: STATISTICS_HISTORY_PAGE_SIZE,
-    historyLoading,
+    historyPageSize,
+    historyInitialLoading,
+    historyRefreshing,
     exporting,
     handleExportExcel,
     showHistoryPagination: true,

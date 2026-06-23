@@ -1,6 +1,5 @@
 package com.bv87.diemdanh.service.ai.head;
 
-import com.bv87.diemdanh.entity.AttendanceStatus;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.service.AttendanceService;
@@ -24,7 +23,7 @@ public class HeadAiToolService {
     @Transactional
     public Map<String, Object> previewBatchAttendance(AuthUser authUser, Map<String, Object> args) {
         LocalDate date = dateArg(args, "date", timeService.today());
-        AttendanceStatus status = statusArg(args, "status");
+        String status = statusArg(args, "status");
         String scope = stringArg(args, "scope", "unchecked_only");
         return attendanceService.previewBatchAttendance(authUser, date, status, scope);
     }
@@ -56,12 +55,12 @@ public class HeadAiToolService {
         return LocalDate.parse(value.toString());
     }
 
-    private AttendanceStatus statusArg(Map<String, Object> args, String key) {
+    private String statusArg(Map<String, Object> args, String key) {
         Object value = args.get(key);
         if (value == null) {
-            throw new BusinessException("Thiếu trạng thái chấm công");
+            throw new BusinessException("Thiếu trạng thái Điểm danh");
         }
-        return AttendanceStatus.valueOf(value.toString());
+        return value.toString();
     }
 
     private String stringArg(Map<String, Object> args, String key, String defaultValue) {

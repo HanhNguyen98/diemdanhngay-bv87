@@ -68,12 +68,17 @@ export default {
         info: {
           DEFAULT: '#EFF6FF',
           fg: '#3B82F6',
+          surface: '#E7F1FF',
+          line: '#B6D4FE',
         },
         neutral: {
           DEFAULT: '#F3F4F6',
           fg: '#6B7280',
         },
-        /* ── KPI icon backgrounds (mockup chấm công) ── */
+        dept: {
+          active: '#1C8538',
+        },
+        /* ── KPI icon backgrounds (mockup Điểm danh) ── */
         kpi: {
           present: '#DEFBE8',
           duty: '#FDF2C9',

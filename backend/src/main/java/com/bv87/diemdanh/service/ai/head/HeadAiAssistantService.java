@@ -22,7 +22,7 @@ import java.util.concurrent.Executor;
 public class HeadAiAssistantService {
 
     private static final String GREETING =
-            "Chào Trưởng đơn vị, tôi có thể giúp bạn chấm công hàng loạt cho nhân viên chưa xác nhận.";
+            "Chào Trưởng đơn vị, tôi có thể giúp bạn Điểm danh hàng loạt cho nhân viên CHƯA CHẤM.";
 
     private final HeadAiIntentRouter intentRouter;
     private final HeadAiToolService toolService;
@@ -92,8 +92,8 @@ public class HeadAiAssistantService {
             }
             case BATCH_ATTENDANCE_EXECUTE -> emitBatchAttendancePreview(authUser, emitter, intent);
             case UNKNOWN -> streamText(emitter,
-                    "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng nút \"Chấm công hàng loạt\" "
-                            + "hoặc nhập: \"Chấm công đi làm cho tất cả\".");
+                    "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng nút \"Điểm danh hàng loạt\" "
+                            + "hoặc nhập: \"Điểm danh đi làm cho tất cả\".");
         }
     }
 
@@ -105,7 +105,7 @@ public class HeadAiAssistantService {
         sendEvent(emitter, "widget", Map.of("type", "batch_attendance_confirm", "payload", preview));
         int count = ((Number) preview.getOrDefault("targetCount", 0)).intValue();
         if (count == 0) {
-            streamText(emitter, "Không có nhân viên nào phù hợp để chấm công.");
+            streamText(emitter, "Không có nhân viên nào phù hợp để Điểm danh.");
         } else {
             streamText(emitter, String.format(
                     "Có %d nhân viên sẽ được cập nhật. Vui lòng xác nhận trước khi thực hiện.", count));
@@ -118,7 +118,7 @@ public class HeadAiAssistantService {
         if ("batch_attendance".equals(tool)) {
             int count = ((Number) result.getOrDefault("targetCount", 0)).intValue();
             message = count == 0
-                    ? "Không có nhân viên nào phù hợp để chấm công."
+                    ? "Không có nhân viên nào phù hợp để Điểm danh."
                     : String.format("Có %d nhân viên sẽ được cập nhật. Vui lòng xác nhận.", count);
             widgets.add(Map.of("type", "batch_attendance_confirm", "payload", result));
         } else {

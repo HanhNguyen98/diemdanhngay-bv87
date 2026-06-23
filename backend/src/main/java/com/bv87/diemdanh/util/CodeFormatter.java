@@ -17,6 +17,14 @@ public final class CodeFormatter {
         return String.format("%02d", deptCode);
     }
 
+    /** @return zero-padded group code, e.g. 1 → "01" */
+    public static String formatGroupCode(Integer groupCode) {
+        if (groupCode == null) {
+            return null;
+        }
+        return String.format("%02d", groupCode);
+    }
+
     /** @return zero-padded employee code, e.g. 1001 → "01001" */
     public static String formatEmpCode(Integer empCode) {
         if (empCode == null) {

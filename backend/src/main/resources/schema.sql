@@ -2,21 +2,52 @@
 SET NAMES utf8mb4;
 SET time_zone = '+07:00';
 
+CREATE TABLE IF NOT EXISTS department_groups (
+    group_code   INT          NOT NULL,
+    group_name   VARCHAR(100) NOT NULL,
+    sort_order   INT          NOT NULL DEFAULT 0,
+    is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+    PRIMARY KEY (group_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS departments (
     dept_code      INT          NOT NULL,
     dept_name      VARCHAR(100) NOT NULL,
+    unit_code      VARCHAR(20)  NULL,
+    group_code     INT          NOT NULL,
     location       VARCHAR(150) NULL,
     head_emp_code       INT          NULL,
     location_image_url  MEDIUMTEXT   NULL,
-    PRIMARY KEY (dept_code)
+    is_active           TINYINT(1)   NOT NULL DEFAULT 1,
+    PRIMARY KEY (dept_code),
+    KEY idx_dept_group (group_code),
+    CONSTRAINT fk_dept_group FOREIGN KEY (group_code) REFERENCES department_groups (group_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS staff_ranks (
+    rank_code   INT          NOT NULL,
+    rank_name   VARCHAR(100) NOT NULL,
+    sort_order  INT          NOT NULL DEFAULT 0,
+    is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+    PRIMARY KEY (rank_code),
+    UNIQUE KEY uk_staff_rank_name (rank_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS staff_positions (
+    position_code   INT          NOT NULL,
+    position_name   VARCHAR(150) NOT NULL,
+    sort_order      INT          NOT NULL DEFAULT 0,
+    is_active       TINYINT(1)   NOT NULL DEFAULT 1,
+    PRIMARY KEY (position_code),
+    UNIQUE KEY uk_staff_position_name (position_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS employees (
     emp_code      INT          NOT NULL,
     fullname      VARCHAR(100) NOT NULL,
     dept_code     INT          NOT NULL,
-    rank_name     VARCHAR(50)  NULL,
-    position_name VARCHAR(50)  NULL,
+    rank_name     VARCHAR(100) NULL,
+    position_name VARCHAR(150) NULL,
     is_active     TINYINT(1)   NOT NULL DEFAULT 1,
     avatar_url    MEDIUMTEXT   NULL,
     PRIMARY KEY (emp_code),
@@ -127,6 +158,20 @@ CREATE TABLE IF NOT EXISTS ai_pending_actions (
     KEY idx_ai_pending_expires (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS attendance_manual_locks (
+    id              BIGINT       NOT NULL AUTO_INCREMENT,
+    attendance_date DATE         NOT NULL,
+    dept_code       INT          NOT NULL,
+    reason          VARCHAR(255) NOT NULL,
+    locked_by       BIGINT       NOT NULL,
+    locked_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_manual_lock (attendance_date, dept_code),
+    KEY idx_manual_lock_date (attendance_date),
+    CONSTRAINT fk_manual_lock_dept FOREIGN KEY (dept_code) REFERENCES departments (dept_code),
+    CONSTRAINT fk_manual_lock_admin FOREIGN KEY (locked_by) REFERENCES accounts (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS attendance_report_blocks (
     id               BIGINT       NOT NULL AUTO_INCREMENT,
     attendance_date  DATE         NOT NULL,
@@ -138,4 +183,20 @@ CREATE TABLE IF NOT EXISTS attendance_report_blocks (
     UNIQUE KEY uk_report_block (attendance_date, dept_code),
     CONSTRAINT fk_report_block_dept FOREIGN KEY (dept_code) REFERENCES departments (dept_code),
     CONSTRAINT fk_report_block_admin FOREIGN KEY (blocked_by) REFERENCES accounts (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS employee_department_assignments (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    emp_code    INT          NOT NULL,
+    dept_code   INT          NOT NULL,
+    from_date   DATE         NOT NULL,
+    to_date     DATE         NULL,
+    reason      VARCHAR(255) NULL,
+    created_by  VARCHAR(50)  NOT NULL,
+    created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_emp_assign_emp (emp_code, to_date),
+    KEY idx_emp_assign_dept (dept_code),
+    CONSTRAINT fk_emp_assign_emp FOREIGN KEY (emp_code) REFERENCES employees (emp_code),
+    CONSTRAINT fk_emp_assign_dept FOREIGN KEY (dept_code) REFERENCES departments (dept_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

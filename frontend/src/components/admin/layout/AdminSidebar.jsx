@@ -20,22 +20,22 @@ import {
   SETTINGS_TAB_IDS,
 } from '../../../constants/admin';
 import { useAppBranding } from '../../../context/AppBrandingContext';
-import { useAiAssistantContext } from '../../../context/AiAssistantContext';
+import { useAiAssistantActions } from '../../../context/AiAssistantContext';
 import AppLogo from '../../shared/AppLogo';
 import SidebarUserCard from '../../layout/SidebarUserCard';
 import AdminNavGroup from './AdminNavGroup';
 
-const AdminSidebar = memo(function AdminSidebar({ activeTab, onTabChange, onLogout, user }) {
+const AdminSidebar = memo(function AdminSidebar({ activeTab, onTabChange, onLogout, user, className = '' }) {
   const { branding } = useAppBranding();
-  const { setOpen: openAiAssistant } = useAiAssistantContext();
+  const { setOpen: openAiAssistant } = useAiAssistantActions();
 
   const handleChangePassword = () => {
     onTabChange(ADMIN_TAB_IDS.PASSWORD);
   };
 
   return (
-    <aside className="w-[240px] shrink-0 bg-sidebar-bg border-r border-gray-200 flex flex-col min-h-screen">
-      <div className="px-5 py-5 border-b border-gray-200/60">
+    <aside className={`w-[240px] shrink-0 bg-sidebar-bg border-r border-line flex flex-col min-h-screen ${className}`}>
+      <div className="px-5 py-5 border-b border-line/60">
         <button
           type="button"
           onClick={() => window.location.reload()}
@@ -92,7 +92,7 @@ const AdminSidebar = memo(function AdminSidebar({ activeTab, onTabChange, onLogo
         />
       </nav>
 
-      <div className="mt-auto border-t border-gray-200/60">
+      <div className="mt-auto border-t border-line/60">
         {user && <SidebarUserCard user={user} onChangePassword={handleChangePassword} />}
 
         <div className="px-3 pb-3 space-y-0.5">

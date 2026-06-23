@@ -11,7 +11,7 @@ public class BrandingDto {
     private final String loginAvatarUrl;
     /** HH:mm — giờ chốt sổ điểm danh */
     private final String attendanceLockTime;
-    /** HH:mm — giờ bắt đầu cho phép chấm công */
+    /** HH:mm — giờ bắt đầu cho phép Điểm danh */
     private final String attendanceOpenTime;
     /** HH:mm — giờ tự động gửi nhắc nhở */
     private final String attendanceReminderTime;

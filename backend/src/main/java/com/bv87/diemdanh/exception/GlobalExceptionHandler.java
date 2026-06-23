@@ -1,5 +1,6 @@
 package com.bv87.diemdanh.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -45,5 +46,18 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("message", "Dữ liệu đầu vào không hợp lệ");
         return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String detail = ex.getMostSpecificCause().getMessage();
+        if (detail != null && detail.contains("uk_one_head_per_dept")) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message",
+                    "Đơn vị này đã có tài khoản Trưởng đơn vị. "
+                            + "Vui lòng sửa hoặc xóa tài khoản hiện có trước khi tạo mới."));
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", "Dữ liệu trùng lặp hoặc vi phạm ràng buộc hệ thống"));
     }
 }

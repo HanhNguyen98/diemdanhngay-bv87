@@ -6,6 +6,9 @@
  * Do NOT use raw hex in components — extend this file + tailwind.config instead.
  */
 
+/** App UI font — synced with tailwind.config.js `fontFamily.sans` */
+export const FONT_FAMILY_SANS = "'Segoe UI', system-ui, -apple-system, sans-serif";
+
 export const COLORS = {
   primary: '#2563EB',
   primaryHover: '#1D4ED8',
@@ -31,8 +34,9 @@ export const COLORS = {
     badge: '#FDE68A',
   },
   danger: { bg: '#FEF2F2', fg: '#EF4444', dark: '#DC2626' },
-  info: { bg: '#EFF6FF', fg: '#3B82F6' },
+  info: { bg: '#EFF6FF', fg: '#3B82F6', surface: '#E7F1FF', line: '#B6D4FE' },
   neutral: { bg: '#F3F4F6', fg: '#6B7280' },
+  deptActive: '#1C8538',
 
   kpiPresent: '#DEFBE8',
   kpiDuty: '#FDF2C9',

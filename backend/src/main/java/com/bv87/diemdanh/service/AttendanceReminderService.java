@@ -106,8 +106,8 @@ public class AttendanceReminderService {
                 continue;
             }
 
-            var headOpt = accountRepository.findActiveByRoleAndDeptCode(AccountRole.HEAD, deptCode);
-            if (headOpt.isEmpty()) {
+            List<Account> heads = accountRepository.findAllActiveByRoleAndDeptCode(AccountRole.HEAD, deptCode);
+            if (heads.isEmpty()) {
                 skippedNoHead++;
                 skippedNames.add(summary.getDeptName());
                 saveLog(date, deptCode, trigger, null, adminId, ReminderLogStatus.SKIPPED_NO_HEAD,
@@ -115,13 +115,13 @@ public class AttendanceReminderService {
                 continue;
             }
 
-            Account head = headOpt.get();
+            Account head = heads.get(0);
             String body = buildReminderBody(summary, date, reminderTime);
             Notification notification = new Notification();
             notification.setRecipientId(head.getId());
             notification.setSenderId(adminId);
             notification.setType(NotificationType.ATTENDANCE_REMINDER);
-            notification.setTitle("Nhắc hoàn thành chấm công");
+            notification.setTitle("Nhắc hoàn thành Điểm danh");
             notification.setBody(body);
             notification.setDeptCode(deptCode);
             notification.setAttendanceDate(date);
@@ -190,6 +190,7 @@ public class AttendanceReminderService {
         }
 
         List<Department> departments = departmentRepository.findAll().stream()
+                .filter(Department::isActive)
                 .sorted(java.util.Comparator.comparing(Department::getDeptCode))
                 .toList();
 
@@ -258,9 +259,9 @@ public class AttendanceReminderService {
                 sb.append(' ');
             }
             sb.append("Bỏ qua ").append(skippedNoHead)
-                    .append(" phòng thiếu tài khoản HEAD — vui lòng thêm tài khoản trưởng ban: ")
+                    .append(" đơn vị vì chưa có tài khoản đăng nhập Trưởng phòng: ")
                     .append(String.join(", ", skippedNames))
-                    .append('.');
+                    .append(". Vui lòng thêm tại Cài đặt → Phân quyền người dùng.");
         }
         return sb.toString();
     }

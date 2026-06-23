@@ -1,5 +1,6 @@
 import { AI_ASSISTANT_UI } from '../constants/aiAssistant';
 import { downloadExcel } from './exportExcel';
+import { countFromBreakdown, normalizeStatusBreakdown } from './statusBreakdown';
 
 const w = AI_ASSISTANT_UI.widgets;
 
@@ -8,21 +9,25 @@ function excelFilename(payload, fallback) {
   return name.replace(/\.csv$/i, '.xlsx');
 }
 
+function resolveColumns(payload) {
+  const fromPayload = normalizeStatusBreakdown(payload?.statusColumns);
+  if (fromPayload.length) return fromPayload;
+
+  const map = new Map();
+  (payload?.rows ?? []).forEach((row) => {
+    normalizeStatusBreakdown(row.statusBreakdown).forEach((item) => {
+      if (!map.has(item.code)) map.set(item.code, item);
+    });
+  });
+  return [...map.values()];
+}
+
 export function downloadWorkStatusExcel(payload) {
-  const headers = [
-    w.colDept,
-    w.colPresent,
-    w.colLeave,
-    w.colStudy,
-    w.colDuty,
-    w.colUnchecked,
-  ];
+  const columns = resolveColumns(payload);
+  const headers = [w.colDept, ...columns.map((col) => col.label), w.colUnchecked];
   const rows = (payload?.rows || []).map((row) => [
     `[${row.deptCodeFormatted}] ${row.deptName}`,
-    row.diLam,
-    row.nghiPhep,
-    row.diHoc,
-    row.diCongTac,
+    ...columns.map((col) => countFromBreakdown(row.statusBreakdown, col.code)),
     row.unchecked ?? 0,
   ]);
 
@@ -35,22 +40,17 @@ export function downloadWorkStatusExcel(payload) {
 }
 
 export function downloadAttendanceStatusExcel(payload) {
+  const columns = resolveColumns(payload);
   const headers = [
     w.colDept,
-    w.colPresent,
-    w.colLeave,
-    w.colStudy,
-    w.colDuty,
+    ...columns.map((col) => col.label),
     w.colUnchecked,
     w.colProgress,
     w.colStatus,
   ];
   const rows = (payload?.rows || []).map((row) => [
     `[${row.deptCodeFormatted}] ${row.deptName}`,
-    row.diLam,
-    row.nghiPhep,
-    row.diHoc,
-    row.diCongTac,
+    ...columns.map((col) => countFromBreakdown(row.statusBreakdown, col.code)),
     row.unchecked ?? 0,
     `${row.progressPercent}%`,
     row.completionLabel,
@@ -58,7 +58,7 @@ export function downloadAttendanceStatusExcel(payload) {
 
   downloadExcel({
     filename: excelFilename(payload, 'bao-cao-cham-cong.xlsx'),
-    sheetName: 'Chấm công',
+    sheetName: 'Điểm danh',
     headers,
     rows,
   });

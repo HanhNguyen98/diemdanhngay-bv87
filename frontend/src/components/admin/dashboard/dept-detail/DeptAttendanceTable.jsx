@@ -1,17 +1,19 @@
 import { memo } from 'react';
 import { ADMIN_UI } from '../../../../constants/admin';
+import RefreshOverlay from '../../../shared/RefreshOverlay';
 import TablePagination from '../../sections/TablePagination';
 import DeptAttendanceRow from './DeptAttendanceRow';
 
 const COLUMNS = [
   { key: 'empCode', labelKey: 'deptDetailColEmpCode', width: '14%' },
   { key: 'fullname', labelKey: 'deptDetailColStaff', width: '34%' },
-  { key: 'status', labelKey: 'deptDetailColStatus', width: '22%' }
+  { key: 'status', labelKey: 'deptDetailColStatus', width: '22%' },
 ];
 
 const DeptAttendanceTable = memo(function DeptAttendanceTable({
   items,
-  loading,
+  initialLoading,
+  refreshing = false,
   page,
   totalPages,
   totalItems,
@@ -22,8 +24,9 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
   const colCount = COLUMNS.length;
 
   return (
-    <section className="bg-surface-white border border-gray-200 rounded-xl shadow-card overflow-hidden flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-auto">
+    <section className="hidden lg:flex bg-surface-white border border-line rounded-xl shadow-card overflow-hidden flex-col flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 overflow-auto">
+        {refreshing && <RefreshOverlay />}
         <table className="w-full min-w-[720px] table-fixed text-sm">
           <colgroup>
             {COLUMNS.map((col) => (
@@ -40,7 +43,7 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {loading ? (
+            {initialLoading ? (
               <tr>
                 <td colSpan={colCount} className="py-20 text-center text-content-muted animate-pulse">
                   {d.deptDetailLoading}
@@ -61,7 +64,7 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
         </table>
       </div>
 
-      {!loading && totalItems > 0 && (
+      {!initialLoading && totalItems > 0 && (
         <TablePagination
           page={page}
           totalPages={totalPages}

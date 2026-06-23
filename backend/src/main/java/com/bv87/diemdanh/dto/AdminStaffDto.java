@@ -16,4 +16,7 @@ public class AdminStaffDto {
     private final String positionName;
     private final boolean active;
     private final String avatarUrl;
+    private final boolean hasActiveHeadAccount;
+    private final boolean isDepartmentCatalogHead;
+    private final String headAccountUsername;
 }

@@ -20,7 +20,7 @@ const SidebarUserCard = memo(function SidebarUserCard({ user, onChangePassword }
 
   const roleLabel =
     user?.roleLabel ||
-    (user?.role === 'HEAD' ? 'TRƯỞNG Đơn vị' : user?.role === 'ADMIN' ? 'Quản trị viên' : '');
+    (user?.role === 'HEAD' ? 'Trưởng đơn vị' : user?.role === 'ADMIN' ? 'Quản trị viên' : '');
 
   return (
     <div ref={rootRef} className="relative px-3 pt-2">
@@ -41,7 +41,7 @@ const SidebarUserCard = memo(function SidebarUserCard({ user, onChangePassword }
           <p className="text-3xs font-semibold text-gray-800 leading-tight whitespace-nowrap">
             {user?.fullname}
           </p>
-          <p className="text-4xs text-content-muted leading-tight mt-0.5 tracking-tight">{roleLabel}</p>
+          <p className="text-4xs text-content-muted leading-tight mt-0.5 tracking-tight uppercase">{roleLabel}</p>
         </div>
       </button>
 

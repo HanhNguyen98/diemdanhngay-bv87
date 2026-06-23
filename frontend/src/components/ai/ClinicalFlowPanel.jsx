@@ -5,6 +5,8 @@ import { useAiAssistantContext } from '../../context/AiAssistantContext';
 import { useAppBranding } from '../../context/AppBrandingContext';
 import AppLogo from '../shared/AppLogo';
 import ClinicalFlowMessage from './ClinicalFlowMessage';
+import DraggableAiFab from './DraggableAiFab';
+import { AI_FAB_STORAGE_KEYS, getAdminAiFabDefaultPosition } from '../../utils/aiFabPosition';
 
 const AI_LOGO_CLASS = 'w-full h-full rounded-full object-cover';
 const AI_LOGO_FALLBACK_CLASS =
@@ -48,11 +50,11 @@ export default function ClinicalFlowPanel() {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={toggleOpen}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 h-11 px-4 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 transition-all"
-        aria-label={AI_ASSISTANT_UI.title}
+      <DraggableAiFab
+        storageKey={AI_FAB_STORAGE_KEYS.admin}
+        getDefaultPosition={getAdminAiFabDefaultPosition}
+        onActivate={toggleOpen}
+        ariaLabel={AI_ASSISTANT_UI.title}
       >
         <span className="w-6 h-6 shrink-0 overflow-hidden rounded-full ring-1 ring-white/30">
           <AppLogo
@@ -63,12 +65,12 @@ export default function ClinicalFlowPanel() {
           />
         </span>
         <span className="text-sm font-semibold hidden sm:inline">Trợ lý AI</span>
-      </button>
+      </DraggableAiFab>
     );
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[min(100vw-2rem,400px)] h-[min(85vh,640px)] flex flex-col rounded-2xl shadow-2xl border border-gray-200 bg-white overflow-hidden">
+    <div className="fixed bottom-4 right-4 z-50 w-[min(100vw-2rem,400px)] h-[min(85vh,640px)] flex flex-col rounded-2xl shadow-2xl border border-gray-200 bg-white overflow-hidden max-lg:bottom-20">
       <header className="shrink-0 flex items-center justify-between gap-2 px-4 py-3 bg-primary text-white">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 shrink-0 overflow-hidden rounded-full ring-1 ring-white/25">

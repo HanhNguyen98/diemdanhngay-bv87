@@ -5,6 +5,11 @@ export function formatDeptCode(code) {
   return String(code).padStart(2, '0');
 }
 
+export function formatGroupCode(code) {
+  if (code == null) return '';
+  return String(code).padStart(2, '0');
+}
+
 export function formatEmpCode(code) {
   if (code == null) return '';
   return String(code).padStart(5, '0');
@@ -25,7 +30,7 @@ export function formatShortDate(dateStr) {
   return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
-/** dd/mm/yyyy — hiển thị trên date navigator chấm công */
+/** dd/mm/yyyy — hiển thị trên date navigator Điểm danh */
 export function formatDateDMY(dateStr) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -42,9 +47,44 @@ export function shiftDate(isoDate, days) {
   return `${ny}-${nm}-${nd}`;
 }
 
+/** Trailing unit code in dept name, e.g. "Khoa Dinh dưỡng (C11)" → C11 */
+const DEPT_SUFFIX_CODE_RE = /\s*\(([^)]+)\)\s*$/;
+
+/**
+ * Split department display name and optional trailing unit code in parentheses.
+ * @param {string} name
+ * @returns {{ displayName: string, unitCode: string|null }}
+ */
+export function parseDeptNameParts(name) {
+  if (!name) return { displayName: '', unitCode: null };
+  const match = name.match(DEPT_SUFFIX_CODE_RE);
+  if (!match) return { displayName: name.trim(), unitCode: null };
+  return {
+    displayName: name.replace(DEPT_SUFFIX_CODE_RE, '').trim(),
+    unitCode: match[1].trim(),
+  };
+}
+
 export function formatDeptDisplayName(name) {
-  if (!name) return '';
-  return `${name}`;
+  return parseDeptNameParts(name).displayName;
+}
+
+/**
+ * Label for department filter dropdowns.
+ * If unitCode exists -> [unitCode] deptNameDisplay (fallback to deptName).
+ * If unitCode is empty -> keep old behavior: [deptCodeFormatted] deptName.
+ */
+export function formatDeptFilterLabel(dept) {
+  if (!dept) return '';
+  const unitCode = dept.unitCode && String(dept.unitCode).trim();
+
+  if (unitCode) {
+    const name = dept.deptNameDisplay || dept.deptName;
+    return `[${unitCode}] ${name}`;
+  }
+
+  const code = dept.deptCodeFormatted || formatDeptCode(dept.deptCode);
+  return `[${code}] ${dept.deptName}`;
 }
 
 /** So sánh ISO date (YYYY-MM-DD). Trả về âm / 0 / dương. */
@@ -123,6 +163,14 @@ export function weekRangeISO(isoDate) {
   const end = new Date(fromY, date.getMonth(), date.getDate() + 6);
   const to = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
   return { from, to };
+}
+
+/** Inclusive day count between ISO dates (YYYY-MM-DD). */
+export function daysBetweenInclusive(from, to) {
+  const start = new Date(`${from}T12:00:00`);
+  const end = new Date(`${to}T12:00:00`);
+  const diff = Math.floor((end - start) / 86_400_000);
+  return diff + 1;
 }
 
 export function getStatisticsDateRange(preset, refDate = todayISO()) {

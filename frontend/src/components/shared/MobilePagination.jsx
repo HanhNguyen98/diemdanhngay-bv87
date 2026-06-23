@@ -2,8 +2,14 @@ import { memo, useMemo } from 'react';
 import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
 import { buildPageRange } from '../../hooks/usePagination';
 
-const NAV_BTN =
-  'w-9 h-9 rounded-lg bg-[#E6EEFE] flex items-center justify-center text-navy disabled:opacity-40 hover:bg-[#D9E4FC] transition-colors shrink-0';
+const BTN_BASE = 'w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors';
+
+const NAV_BTN = `${BTN_BASE} border bg-surface-white border-line text-navy hover:bg-primary-light disabled:bg-attendance-search disabled:border-line/50 disabled:text-content-muted/40 disabled:hover:bg-attendance-search`;
+
+const PAGE_BTN = `${BTN_BASE} text-sm`;
+
+const STICKY_BAR =
+  'sticky bottom-0 z-30 mt-1 py-1.5 bg-surface-page/90 backdrop-blur-sm border-t border-line/80';
 
 const MobilePagination = memo(function MobilePagination({
   page,
@@ -11,14 +17,16 @@ const MobilePagination = memo(function MobilePagination({
   totalItems,
   onPageChange,
   className = '',
+  sticky = true,
 }) {
-  const pages = useMemo(() => buildPageRange(page, totalPages), [page, totalPages]);
+  const safeTotalPages = Math.max(1, totalPages || 1);
+  const pages = useMemo(() => buildPageRange(page, safeTotalPages), [page, safeTotalPages]);
 
-  if (!totalItems || totalPages <= 1) return null;
+  if (!totalItems) return null;
 
   return (
     <nav
-      className={`flex items-center justify-center gap-3 py-4 ${className}`}
+      className={`flex items-center justify-center gap-2 ${sticky ? STICKY_BAR : 'py-2'} ${className}`}
       aria-label="Phân trang"
     >
       <button
@@ -31,37 +39,35 @@ const MobilePagination = memo(function MobilePagination({
         <IconChevronLeft className="w-4 h-4" />
       </button>
 
-      <div className="flex items-center gap-2">
-        {pages.map((p, idx) =>
-          p === '…' ? (
-            <span
-              key={`ellipsis-${idx}`}
-              className="w-9 h-9 flex items-center justify-center text-content-muted text-sm"
-            >
-              …
-            </span>
-          ) : (
-            <button
-              key={p}
-              type="button"
-              onClick={() => onPageChange(p)}
-              aria-current={p === page ? 'page' : undefined}
-              className={
-                p === page
-                  ? 'w-9 h-9 rounded-lg bg-pagination-active text-white text-sm font-semibold shrink-0'
-                  : 'w-9 h-9 flex items-center justify-center text-sm font-medium text-content-heading hover:text-primary transition-colors shrink-0'
-              }
-            >
-              {p}
-            </button>
-          ),
-        )}
-      </div>
+      {pages.map((p, idx) =>
+        p === '…' ? (
+          <span
+            key={`ellipsis-${idx}`}
+            className="w-10 h-10 flex items-center justify-center text-content-muted text-sm leading-none"
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onPageChange(p)}
+            aria-current={p === page ? 'page' : undefined}
+            className={
+              p === page
+                ? `${PAGE_BTN} bg-primary text-white font-bold`
+                : `${PAGE_BTN} bg-table-header text-gray-800 font-medium hover:bg-primary-light`
+            }
+          >
+            {p}
+          </button>
+        ),
+      )}
 
       <button
         type="button"
         onClick={() => onPageChange(page + 1)}
-        disabled={page >= totalPages}
+        disabled={page >= safeTotalPages}
         className={NAV_BTN}
         aria-label="Trang sau"
       >

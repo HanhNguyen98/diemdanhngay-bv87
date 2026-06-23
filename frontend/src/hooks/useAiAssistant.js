@@ -28,7 +28,7 @@ export function useAiAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     createMessage('assistant', {
-      content: 'Chào Admin, tôi có thể giúp gì cho bạn trong việc thống kê và quản lý chấm công hôm nay?',
+      content: 'Chào Admin, tôi có thể giúp gì cho bạn trong việc thống kê và quản lý Điểm danh hôm nay?',
       streaming: false,
     }),
   ]);

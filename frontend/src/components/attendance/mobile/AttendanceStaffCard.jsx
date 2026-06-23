@@ -16,7 +16,7 @@ const AttendanceStaffCard = memo(function AttendanceStaffCard({ staff, disabled,
           <p className="text-sm font-bold text-navy truncate">{staff.fullname}</p>
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
             {staff.rankName && (
-              <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-light text-primary text-4xs font-semibold uppercase">
+              <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-light text-primary text-[0.70rem] font-semibold">
                 {staff.rankName}
               </span>
             )}
@@ -26,18 +26,7 @@ const AttendanceStaffCard = memo(function AttendanceStaffCard({ staff, disabled,
           </div>
         </div>
 
-        <div className="shrink-0 min-w-0 max-w-[42%] text-right">
-          <p className="text-4xs font-semibold text-content-muted tracking-wide">
-            {MOBILE_UI.statusLabel}
-          </p>
-          <div className="mt-1 flex justify-end min-w-0">
-            {unchecked ? (
-              <span className="text-4xs italic text-slate-600">{UI.filterUnchecked}</span>
-            ) : (
-              <StatusBadge staff={staff} />
-            )}
-          </div>
-        </div>
+        
       </div>
 
       <MobileQuickActionGrid staff={staff} disabled={disabled} onQuickAction={onQuickAction} />

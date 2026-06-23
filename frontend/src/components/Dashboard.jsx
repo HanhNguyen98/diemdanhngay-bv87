@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
 import { HEAD_NAV_IDS, UI } from '../constants/attendance';
+import { AttendanceStatusProvider } from '../context/AttendanceStatusContext';
 
 const AttendancePage = lazy(() => import('./attendance/AttendancePage'));
 const StatisticsPage = lazy(() => import('./statistics/StatisticsPage'));
@@ -34,8 +35,10 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   return (
-    <Suspense fallback={<HeadRouteFallback />}>
-      <Page {...pageProps} />
-    </Suspense>
+    <AttendanceStatusProvider>
+      <Suspense fallback={<HeadRouteFallback />}>
+        <Page {...pageProps} />
+      </Suspense>
+    </AttendanceStatusProvider>
   );
 }

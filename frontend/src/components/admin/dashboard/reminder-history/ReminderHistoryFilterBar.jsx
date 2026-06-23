@@ -1,54 +1,110 @@
 import { memo } from 'react';
-import { Filter } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import { ADMIN_UI } from '../../../../constants/admin';
-
-const DATE_INPUT_CLASS =
-  'h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus-visible:ring-2 focus-visible:ring-primary/25 min-w-[140px]';
+import StaffDeptFilter from '../../../staff/StaffDeptFilter';
+import DateRangePickerField from '../../../ui/DateRangePickerField';
 
 const LABEL_CLASS =
-  'text-2xs font-semibold text-content-muted uppercase tracking-wider shrink-0';
+  'text-3xs font-semibold text-content-muted uppercase shrink-0 whitespace-nowrap';
+
+const APPLY_BTN_CLASS =
+  'h-9 shrink-0 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-60';
+
+const RESET_BTN_CLASS =
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-white text-content-muted hover:bg-neutral transition-colors disabled:opacity-60';
 
 const ReminderHistoryFilterBar = memo(function ReminderHistoryFilterBar({
+  departments,
+  deptFilter,
+  onDeptFilterChange,
   dateFrom,
   dateTo,
   onDateFromChange,
   onDateToChange,
   onApply,
+  onReset,
   loading,
+  layout = 'desktop-toolbar',
 }) {
   const { dashboard: d } = ADMIN_UI;
 
+  const applyButton = (
+    <button
+      type="button"
+      onClick={() => onApply?.()}
+      disabled={loading}
+      className={APPLY_BTN_CLASS}
+      aria-label={d.reminderApplyFilter}
+    >
+      <Search className="w-4 h-4 shrink-0" aria-hidden="true" />
+      {layout === 'desktop-toolbar' ? (
+        d.reminderApplyFilter
+      ) : (
+        <span className="hidden sm:inline">{d.reminderApplyFilter}</span>
+      )}
+    </button>
+  );
+
+  const resetButton = onReset ? (
+    <button
+      type="button"
+      onClick={() => onReset?.()}
+      disabled={loading}
+      title={ADMIN_UI.resetFilters}
+      aria-label={ADMIN_UI.resetFilters}
+      className={RESET_BTN_CLASS}
+    >
+      <RotateCcw className="w-4 h-4" aria-hidden="true" />
+    </button>
+  ) : null;
+
+  if (layout === 'mobile-row') {
+    return (
+      <div className="flex items-center gap-2 w-full min-w-0">
+        <DateRangePickerField
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onRangeChange={(from, to) => {
+            onDateFromChange(from);
+            onDateToChange(to);
+          }}
+          disabled={loading}
+          ariaLabel={d.reminderFilterRange}
+          className="flex-1 min-w-0"
+        />
+        {applyButton}
+        {resetButton}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 w-full">
-      <label className="flex items-center gap-2">
-        <span className={LABEL_CLASS}>{d.reminderFilterFrom}</span>
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => onDateFromChange(e.target.value)}
-          className={DATE_INPUT_CLASS}
-        />
-      </label>
+    <div className="flex flex-1 items-center gap-2 min-w-0 flex-wrap lg:flex-nowrap">
+      <StaffDeptFilter
+        departments={departments}
+        value={deptFilter}
+        onChange={onDeptFilterChange}
+        className="w-full sm:w-[15rem] shrink-0"
+      />
 
-      <label className="flex items-center gap-2">
-        <span className={LABEL_CLASS}>{d.reminderFilterTo}</span>
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => onDateToChange(e.target.value)}
-          className={DATE_INPUT_CLASS}
+      <div className="flex items-center gap-2 shrink-0 min-w-0">
+        <span className={LABEL_CLASS}>{d.reminderFilterRange}</span>
+        <DateRangePickerField
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onRangeChange={(from, to) => {
+            onDateFromChange(from);
+            onDateToChange(to);
+          }}
+          disabled={loading}
+          ariaLabel={d.reminderFilterRange}
+          className="w-auto shrink-0"
+          triggerClassName="min-w-[220px]"
         />
-      </label>
+      </div>
 
-      <button
-        type="button"
-        onClick={onApply}
-        disabled={loading}
-        className="h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-60 ml-auto"
-      >
-        <Filter className="w-4 h-4" />
-        {d.reminderApplyFilter}
-      </button>
+      {applyButton}
+      {resetButton}
     </div>
   );
 });

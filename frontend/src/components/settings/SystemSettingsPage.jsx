@@ -2,6 +2,7 @@ import AvatarUpload from '../shared/AvatarUpload';
 import AppLogo from '../shared/AppLogo';
 import FlashBanner from '../shared/FlashBanner';
 import LoginBrandingHeader from '../shared/LoginBrandingHeader';
+import AdminSubmenuBreadcrumb from '../admin/sections/AdminSubmenuBreadcrumb';
 import { ADMIN_UI } from '../../constants/admin';
 import { useAppBranding } from '../../context/AppBrandingContext';
 import { useSystemSettings } from '../../hooks/useSystemSettings';
@@ -18,7 +19,7 @@ function SettingsSection({ title,  children, className = '' }) {
     <section
       className={`bg-surface-white border border-gray-200 rounded-xl shadow-card p-5 flex flex-col gap-4 ${className}`}
     >
-   <h2 className="text-sm font-bold text-gray-800">{title}</h2>
+   <h2 className="admin-section-title">{title}</h2>
       {children}
     </section>
   );
@@ -66,16 +67,20 @@ export default function SystemSettingsPage() {
 
   if (loading) {
     return (
-      <div className="-mt-3 w-full flex items-center justify-center py-16 text-sm text-content-muted">
-        Đang tải cấu hình...
-      </div>
+      <>
+        <AdminSubmenuBreadcrumb parentLabelKey="settings" currentLabelKey="settingsSystem" />
+        <div className="w-full flex items-center justify-center py-16 text-sm text-content-muted">
+          Đang tải cấu hình...
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      <AdminSubmenuBreadcrumb parentLabelKey="settings" currentLabelKey="settingsSystem" />
       {flash && <FlashBanner flash={flash} onClose={clearFlash} />}
-      <div className="h-full min-h-0 overflow-y-auto w-full space-y-4">
+      <div className="w-full space-y-4">
         <div className="grid grid-cols-1 gap-4 w-full">
           <SettingsSection title={`1. ${system.groupSystemName}`}>
             <div className="max-w-xl">

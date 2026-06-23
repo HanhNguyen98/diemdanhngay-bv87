@@ -3,7 +3,6 @@ package com.bv87.diemdanh.service.ai;
 import com.bv87.diemdanh.dto.AttendanceSummaryDto;
 import com.bv87.diemdanh.dto.SendReminderResultDto;
 import com.bv87.diemdanh.dto.ai.AiReminderPreviewDeptDto;
-import com.bv87.diemdanh.entity.AttendanceStatus;
 import com.bv87.diemdanh.entity.CompletionStatus;
 import com.bv87.diemdanh.entity.Department;
 import com.bv87.diemdanh.exception.BusinessException;
@@ -12,6 +11,7 @@ import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.service.AttendanceReminderService;
 import com.bv87.diemdanh.service.AttendanceService;
+import com.bv87.diemdanh.service.AttendanceStatusCatalogService;
 import com.bv87.diemdanh.util.CodeFormatter;
 import com.bv87.diemdanh.util.VietnamTimeService;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +41,7 @@ public class AiToolService {
     private final DepartmentRepository departmentRepository;
     private final AiPendingActionStore pendingActionStore;
     private final VietnamTimeService timeService;
+    private final AttendanceStatusCatalogService statusCatalogService;
 
     @Transactional(readOnly = true)
     public Map<String, Object> buildWorkStatusReport(AuthUser authUser, Map<String, Object> args) {
@@ -56,37 +57,40 @@ public class AiToolService {
 
         List<Department> departments = deptCode != null
                 ? List.of(departmentRepository.findById(deptCode)
+                        .filter(Department::isActive)
                         .orElseThrow(() -> new BusinessException("Không tìm thấy Đơn vị")))
-                : departmentRepository.findAll();
+                : departmentRepository.findAll().stream()
+                        .filter(Department::isActive)
+                        .toList();
 
-        Map<Integer, long[]> countsByDept = new HashMap<>();
+        Map<Integer, Map<String, Long>> countsByDept = new HashMap<>();
         for (Object[] aggregate : attendanceRecordRepository.aggregateWorkStatusByDept(from, to, deptCode)) {
             Integer code = (Integer) aggregate[0];
-            AttendanceStatus status = (AttendanceStatus) aggregate[2];
+            String status = aggregate[2].toString();
             long count = (Long) aggregate[3];
-            long[] counts = countsByDept.computeIfAbsent(code, ignored -> new long[4]);
-            switch (status) {
-                case DI_LAM -> counts[0] = count;
-                case NGHI_PHEP -> counts[1] = count;
-                case DI_HOC -> counts[2] = count;
-                case DI_CONG_TAC -> counts[3] = count;
-            }
+            countsByDept.computeIfAbsent(code, ignored -> new HashMap<>()).merge(status, count, Long::sum);
         }
 
         List<Map<String, Object>> rows = new ArrayList<>();
         for (Department dept : departments) {
-            long[] counts = countsByDept.getOrDefault(dept.getDeptCode(), new long[4]);
+            Map<String, Long> deptCounts = countsByDept.getOrDefault(dept.getDeptCode(), Map.of());
+            List<com.bv87.diemdanh.dto.StatusBreakdownItemDto> breakdown =
+                    statusCatalogService.buildBreakdown(deptCounts);
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("deptCode", dept.getDeptCode());
             row.put("deptCodeFormatted", CodeFormatter.formatDeptCode(dept.getDeptCode()));
             row.put("deptName", dept.getDeptName());
-            row.put("diLam", counts[0]);
-            row.put("nghiPhep", counts[1]);
-            row.put("diHoc", counts[2]);
-            row.put("diCongTac", counts[3]);
+            row.put("statusBreakdown", breakdown);
             row.put("unchecked", 0L);
             rows.add(row);
         }
+
+        List<com.bv87.diemdanh.dto.StatusBreakdownItemDto> statusColumns =
+                statusCatalogService.buildBreakdown(countsByDept.values().stream()
+                        .reduce(new HashMap<>(), (acc, map) -> {
+                            map.forEach((k, v) -> acc.merge(k, v, Long::sum));
+                            return acc;
+                        }));
 
         String scope = deptCode != null ? departments.get(0).getDeptName() : "Toàn viện";
         String filename = String.format("bao-cao-lam-viec-%s-%s-%s.xlsx",
@@ -100,6 +104,7 @@ public class AiToolService {
         result.put("fromDateFormatted", DMY.format(from));
         result.put("toDateFormatted", DMY.format(to));
         result.put("rows", rows);
+        result.put("statusColumns", statusColumns);
         result.put("filename", filename);
         return result;
     }
@@ -114,10 +119,7 @@ public class AiToolService {
             row.put("deptCode", s.getDeptCode());
             row.put("deptCodeFormatted", s.getDeptCodeFormatted());
             row.put("deptName", s.getDeptName());
-            row.put("diLam", s.getDiLam());
-            row.put("nghiPhep", s.getNghiPhep());
-            row.put("diHoc", s.getDiHoc());
-            row.put("diCongTac", s.getDiCongTac());
+            row.put("statusBreakdown", s.getStatusBreakdown());
             row.put("unchecked", s.getUncheckedCount());
             row.put("progressPercent", s.getProgressPercent());
             row.put("completionStatus", s.getCompletionStatus().name());
@@ -126,13 +128,17 @@ public class AiToolService {
             return row;
         }).collect(Collectors.toList());
 
+        List<com.bv87.diemdanh.dto.StatusBreakdownItemDto> statusColumns = statusCatalogService.mergeBreakdowns(
+                summaries.stream().map(AttendanceSummaryDto::getStatusBreakdown).toList());
+
         String filename = String.format("bao-cao-cham-cong-ngay-%s.xlsx", date);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("title", "Báo cáo trạng thái chấm công");
+        result.put("title", "Báo cáo trạng thái Điểm danh");
         result.put("date", date.toString());
         result.put("dateFormatted", DMY.format(date));
         result.put("rows", rows);
+        result.put("statusColumns", statusColumns);
         result.put("filename", filename);
         return result;
     }

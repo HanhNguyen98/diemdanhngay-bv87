@@ -1,22 +1,23 @@
 import { lazy, Suspense } from 'react';
-import { ADMIN_UI } from '../../constants/admin';
+import { ADMIN_UI, MOBILE_REGISTRY_PAGINATION_CLASS } from '../../constants/admin';
 import { UI } from '../../constants/attendance';
 import { useStaffPage } from '../../hooks/useStaffPage';
 import { useHeadStaffPage } from '../../hooks/useHeadStaffPage';
+import AdminCatalogBreadcrumb from '../admin/sections/AdminCatalogBreadcrumb';
 import RegistryTableShell from '../admin/sections/RegistryTableShell';
 import TablePagination from '../admin/sections/TablePagination';
 import MobilePagination from '../shared/MobilePagination';
-import StaffDeptFilter from './StaffDeptFilter';
-import RegistrySearchInput from '../admin/sections/RegistrySearchInput';
 import ExcelTaskMenu from '../admin/sections/ExcelTaskMenu';
+import StaffFilterBar from './StaffFilterBar';
 import StaffStatGrid from './StaffStatGrid';
 import StaffTable from './StaffTable';
-import StaffViewModal from './StaffViewModal';
+import StaffCardList from './mobile/StaffCardList';
 import FlashBanner from '../shared/FlashBanner';
 import InlineErrorBanner from '../shared/InlineErrorBanner';
 
 const StaffFormModal = lazy(() => import('./StaffFormModal'));
 const StaffAvatarModal = lazy(() => import('./StaffAvatarModal'));
+const StaffTransferHistoryModal = lazy(() => import('./StaffTransferHistoryModal'));
 const DeleteModal = lazy(() => import('../shared/DeleteModal'));
 
 function StaffRegistryView({
@@ -25,6 +26,8 @@ function StaffRegistryView({
   setSearch,
   stats,
   loading,
+  initialLoading,
+  refreshing,
   error,
   listItems,
   showPagination = true,
@@ -36,6 +39,7 @@ function StaffRegistryView({
   departments,
   deptFilter,
   setDeptFilter,
+  onResetFilters,
   formStaff,
   setFormStaff,
   deleteStaff,
@@ -50,13 +54,17 @@ function StaffRegistryView({
   avatarStaff,
   setAvatarStaff,
   handleSaveAvatar,
-  viewStaff,
-  setViewStaff,
+  historyStaff,
+  setHistoryStaff,
   flash,
   clearFlash,
 }) {
   return (
-    <div className="flex flex-col gap-2 lg:h-full lg:min-h-0">
+    <>
+      {!isHead && <AdminCatalogBreadcrumb currentLabelKey="staff" />}
+
+      <div className="flex flex-col gap-2 lg:h-full lg:min-h-0">
+
       {flash && <FlashBanner flash={flash} onClose={clearFlash} />}
       <InlineErrorBanner message={error} />
 
@@ -65,74 +73,82 @@ function StaffRegistryView({
       </div>
 
       <RegistryTableShell
-        actionLabel={isHead ? null : ADMIN_UI.staff.newButton}
-        onAction={isHead ? null : () => setFormStaff({})}
-        filterControl={
-          isHead ? null : (
-            <StaffDeptFilter
-              departments={departments}
-              value={deptFilter}
-              onChange={setDeptFilter}
-            />
-          )
-        }
-        searchControl={
-          <RegistrySearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder={ADMIN_UI.searchPlaceholderStaff}
-            widthClass="w-full sm:w-[340px] max-w-full"
+        toolbar={
+          <StaffFilterBar
+            isHead={isHead}
+            departments={departments}
+            deptFilter={deptFilter}
+            onDeptFilterChange={setDeptFilter}
+            search={search}
+            onSearchChange={setSearch}
+            onAdd={() => setFormStaff({})}
+            onResetFilters={onResetFilters}
+            loading={initialLoading}
+            excelControl={
+              isHead ? null : (
+                <ExcelTaskMenu
+                  onTemplate={handleTemplateDownload}
+                  onImport={handleImportFile}
+                  onExport={handleExport}
+                  importing={importing}
+                  disabled={initialLoading}
+                />
+              )
+            }
           />
         }
-        excelControl={
-          isHead ? null : (
-            <ExcelTaskMenu
-              onTemplate={handleTemplateDownload}
-              onImport={handleImportFile}
-              onExport={handleExport}
-              importing={importing}
-              disabled={loading}
-            />
-          )
-        }
-        loading={loading}
+        initialLoading={initialLoading}
+        refreshing={refreshing}
         loadingLabel={ADMIN_UI.loading}
         footer={
           showPagination ? (
-            <div className="hidden lg:block">
-              <TablePagination
-                page={page}
-                totalPages={totalPages}
-                totalItems={filteredCount}
-                pageSize={pageSize}
-                onPageChange={goToPage}
-                unitLabel={UI.employees}
-              />
-            </div>
+            <>
+              <div className="hidden lg:block">
+                <TablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  totalItems={filteredCount}
+                  pageSize={pageSize}
+                  onPageChange={goToPage}
+                  unitLabel={UI.employees}
+                />
+              </div>
+              {!initialLoading && (
+                <MobilePagination
+                  sticky={false}
+                  className={MOBILE_REGISTRY_PAGINATION_CLASS}
+                  page={page}
+                  totalPages={totalPages}
+                  totalItems={filteredCount}
+                  onPageChange={goToPage}
+                />
+              )}
+            </>
           ) : null
         }
         className="lg:flex-1 lg:min-h-0"
       >
-        <StaffTable
-          items={listItems}
-          avatarOnly={isHead}
-          onView={setViewStaff}
-          onEdit={isHead ? setAvatarStaff : setFormStaff}
-          onDelete={isHead ? undefined : setDeleteStaff}
-        />
+        <div className="lg:hidden">
+          <StaffCardList
+            items={listItems}
+            avatarOnly={isHead}
+            hideDeptColumn={isHead}
+            onEdit={isHead ? setAvatarStaff : setFormStaff}
+            onDelete={isHead ? undefined : setDeleteStaff}
+            onHistory={isHead ? undefined : setHistoryStaff}
+          />
+        </div>
+        <div className="hidden lg:block">
+          <StaffTable
+            items={listItems}
+            avatarOnly={isHead}
+            hideDeptColumn={isHead}
+            onEdit={isHead ? setAvatarStaff : setFormStaff}
+            onDelete={isHead ? undefined : setDeleteStaff}
+            onHistory={isHead ? undefined : setHistoryStaff}
+          />
+        </div>
       </RegistryTableShell>
-
-      {showPagination && !loading && (
-        <MobilePagination
-          className="lg:hidden shrink-0"
-          page={page}
-          totalPages={totalPages}
-          totalItems={filteredCount}
-          onPageChange={goToPage}
-        />
-      )}
-
-      <StaffViewModal staff={viewStaff} onClose={() => setViewStaff(null)} />
 
       <Suspense fallback={null}>
         {isHead && avatarStaff && (
@@ -159,8 +175,15 @@ function StaffRegistryView({
             loading={deleteLoading}
           />
         )}
+        {!isHead && historyStaff && (
+          <StaffTransferHistoryModal
+            staff={historyStaff}
+            onClose={() => setHistoryStaff(null)}
+          />
+        )}
       </Suspense>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -173,6 +196,8 @@ function AdminStaffContent() {
       setSearch={state.setSearch}
       stats={state.stats}
       loading={state.loading}
+      initialLoading={state.initialLoading}
+      refreshing={state.refreshing}
       error={state.error}
       listItems={state.paginated}
       showPagination
@@ -184,10 +209,13 @@ function AdminStaffContent() {
       departments={state.departments}
       deptFilter={state.deptFilter}
       setDeptFilter={state.setDeptFilter}
+      onResetFilters={state.resetFilters}
       formStaff={state.formStaff}
       setFormStaff={state.setFormStaff}
       deleteStaff={state.deleteStaff}
       setDeleteStaff={state.setDeleteStaff}
+      historyStaff={state.historyStaff}
+      setHistoryStaff={state.setHistoryStaff}
       deleteLoading={state.deleteLoading}
       handleSave={state.handleSave}
       handleDelete={state.handleDelete}
@@ -195,8 +223,6 @@ function AdminStaffContent() {
       handleTemplateDownload={state.handleTemplateDownload}
       handleImportFile={state.handleImportFile}
       handleExport={state.handleExport}
-      viewStaff={state.viewStaff}
-      setViewStaff={state.setViewStaff}
       flash={state.flash}
       clearFlash={state.clearFlash}
     />
@@ -210,8 +236,11 @@ function HeadStaffContent() {
       isHead
       search={state.search}
       setSearch={state.setSearch}
+      onResetFilters={state.resetFilters}
       stats={state.stats}
       loading={state.loading}
+      initialLoading={state.initialLoading}
+      refreshing={state.refreshing}
       error={state.error}
       listItems={state.paginated}
       showPagination
@@ -223,8 +252,6 @@ function HeadStaffContent() {
       avatarStaff={state.avatarStaff}
       setAvatarStaff={state.setAvatarStaff}
       handleSaveAvatar={state.handleSaveAvatar}
-      viewStaff={state.viewStaff}
-      setViewStaff={state.setViewStaff}
       flash={state.flash}
       clearFlash={state.clearFlash}
     />

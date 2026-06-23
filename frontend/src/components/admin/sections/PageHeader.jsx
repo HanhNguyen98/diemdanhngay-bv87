@@ -5,7 +5,7 @@ const PageHeader = memo(function PageHeader({ title, subtitle, actionLabel, onAc
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-800">{title}</h1>
+        <h1 className="text-3xl font-bold text-content-heading">{title}</h1>
         <p className="text-sm text-content-muted mt-1.5">{subtitle}</p>
       </div>
       {actionLabel && onAction && (

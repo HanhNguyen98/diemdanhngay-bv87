@@ -1,48 +1,65 @@
-import { memo } from 'react';
-import { Users, Briefcase, CalendarX } from 'lucide-react';
+import { memo, useMemo } from 'react';
+import { Users } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { KPI_METRIC_ICON_BOX, KPI_METRIC_ICON_SIZE } from '../../../constants/attendance';
-import { DI_HOC_ICON_BG, DI_HOC_ICON_COLOR, DiHocIcon } from '../../shared/DiHocIcon';
-import { IconBriefcase } from '../../icons/Icons';
+import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
+import { KPI_BG_BY_COLOR, mergeBreakdownWithCatalog } from '../../../utils/statusBreakdown';
+import { StatusBreakdownIcon } from '../../shared/StatusBreakdownIcon';
+import { KpiMetricCard } from '../../shared/StatusBreakdownKpiGrid';
+import DashboardMobileKpiBar from './DashboardMobileKpiBar';
 
-const CARD = 'bg-surface-white border border-gray-200 rounded-xl px-4 py-3 shadow-card flex items-center gap-3';
+const CARD = 'bg-surface-white border border-line rounded-xl px-4 py-3 shadow-card flex items-center gap-3';
 
-function KpiCard({ icon: Icon, iconBg, label, value, iconClassName = KPI_METRIC_ICON_SIZE }) {
-  return (
-    <article className={CARD}>
-      <div className={`${KPI_METRIC_ICON_BOX} rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
-        <Icon className={iconClassName} />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">{value}</p>
-        <p className="text-3xs font-semibold text-content-muted uppercase mt-1">{label}</p>
-      </div>
-    </article>
-  );
-}
-
-const DashboardKpiBar = memo(function DashboardKpiBar({ kpi }) {
+const DashboardKpiBar = memo(function DashboardKpiBar({ kpi, scopeLabel }) {
   const { dashboard: d } = ADMIN_UI;
+  const { items: catalogItems } = useAttendanceStatusConfig();
+
+  const items = useMemo(
+    () => mergeBreakdownWithCatalog(kpi?.statusBreakdown, catalogItems),
+    [kpi?.statusBreakdown, catalogItems],
+  );
+
   return (
-    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-      <KpiCard icon={Users} iconBg="bg-primary-light text-primary" label={d.kpiTotal} value={kpi?.total ?? 0} />
-      <KpiCard icon={Briefcase} iconBg="bg-kpi-present text-success-dark" label={d.kpiPresent} value={kpi?.diLam ?? 0} />
-      <KpiCard icon={CalendarX} iconBg="bg-kpi-absent text-danger-dark" label={d.kpiAbsent} value={kpi?.nghiPhep ?? 0} />
-      <KpiCard
-        icon={DiHocIcon}
-        iconBg={DI_HOC_ICON_BG}
-        iconClassName={`${KPI_METRIC_ICON_SIZE} ${DI_HOC_ICON_COLOR}`}
-        label={d.kpiStudy}
-        value={kpi?.diHoc ?? 0}
-      />
-      <KpiCard
-        icon={IconBriefcase}
-        iconBg="bg-info"
-        iconClassName={`${KPI_METRIC_ICON_SIZE} text-primary`}
-        label={d.kpiDuty}
-        value={kpi?.diCongTac ?? 0}
-      />
-    </section>
+    <>
+      <DashboardMobileKpiBar kpi={kpi} scopeLabel={scopeLabel} />
+
+      <div className="hidden lg:flex lg:flex-col lg:gap-1.5">
+        {scopeLabel && (
+          <p className="text-2xs text-content-muted truncate" title={scopeLabel}>
+            {scopeLabel}
+          </p>
+        )}
+        <section
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 min-h-[9.5rem]"
+          aria-label="Tổng hợp quân số"
+        >
+        <article className={CARD}>
+          <div className={`${KPI_METRIC_ICON_BOX} rounded-lg flex items-center justify-center shrink-0 bg-primary-light text-primary`}>
+            <Users className={KPI_METRIC_ICON_SIZE} />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">{kpi?.total ?? 0}</p>
+            <p className="text-3xs font-semibold text-content-muted uppercase mt-1">{d.kpiTotal}</p>
+          </div>
+        </article>
+
+        {items.map((item) => (
+          <KpiMetricCard
+            key={item.code}
+            label={item.label}
+            value={item.count ?? 0}
+            iconBgClass={KPI_BG_BY_COLOR[item.colorKey] || 'bg-neutral'}
+          >
+            <StatusBreakdownIcon iconKey={item.iconKey} colorKey={item.colorKey} className={KPI_METRIC_ICON_SIZE} />
+          </KpiMetricCard>
+        ))}
+
+        <KpiMetricCard label={d.chartUnchecked} value={kpi?.unchecked ?? 0} iconBgClass="bg-neutral">
+          <span className={`${KPI_METRIC_ICON_SIZE} text-content-muted font-bold leading-none`}>—</span>
+        </KpiMetricCard>
+        </section>
+      </div>
+    </>
   );
 });
 

@@ -42,6 +42,7 @@ public class AiDeptDictionary {
         }
 
         return departmentRepository.findAll().stream()
+                .filter(Department::isActive)
                 .filter(d -> matchesDeptName(normalized, d))
                 .map(Department::getDeptCode)
                 .findFirst()
@@ -61,12 +62,15 @@ public class AiDeptDictionary {
                 return true;
             }
         }
-        return departmentRepository.findAll().stream().anyMatch(d -> matchesDeptName(normalized, d));
+        return departmentRepository.findAll().stream()
+                .filter(Department::isActive)
+                .anyMatch(d -> matchesDeptName(normalized, d));
     }
 
     private Optional<Integer> findDeptByNameFragment(String fragment) {
         String needle = normalize(fragment);
         return departmentRepository.findAll().stream()
+                .filter(Department::isActive)
                 .filter(d -> normalize(d.getDeptName()).contains(needle))
                 .map(Department::getDeptCode)
                 .findFirst();

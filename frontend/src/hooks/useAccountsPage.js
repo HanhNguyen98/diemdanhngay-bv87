@@ -1,20 +1,48 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ADMIN_UI } from '../constants/admin';
+import { ACCOUNT_ROLE_FILTER, ACCOUNT_STATUS_FILTER } from '../constants/adminFilters';
+import { getAccountFilterDefaults } from '../utils/filterResetDefaults';
 import { adminApi } from '../services/api';
 import { useDepartments } from './useDepartments';
 import { useFlashMessage } from './useFlashMessage';
-import { usePagination } from './usePagination';
+import { useLoadingPhase } from './useLoadingPhase';
 import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
 
 const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
 
+function buildAccountPayload(account, overrides = {}) {
+  const payload = {
+    username: account.username,
+    role: account.role,
+    active: overrides.active ?? account.active !== false,
+  };
+  if (account.role === 'HEAD') {
+    payload.empCode = account.empCode;
+    payload.deptCode = account.deptCode;
+    payload.fullname = account.fullname;
+  } else {
+    payload.fullname = account.fullname;
+    payload.deptCode = null;
+    payload.empCode = null;
+  }
+  return payload;
+}
+
 export function useAccountsPage() {
   const { items: departments } = useDepartments();
   const [items, setItems] = useState([]);
-  const [staffList, setStaffList] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState(null);
+  const [formStaffList, setFormStaffList] = useState([]);
+  const [formAccounts, setFormAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState(ACCOUNT_ROLE_FILTER.ALL);
+  const [statusFilter, setStatusFilter] = useState(ACCOUNT_STATUS_FILTER.ALL);
+  const [page, setPage] = useState(1);
+  const [togglingId, setTogglingId] = useState(null);
   const { flash, showSuccess, showError, clearFlash } = useFlashMessage();
 
   const [formAccount, setFormAccount] = useState(null);
@@ -22,48 +50,85 @@ export function useAccountsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [resetAccount, setResetAccount] = useState(null);
 
-  const load = useCallback(async () => {
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await adminApi.getAccountStats();
+      setStats(data);
+    } catch {
+      setStats(null);
+    }
+  }, []);
+
+  const load = useCallback(async (signal) => {
     setLoading(true);
     setError('');
     try {
-      const [accounts, staff] = await Promise.all([
-        adminApi.listAccounts(),
-        adminApi.listStaff(),
-      ]);
-      setItems(accounts);
-      setStaffList(staff);
+      const result = await adminApi.listAccounts({
+        search,
+        role: roleFilter || undefined,
+        status: statusFilter || undefined,
+        page,
+        pageSize: PAGE_SIZE,
+        signal,
+      });
+      if (signal?.aborted) return;
+      setItems(result.items ?? []);
+      setTotalItems(result.totalItems ?? 0);
+      setTotalPages(Math.max(1, result.totalPages ?? 1));
     } catch (err) {
+      if (err.name === 'AbortError') return;
       setItems([]);
-      setStaffList([]);
+      setTotalItems(0);
+      setTotalPages(1);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [search, roleFilter, statusFilter, page]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => load(controller.signal), 200);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [load]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, statusFilter]);
+
+  const loadFormRefs = useCallback(async () => {
+    try {
+      const [accountsResult, staffResult] = await Promise.all([
+        adminApi.listAccounts({ page: 1, pageSize: 500 }),
+        adminApi.listStaff({ page: 1, pageSize: 500 }),
+      ]);
+      setFormAccounts(accountsResult.items ?? []);
+      setFormStaffList(staffResult.items ?? []);
+    } catch {
+      setFormAccounts([]);
+      setFormStaffList([]);
     }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (formAccount != null) {
+      loadFormRefs();
+    }
+  }, [formAccount, loadFormRefs]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return items;
-    const q = search.toLowerCase();
-    return items.filter(
-      (account) =>
-        account.username.toLowerCase().includes(q) ||
-        account.fullname.toLowerCase().includes(q) ||
-        (account.empCodeFormatted || '').toLowerCase().includes(q) ||
-        String(account.empCode ?? '').includes(q) ||
-        (account.deptName || '').toLowerCase().includes(q) ||
-        (account.roleLabel || '').toLowerCase().includes(q),
-    );
-  }, [items, search]);
-
-  const { page, totalPages, paginated, pageSize, goToPage } = usePagination(filtered, PAGE_SIZE);
-
-  useEffect(() => {
-    goToPage(1);
-  }, [search, goToPage]);
+  const goToPage = useCallback(
+    (next) => {
+      setPage((current) => Math.min(Math.max(1, next), totalPages));
+    },
+    [totalPages],
+  );
 
   const handleSave = useCallback(
     async (payload, editId) => {
@@ -74,9 +139,9 @@ export function useAccountsPage() {
         await adminApi.createAccount(payload);
         showSuccess(ADMIN_UI.flash.accountCreateSuccess);
       }
-      await load();
+      await Promise.all([load(), loadStats()]);
     },
-    [load, showSuccess],
+    [load, loadStats, showSuccess],
   );
 
   const handleResetPassword = useCallback(
@@ -97,38 +162,65 @@ export function useAccountsPage() {
       await adminApi.deleteAccount(deleteAccount.id);
       setDeleteAccount(null);
       showSuccess(ADMIN_UI.flash.accountDeleteSuccess(name));
-      await load();
+      await Promise.all([load(), loadStats()]);
     } catch (err) {
       showError(err.message || ADMIN_UI.flash.accountDeleteFail);
     } finally {
       setDeleteLoading(false);
     }
-  }, [deleteAccount, load, showSuccess, showError]);
+  }, [deleteAccount, load, loadStats, showSuccess, showError]);
 
-  const stats = useMemo(
-    () => ({
-      total: items.length,
-      active: items.filter((a) => a.active).length,
-      admin: items.filter((a) => a.role === 'ADMIN').length,
-      head: items.filter((a) => a.role === 'HEAD').length,
-    }),
-    [items],
+  const handleToggleActive = useCallback(
+    async (account) => {
+      setTogglingId(account.id);
+      try {
+        const nextActive = account.active === false;
+        await adminApi.updateAccount(
+          account.id,
+          buildAccountPayload(account, { active: nextActive }),
+        );
+        showSuccess(ADMIN_UI.flash.accountUpdateSuccess);
+        await Promise.all([load(), loadStats()]);
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        setTogglingId(null);
+      }
+    },
+    [load, loadStats, showSuccess, showError],
   );
+
+  const resetFilters = useCallback(() => {
+    const { search: nextSearch, role, status } = getAccountFilterDefaults();
+    setSearch(nextSearch);
+    setRoleFilter(role);
+    setStatusFilter(status);
+  }, []);
+
+  const { initialLoading, refreshing } = useLoadingPhase(loading);
 
   return {
     departments,
-    staffList,
+    staffList: formStaffList,
     items,
     search,
     setSearch,
+    roleFilter,
+    setRoleFilter,
+    statusFilter,
+    setStatusFilter,
+    resetFilters,
+    togglingId,
     stats,
     loading,
+    initialLoading,
+    refreshing,
     error,
-    paginated,
-    filteredCount: filtered.length,
+    paginated: items,
+    filteredCount: totalItems,
     page,
     totalPages,
-    pageSize,
+    pageSize: PAGE_SIZE,
     goToPage,
     formAccount,
     setFormAccount,
@@ -140,6 +232,8 @@ export function useAccountsPage() {
     handleResetPassword,
     handleSave,
     handleDelete,
+    handleToggleActive,
+    formAccounts,
     flash,
     clearFlash,
   };

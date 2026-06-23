@@ -1,4 +1,5 @@
-import { memo, useState, useEffect, useRef, useCallback } from 'react';
+import { memo, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
 import {
   parseISODate,
@@ -7,6 +8,7 @@ import {
   getWeekdayLabels,
 } from '../../utils/dateUtils';
 import { compareISODate, todayISO } from '../../utils/formatters';
+import { POPOVER_WIDTH, computePopoverFixedPosition } from './datePickerLayout';
 
 const WEEKDAYS = getWeekdayLabels();
 
@@ -63,6 +65,10 @@ function isMonthBefore(year, monthIndex, minDate) {
   return year < minY || (year === minY && monthIndex < minM);
 }
 
+function computeFixedPosition(anchorRect, popoverHeight) {
+  return computePopoverFixedPosition(anchorRect, popoverHeight, POPOVER_WIDTH);
+}
+
 export default function DatePickerPopover({
   value,
   onChange,
@@ -75,6 +81,7 @@ export default function DatePickerPopover({
   const parsed = parseISODate(value);
   const [viewYear, setViewYear] = useState(parsed.year);
   const [viewMonth, setViewMonth] = useState(parsed.month);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     const p = parseISODate(value);
@@ -82,8 +89,30 @@ export default function DatePickerPopover({
     setViewMonth(p.month);
   }, [value]);
 
+  const updatePosition = useCallback(() => {
+    const anchor = anchorRef?.current;
+    const popover = popoverRef.current;
+    if (!anchor || !popover) return;
+    const height = popover.offsetHeight || 380;
+    setPosition(computeFixedPosition(anchor.getBoundingClientRect(), height));
+  }, [anchorRef]);
+
+  useLayoutEffect(() => {
+    updatePosition();
+  }, [updatePosition, viewYear, viewMonth]);
+
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    const handleReposition = () => updatePosition();
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [updatePosition]);
+
+  useEffect(() => {
+    const handlePointerOutside = (e) => {
       if (
         popoverRef.current?.contains(e.target) ||
         anchorRef?.current?.contains(e.target)
@@ -95,10 +124,12 @@ export default function DatePickerPopover({
     const handleEscape = (e) => {
       if (e.key === 'Escape') onClose();
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handlePointerOutside);
+    document.addEventListener('touchstart', handlePointerOutside, { passive: true });
     document.addEventListener('keydown', handleEscape);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handlePointerOutside);
+      document.removeEventListener('touchstart', handlePointerOutside);
       document.removeEventListener('keydown', handleEscape);
     };
   }, [onClose, anchorRef]);
@@ -123,10 +154,11 @@ export default function DatePickerPopover({
   const canGoPrev = !isMonthBefore(viewYear, viewMonth, minDate);
   const canGoNext = !isMonthAfter(viewYear, viewMonth, maxDate);
 
-  return (
+  const panel = (
     <div
       ref={popoverRef}
-      className="absolute right-0 top-full mt-2 z-50 w-[300px] bg-surface-white dark:bg-dark-sidebar border border-line dark:border-dark-border rounded-xl shadow-panel p-4 animate-fade-in"
+      style={{ top: position.top, left: position.left, width: POPOVER_WIDTH }}
+      className="fixed z-[200] bg-surface-white dark:bg-dark-sidebar border border-line dark:border-dark-border rounded-xl shadow-panel p-4 animate-fade-in"
       role="dialog"
       aria-label="Chọn ngày"
     >
@@ -190,4 +222,6 @@ export default function DatePickerPopover({
       </button>
     </div>
   );
+
+  return createPortal(panel, document.body);
 }

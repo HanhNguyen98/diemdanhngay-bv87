@@ -69,7 +69,7 @@ const DesktopPagination = memo(function DesktopPagination({
               onClick={() => onPageChange(p)}
               className={
                 p === page
-                  ? 'w-7 h-7 rounded-md text-xs font-medium bg-pagination-active text-white'
+                  ? 'w-7 h-7 rounded-md text-xs font-semibold bg-pagination-active text-white'
                   : 'w-7 h-7 rounded-md text-xs font-medium border border-slate-200 text-content-muted hover:bg-neutral transition-colors'
               }
             >

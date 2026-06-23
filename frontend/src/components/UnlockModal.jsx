@@ -39,7 +39,7 @@ export default function UnlockModal({ deptCode, deptName, onConfirm, onClose }) 
 
         <div className="p-6 space-y-4">
           <p className="text-sm text-content-muted">
-            Thao tác này cho phép TRƯỞNG Đơn vị tiếp tục cập nhật quân số sau giờ chốt sổ 16:00.
+            Thao tác này cho phép Trưởng đơn vị tiếp tục cập nhật quân số sau giờ chốt sổ 16:00.
             Vui lòng ghi rõ lý do giải trình.
           </p>
 

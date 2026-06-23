@@ -13,7 +13,7 @@ const selectClass =
 
 const ROLES = [
   { value: 'ADMIN', label: 'Quản trị viên' },
-  { value: 'HEAD', label: 'TRƯỞNG Đơn vị' },
+  { value: 'HEAD', label: 'Trưởng đơn vị' },
 ];
 
 function staffOptionLabel(staff) {
@@ -52,7 +52,6 @@ export default function AccountFormModal({
       accounts
         .filter(
           (a) =>
-            a.active &&
             a.role === 'HEAD' &&
             a.deptCode != null &&
             a.id !== initial?.id,
@@ -171,6 +170,17 @@ export default function AccountFormModal({
         setError(ADMIN_UI.accounts.form.employeeRequired);
         return;
       }
+      const deptCode = parseInt(form.deptCode, 10);
+      const deptTaken = accounts.some(
+        (a) =>
+          a.role === 'HEAD' &&
+          a.deptCode === deptCode &&
+          a.id !== initial?.id,
+      );
+      if (deptTaken) {
+        setError(ADMIN_UI.accounts.form.headDeptTaken);
+        return;
+      }
     } else if (!form.fullname.trim()) {
       setError('Họ và tên là bắt buộc');
       return;
@@ -249,6 +259,9 @@ export default function AccountFormModal({
       </div>
       {form.role === 'HEAD' ? (
         <>
+          <p className="text-xs text-content-muted leading-relaxed -mt-1 mb-1">
+            {ADMIN_UI.accounts.form.headDeptNote}
+          </p>
           <div>
             <label className={labelClass}>{ADMIN_UI.accounts.form.employee}</label>
             <SearchableSelect

@@ -1,12 +1,11 @@
 import { memo } from 'react';
 import { ADMIN_UI } from '../../constants/admin';
+import RegistryTableEmptyRow from '../admin/sections/RegistryTableEmptyRow';
 import AccountRow from './AccountRow';
 
-const AccountTable = memo(function AccountTable({ items, onEdit, onDelete, onResetPassword }) {
-  if (!items.length) {
-    return <div className="text-center py-16 text-content-muted">{ADMIN_UI.empty}</div>;
-  }
+const COL_SPAN = 7;
 
+const AccountTable = memo(function AccountTable({ items, onEdit, onDelete, onResetPassword }) {
   const { columns } = ADMIN_UI.accounts;
 
   return (
@@ -23,15 +22,19 @@ const AccountTable = memo(function AccountTable({ items, onEdit, onDelete, onRes
           </tr>
         </thead>
         <tbody>
-          {items.map((account) => (
-            <AccountRow
-              key={account.id}
-              account={account}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onResetPassword={onResetPassword}
-            />
-          ))}
+          {items.length === 0 ? (
+            <RegistryTableEmptyRow colSpan={COL_SPAN} />
+          ) : (
+            items.map((account) => (
+              <AccountRow
+                key={account.id}
+                account={account}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onResetPassword={onResetPassword}
+              />
+            ))
+          )}
         </tbody>
     </table>
   );

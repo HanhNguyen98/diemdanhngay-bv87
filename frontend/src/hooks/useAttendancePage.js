@@ -4,11 +4,12 @@ import { useAppBootstrap } from '../context/AppBootstrapContext';
 import {
   ATTENDANCE_PAGE_SIZE,
   MOBILE_PAGE_SIZE,
-  STATUS_BADGE,
   UI,
   isAttendanceUnchecked,
 } from '../constants/attendance';
+import { useAttendanceStatusConfig } from '../context/AttendanceStatusContext';
 import { formatDeptCode, getRecentDates, todayISO } from '../utils/formatters';
+import { buildBreakdownFromStaff } from '../utils/statusBreakdown';
 import { useAttendanceCache } from './useAttendanceCache';
 import { useFlashMessage } from './useFlashMessage';
 import { useIsMobile } from './useIsMobile';
@@ -18,13 +19,14 @@ function applyStaffPatch(list, empCode, patch) {
 }
 
 /**
- * State và handlers cho màn chấm công (HEAD + ADMIN preview).
- * Giữ nguyên luồng: fetch → optimistic update → gửi báo cáo → khóa sau 08:30.
+ * State và handlers cho màn Điểm danh (HEAD + ADMIN preview).
+ * Luồng: fetch → optimistic update → gửi báo cáo → khóa sau 16:00.
  *
  * @param {{ role: string, deptCode?: string|number }} user - Session đăng nhập
  * @returns {object} Props cho `AttendancePage` (flash, staffList phân trang, handlers…)
  */
 export function useAttendancePage(user) {
+  const { statusBadge, items: statusCatalogItems } = useAttendanceStatusConfig();
   const isMobile = useIsMobile();
   const pageSize = isMobile ? MOBILE_PAGE_SIZE : ATTENDANCE_PAGE_SIZE;
   const isAdmin = user.role === 'ADMIN';
@@ -35,11 +37,12 @@ export function useAttendancePage(user) {
   const [summary, setSummary] = useState(null);
   const [staffList, setStaffList] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { flash, showSuccess, showWarning, showError, clearFlash } = useFlashMessage();
   const [unlockTarget, setUnlockTarget] = useState(null);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
-  const [showFilter, setShowFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [reportSent, setReportSent] = useState(false);
@@ -49,8 +52,18 @@ export function useAttendancePage(user) {
   const cache = useAttendanceCache();
   const fetchIdRef = useRef(0);
   const adminDeptsLoadedRef = useRef(false);
+  const staffListRef = useRef(staffList);
+  const summaryRef = useRef(summary);
   const recentDates = useMemo(() => getRecentDates(4), []);
   const isToday = selectedDate === todayISO();
+
+  useEffect(() => {
+    staffListRef.current = staffList;
+  }, [staffList]);
+
+  useEffect(() => {
+    summaryRef.current = summary;
+  }, [summary]);
 
   const handleDateChange = useCallback((date) => {
     if (date === selectedDate) return;
@@ -89,6 +102,8 @@ export function useAttendancePage(user) {
 
       if (!silent) {
         setInitialLoading(true);
+      } else {
+        setFetching(true);
       }
 
       try {
@@ -104,6 +119,7 @@ export function useAttendancePage(user) {
       } finally {
         if (requestId === fetchIdRef.current) {
           setInitialLoading(false);
+          setFetching(false);
         }
       }
     },
@@ -111,24 +127,46 @@ export function useAttendancePage(user) {
   );
 
   useEffect(() => {
-    fetchAttendance(selectedDept, selectedDate);
+    const hasData = Boolean(summaryRef.current) || staffListRef.current.length > 0;
+    fetchAttendance(selectedDept, selectedDate, { silent: hasData });
   }, [selectedDept, selectedDate, fetchAttendance]);
 
   useEffect(() => {
     setPage(1);
   }, [selectedDept, selectedDate, deferredSearch, statusFilter]);
 
+  const syncBreakdown = useCallback(
+    (nextStaff) => {
+      const breakdown = buildBreakdownFromStaff(nextStaff, statusCatalogItems);
+      const baseSummary = summaryRef.current;
+      if (baseSummary) {
+        const nextSummary = { ...baseSummary, statusBreakdown: breakdown };
+        setSummary(nextSummary);
+        cache.set(selectedDept, selectedDate, { summary: nextSummary, staff: nextStaff });
+      }
+      return breakdown;
+    },
+    [cache, selectedDate, selectedDept, statusCatalogItems],
+  );
+
   const submitAttendance = useCallback(
     async (empCode, status, note = null) => {
-      const snapshot = staffList;
+      if (submitting) return;
+
+      const snapshot = staffListRef.current;
       const optimistic = {
         recordId: -1,
         status,
         note,
-        statusLabel: STATUS_BADGE[status]?.label || status,
+        statusLabel: statusBadge[status]?.label || status,
       };
 
-      setStaffList((prev) => applyStaffPatch(prev, empCode, optimistic));
+      setSubmitting(true);
+      setStaffList((prev) => {
+        const next = applyStaffPatch(prev, empCode, optimistic);
+        syncBreakdown(next);
+        return next;
+      });
 
       try {
         const updated = await api.updateAttendance(empCode, status, note, selectedDate);
@@ -139,15 +177,20 @@ export function useAttendancePage(user) {
             statusLabel: updated.statusLabel,
             note: updated.note,
           });
-          cache.set(selectedDept, selectedDate, { summary, staff: next });
+          syncBreakdown(next);
           return next;
         });
       } catch (err) {
         setStaffList(snapshot);
+        if (summaryRef.current) {
+          syncBreakdown(snapshot);
+        }
         showError(err.message);
+      } finally {
+        setSubmitting(false);
       }
     },
-    [staffList, selectedDate, selectedDept, summary, cache, showError],
+    [selectedDate, showError, statusBadge, submitting, syncBreakdown],
   );
 
   const handleQuickAction = useCallback(
@@ -173,7 +216,7 @@ export function useAttendancePage(user) {
   const selectedDeptName = selectedDeptInfo?.deptName || summary?.deptName || '';
   const locked = summary?.locked ?? false;
   const editable = (summary?.editable ?? false) && isToday;
-  const tableDisabled = !editable || locked;
+  const tableDisabled = !editable || locked || submitting;
 
   const markedCount = useMemo(
     () => staffList.filter((s) => !isAttendanceUnchecked(s)).length,
@@ -208,15 +251,12 @@ export function useAttendancePage(user) {
     }
   }, [cache, fetchAttendance, selectedDate, selectedDept, showSuccess, showError]);
 
-  const stats = useMemo(
-    () => ({
-      diLam: summary?.diLam ?? 0,
-      nghiPhep: summary?.nghiPhep ?? 0,
-      diCongTac: summary?.diCongTac ?? 0,
-      diHoc: summary?.diHoc ?? 0,
-    }),
-    [summary],
-  );
+  const statusBreakdown = useMemo(() => {
+    if (staffList.length > 0 && statusCatalogItems.length > 0) {
+      return buildBreakdownFromStaff(staffList, statusCatalogItems);
+    }
+    return summary?.statusBreakdown ?? [];
+  }, [staffList, statusCatalogItems, summary?.statusBreakdown]);
 
   const filteredStaff = useMemo(() => {
     let list = staffList;
@@ -249,6 +289,7 @@ export function useAttendancePage(user) {
   const totalPages = Math.max(1, Math.ceil(filteredStaff.length / pageSize));
   const pagedStaff = filteredStaff.slice((page - 1) * pageSize, page * pageSize);
   const showSpinner = initialLoading && !summary;
+  const refreshing = fetching;
 
   const refreshAttendance = useCallback(async () => {
     cache.invalidate(selectedDept, selectedDate);
@@ -260,6 +301,7 @@ export function useAttendancePage(user) {
     flash,
     clearFlash,
     showSpinner,
+    refreshing,
     selectedDept,
     setSelectedDept,
     departments,
@@ -273,11 +315,12 @@ export function useAttendancePage(user) {
     unlocked: summary?.unlocked,
     editable,
     tableDisabled,
+    submitting,
     unlockTarget,
     setUnlockTarget,
     handleUnlockConfirm,
     markedCount,
-    stats,
+    statusBreakdown,
     total: summary?.total || staffList.length,
     pageSize,
     reportSent,
@@ -289,8 +332,6 @@ export function useAttendancePage(user) {
     handleSendReportConfirm,
     search,
     setSearch,
-    showFilter,
-    setShowFilter,
     statusFilter,
     setStatusFilter,
     filteredStaff,
@@ -303,4 +344,3 @@ export function useAttendancePage(user) {
     refreshAttendance,
   };
 }
-

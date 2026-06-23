@@ -6,7 +6,7 @@ package com.bv87.diemdanh.entity;
 public enum AccountRole {
 
     ADMIN("Quản trị viên"),
-    HEAD("TRƯỞNG Đơn vị");
+    HEAD("Trưởng đơn vị");
 
     private final String label;
 

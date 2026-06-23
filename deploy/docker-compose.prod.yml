@@ -28,7 +28,7 @@ services:
       DB_USER: ${DB_USER:-diemdanh_user}
       DB_PASS: ${DB_PASS:?Set DB_PASS in .env or environment}
       APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS:-http://192.170.182.14:8081,https://192.170.182.14:8081}
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

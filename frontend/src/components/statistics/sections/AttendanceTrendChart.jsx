@@ -8,37 +8,38 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { STATISTICS_UI } from '../../../constants/attendance';
 import {
-  STATISTICS_CHART_COLORS,
-  STATISTICS_UI,
-  UI,
-} from '../../../constants/attendance';
+  breakdownToChartSeries,
+  trendHasData,
+  trendToChartData,
+} from '../../../utils/statusBreakdown';
+import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 
-const SERIES = [
-  { key: 'diLam', label: UI.kpiPresent, color: STATISTICS_CHART_COLORS.diLam },
-  { key: 'nghiPhep', label: UI.kpiAbsent, color: STATISTICS_CHART_COLORS.nghiPhep },
-  { key: 'diHoc', label: UI.kpiStudy, color: STATISTICS_CHART_COLORS.diHoc },
-  { key: 'diCongTac', label: UI.kpiDuty, color: STATISTICS_CHART_COLORS.diCongTac },
-];
-
-function ChartLegendPill() {
+function ChartLegendPill({ series, compact = false }) {
+  if (!series?.length) return null;
   return (
     <div
-      className="inline-flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-full border border-gray-200 bg-table-header px-5 py-2"
+      className={`w-full overflow-x-auto scrollbar-none rounded-full border border-gray-200 bg-table-header ${
+        compact ? 'px-3 py-2' : 'px-4 py-1.5'
+      }`}
       aria-label="Chú thích biểu đồ"
     >
-      {SERIES.map((item) => (
-        <div key={item.key} className="flex items-center gap-2">
-          <span
-            className="h-[3px] w-5 shrink-0 rounded-full"
-            style={{ backgroundColor: item.color }}
-            aria-hidden="true"
-          />
-          <span className="text-3xs font-semibold text-content-heading uppercase tracking-wide leading-none">
-            {item.label}
-          </span>
-        </div>
-      ))}
+      <div className="flex items-center justify-center gap-3 lg:gap-4 flex-nowrap min-w-max">
+        {series.map((item) => (
+          <div key={item.key} className="flex items-center gap-2 shrink-0">
+            <span
+              className="h-[3px] w-5 shrink-0 rounded-full"
+              style={{ backgroundColor: item.color }}
+              aria-hidden="true"
+            />
+            <span className="text-3xs font-semibold text-content-heading uppercase tracking-wide leading-none whitespace-nowrap">
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -58,69 +59,95 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 const AttendanceTrendChart = memo(function AttendanceTrendChart({ trend }) {
-  const chartData = useMemo(
-    () =>
-      (trend ?? []).map((point) => ({
-        label: point.label,
-        diLam: point.diLam ?? 0,
-        nghiPhep: point.nghiPhep ?? 0,
-        diHoc: point.diHoc ?? 0,
-        diCongTac: point.diCongTac ?? 0,
-      })),
-    [trend],
+  const { items: catalogItems } = useAttendanceStatusConfig();
+  const isMobile = useIsMobile();
+
+  const series = useMemo(
+    () => breakdownToChartSeries(catalogItems.length ? catalogItems : mergeTrendCatalog(trend)),
+    [catalogItems, trend],
   );
 
-  const hasData = chartData.some(
-    (row) => row.diLam || row.nghiPhep || row.diHoc || row.diCongTac,
-  );
+  const chartData = useMemo(() => trendToChartData(trend), [trend]);
+  const hasData = trendHasData(chartData, series);
+  const chartHeight = isMobile ? 220 : 260;
+  const legendBlockHeight = isMobile ? 44 : 36;
+  const plotBlockMinHeight = chartHeight + legendBlockHeight + 16;
+  const tickFontSize = isMobile ? 12 : 15;
+  const marginRight = isMobile ? 8 : 16;
+  const strokeWidth = isMobile ? 2 : 2.5;
+  const dotR = isMobile ? 3 : 4;
+  const activeDotR = isMobile ? 5 : 6;
 
   return (
-    <section className="hidden lg:block shrink-0 bg-surface-white border border-line rounded-xl shadow-card p-4 lg:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <h2 className="text-sm font-semibold text-content-heading">
+    <section className="shrink-0 bg-surface-white border border-line rounded-xl shadow-card p-4 lg:p-5">
+      <div className={`mb-4 ${isMobile ? 'space-y-3' : 'space-y-2'}`}>
+        <h2 className="text-4xs leading-tight whitespace-nowrap lg:text-sm lg:leading-normal lg:whitespace-normal font-semibold text-content-heading">
           {STATISTICS_UI.chartTitle}
         </h2>
-        {hasData && <ChartLegendPill />}
       </div>
 
-      {!hasData ? (
-        <p className="text-center text-content-muted py-16 text-sm">{STATISTICS_UI.noData}</p>
-      ) : (
-        <div className="h-[260px] w-full min-h-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 15, fill: '#6C757D' }}
-                axisLine={{ stroke: '#E0E0E0' }}
-                tickLine={false}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={{ fontSize: 15, fill: '#6C757D' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<ChartTooltip />} />
-              {SERIES.map((s) => (
-                <Line
-                  key={s.key}
-                  type="monotone"
-                  dataKey={s.key}
-                  name={s.label}
-                  stroke={s.color}
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: s.color, strokeWidth: 0 }}
-                  activeDot={{ r: 6 }}
+      <div className="w-full min-h-0" style={{ minHeight: plotBlockMinHeight }}>
+        {!hasData ? (
+          <div
+            className="flex items-center justify-center text-content-muted text-sm"
+            style={{ height: chartHeight }}
+          >
+            {STATISTICS_UI.noData}
+          </div>
+        ) : (
+          <div className="w-full min-h-0" style={{ height: chartHeight }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 4, right: marginRight, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: tickFontSize, fill: '#6C757D' }}
+                  axisLine={{ stroke: '#E0E0E0' }}
+                  tickLine={false}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: tickFontSize, fill: '#6C757D' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<ChartTooltip />} />
+                {series.map((s) => (
+                  <Line
+                    key={s.key}
+                    type="monotone"
+                    dataKey={s.key}
+                    name={s.label}
+                    stroke={s.color}
+                    strokeWidth={strokeWidth}
+                    dot={{ r: dotR, fill: s.color, strokeWidth: 0 }}
+                    activeDot={{ r: activeDotR }}
+                    isAnimationActive={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        <div className="mt-3 flex justify-center min-h-[2.25rem]">
+          <div className="max-w-full">
+            {hasData ? <ChartLegendPill series={series} compact={isMobile} /> : null}
+          </div>
         </div>
-      )}
+      </div>
     </section>
   );
 });
+
+function mergeTrendCatalog(trend) {
+  const map = new Map();
+  (trend ?? []).forEach((point) => {
+    (point.statusBreakdown ?? []).forEach((item) => {
+      if (!map.has(item.code)) map.set(item.code, item);
+    });
+  });
+  return [...map.values()];
+}
 
 export default AttendanceTrendChart;

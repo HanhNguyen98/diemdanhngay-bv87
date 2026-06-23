@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { UI } from '../../../constants/attendance';
+import { buildHeadBreadcrumb } from '../../../constants/headLayout';
 import HeadPageHeader from '../../layout/HeadPageHeader';
 
-export default function StatisticsHeader() {
+export default function StatisticsHeader({ deptName }) {
   const breadcrumb = useMemo(
-    () => [{ label: UI.breadcrumbSystem }, { label: UI.breadcrumbStatistics }],
-    [],
+    () => buildHeadBreadcrumb(UI.breadcrumbStatistics, deptName),
+    [deptName],
   );
 
   return <HeadPageHeader breadcrumb={breadcrumb} />;

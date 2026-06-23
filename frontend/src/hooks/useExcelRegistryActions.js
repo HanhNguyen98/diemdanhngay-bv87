@@ -34,8 +34,8 @@ export function useExcelRegistryActions({
     });
   }, [excelConfig]);
 
-  const handleExport = useCallback(() => {
-    const { headers, rows } = buildExportSheet();
+  const handleExport = useCallback(async () => {
+    const { headers, rows } = await Promise.resolve(buildExportSheet());
     downloadExcel({
       filename: excelConfig.exportFilename,
       sheetName: excelConfig.sheetName,
@@ -54,7 +54,8 @@ export function useExcelRegistryActions({
           return;
         }
 
-        const { payloads, errors: parseErrors } = mapImportRows(rows);
+        const mapped = await Promise.resolve(mapImportRows(rows));
+        const { payloads, errors: parseErrors } = mapped;
         if (!payloads.length) {
           showError(parseErrors[0] || excel.importFail);
           return;

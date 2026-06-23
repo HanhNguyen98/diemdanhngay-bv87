@@ -1,9 +1,18 @@
-import { Filter } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
+import { ADMIN_UI } from '../../../constants/admin';
 import { STATISTICS_UI, TIME_RANGE_PRESETS } from '../../../constants/attendance';
 import TextSearchInput from '../../shared/TextSearchInput';
+import DateRangePickerField from '../../ui/DateRangePickerField';
 
 const DATE_INPUT_CLASS =
-  'h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus-visible:ring-2 focus-visible:ring-primary/25 min-w-[140px]';
+  'h-9 shrink-0 rounded-lg border border-line bg-surface-white px-3 text-sm text-content-body outline-none focus-visible:ring-2 focus-visible:ring-primary/25 w-[8.75rem]';
+
+const DATE_RANGE_WIDTH_CLASS = 'shrink-0 w-[14.75rem] lg:w-[15.5rem]';
+
+const SEARCH_WIDTH_CLASS = 'shrink-0 w-[13rem] lg:w-[15rem]';
+
+const RESET_BTN_CLASS =
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-white text-content-muted hover:bg-neutral transition-colors disabled:opacity-60';
 
 export default function StatisticsFilterBar({
   timePreset,
@@ -12,71 +21,52 @@ export default function StatisticsFilterBar({
   dateTo,
   onDateFromChange,
   onDateToChange,
-  deptName,
   search,
   onSearchChange,
   onApply,
+  onReset,
   loading,
 }) {
   return (
-    <section className="shrink-0 bg-surface-white border border-line rounded-xl px-4 py-3 shadow-card">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:flex-wrap">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-2xs font-semibold text-content-muted uppercase tracking-wider">
-            {STATISTICS_UI.timeRangeLabel}
-          </span>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={timePreset}
-              onChange={(e) => onTimePresetChange(e.target.value)}
-              className={`${DATE_INPUT_CLASS} min-w-[130px]`}
-              aria-label={STATISTICS_UI.timeRangeLabel}
-            >
-              {TIME_RANGE_PRESETS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => onDateFromChange(e.target.value)}
-              className={DATE_INPUT_CLASS}
-              aria-label={STATISTICS_UI.dateFromLabel}
-            />
-            <span className="text-content-muted text-sm select-none">—</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => onDateToChange(e.target.value)}
-              className={DATE_INPUT_CLASS}
-              aria-label={STATISTICS_UI.dateToLabel}
-            />
-          </div>
-        </div>
+    <section
+      className="shrink-0 bg-surface-white border border-line rounded-xl px-4 py-3 shadow-card overflow-hidden"
+      aria-label={STATISTICS_UI.timeRangeLabel}
+    >
+      <div className="flex flex-nowrap items-center gap-2 min-w-0 w-full">
+        <select
+          value={timePreset}
+          onChange={(e) => onTimePresetChange(e.target.value)}
+          className={DATE_INPUT_CLASS}
+          aria-label={STATISTICS_UI.timeRangeLabel}
+          disabled={loading}
+        >
+          {TIME_RANGE_PRESETS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
 
-        <div className="flex flex-col gap-1 min-w-[200px]">
-      
-          <input
-            type="text"
-            value={deptName}
-            readOnly
-            disabled
-            className="h-9 rounded-lg border border-gray-200 bg-neutral px-3 text-sm text-content-muted cursor-not-allowed"
-          />
-        </div>
+        <DateRangePickerField
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onRangeChange={(from, to) => {
+            onDateFromChange(from);
+            onDateToChange(to);
+          }}
+          disabled={loading}
+          ariaLabel={STATISTICS_UI.timeRangeLabel}
+          className={DATE_RANGE_WIDTH_CLASS}
+        />
 
-        <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
-          <label className="text-2xs font-semibold text-content-muted uppercase tracking-wider">
-            &nbsp;
-          </label>
+        <div className={SEARCH_WIDTH_CLASS}>
           <TextSearchInput
             value={search}
             onChange={onSearchChange}
             placeholder={STATISTICS_UI.searchPlaceholder}
             widthClass="w-full"
-            inputClassName="h-9 pl-9 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-neutral outline-none focus-visible:ring-2 focus-visible:ring-primary/25 transition-colors"
+            inputClassName="h-9 w-full min-w-0 pl-3 rounded-lg border border-line text-sm text-content-body bg-surface-white hover:bg-neutral outline-none focus-visible:ring-2 focus-visible:ring-primary/25 transition-colors"
+            showSearchIcon={false}
           />
         </div>
 
@@ -84,11 +74,24 @@ export default function StatisticsFilterBar({
           type="button"
           onClick={onApply}
           disabled={loading}
-          className="h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          className="h-9 shrink-0 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-60"
         >
-          <Filter className="w-4 h-4" />
+          <Search className="w-4 h-4" aria-hidden="true" />
           {STATISTICS_UI.applyFilter}
         </button>
+
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={loading}
+            title={ADMIN_UI.resetFilters}
+            aria-label={ADMIN_UI.resetFilters}
+            className={RESET_BTN_CLASS}
+          >
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </section>
   );

@@ -2,7 +2,6 @@ package com.bv87.diemdanh.service;
 
 import com.bv87.diemdanh.dto.*;
 import com.bv87.diemdanh.entity.AttendanceRecord;
-import com.bv87.diemdanh.entity.AttendanceStatus;
 import com.bv87.diemdanh.entity.Department;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AttendanceRecordRepository;
@@ -18,19 +17,25 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class AttendanceStatisticsService {
 
     private static final DateTimeFormatter DMY_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final int MAX_RANGE_DAYS = 366;
+    private static final int MAX_EXPORT_ROWS = 5000;
 
     private final AttendanceRecordRepository attendanceRepository;
     private final DepartmentRepository departmentRepository;
     private final AttendanceLockService lockService;
+    private final AttendanceStatusCatalogService statusCatalogService;
 
     @Transactional(readOnly = true)
     public AttendanceStatisticsDto getStatistics(
@@ -53,21 +58,14 @@ public class AttendanceStatisticsService {
                 .filter(r -> matchesSearch(r, q))
                 .toList();
 
-        long diLam = 0, nghiPhep = 0, diHoc = 0, diCongTac = 0;
+        Map<String, Long> counts = new HashMap<>();
         for (AttendanceRecord record : records) {
-            switch (record.getStatus()) {
-                case DI_LAM -> diLam++;
-                case NGHI_PHEP -> nghiPhep++;
-                case DI_HOC -> diHoc++;
-                case DI_CONG_TAC -> diCongTac++;
-            }
+            counts.merge(record.getStatus(), 1L, Long::sum);
         }
+        List<StatusBreakdownItemDto> breakdown = statusCatalogService.buildBreakdown(counts);
 
         AttendanceStatisticsSummaryDto summary = AttendanceStatisticsSummaryDto.builder()
-                .diLam(diLam)
-                .nghiPhep(nghiPhep)
-                .diHoc(diHoc)
-                .diCongTac(diCongTac)
+                .statusBreakdown(breakdown)
                 .build();
 
         List<AttendanceTrendPointDto> trend = buildTrend(from, to, records);
@@ -136,7 +134,14 @@ public class AttendanceStatisticsService {
         lockService.assertCanView(authUser, deptCode);
 
         String q = normalizeSearch(search);
-        return attendanceRepository.findHistoryAll(deptCode, from, to, q).stream()
+        List<AttendanceRecord> records = attendanceRepository
+                .findHistoryAll(deptCode, from, to, q);
+        if (records.size() > MAX_EXPORT_ROWS) {
+            throw new BusinessException(
+                    "Quá nhiều dòng để xuất (" + records.size()
+                            + "). Vui lòng thu hẹp khoảng thời gian hoặc dùng bộ lọc.");
+        }
+        return records.stream()
                 .map(this::toHistoryItem)
                 .toList();
     }
@@ -147,6 +152,9 @@ public class AttendanceStatisticsService {
         }
         if (from.isAfter(to)) {
             throw new BusinessException("Ngày bắt đầu phải trước ngày kết thúc");
+        }
+        if (ChronoUnit.DAYS.between(from, to) > MAX_RANGE_DAYS) {
+            throw new BusinessException("Khoảng thời gian tối đa là " + MAX_RANGE_DAYS + " ngày");
         }
     }
 
@@ -161,7 +169,7 @@ public class AttendanceStatisticsService {
                 .fullname(employee.getFullname())
                 .avatarUrl(employee.getAvatarUrl())
                 .status(record.getStatus())
-                .statusLabel(record.getStatus().getLabel())
+                .statusLabel(statusCatalogService.resolveLabel(record.getStatus()))
                 .note(record.getNote())
                 .build();
     }
@@ -201,25 +209,17 @@ public class AttendanceStatisticsService {
         List<AttendanceTrendPointDto> trend = new ArrayList<>();
 
         for (DateBucket bucket : buckets) {
-            long diLam = 0, nghiPhep = 0, diHoc = 0, diCongTac = 0;
+            Map<String, Long> counts = new HashMap<>();
             for (AttendanceRecord record : records) {
                 LocalDate d = record.getAttendanceDate();
                 if (d.isBefore(bucket.from()) || d.isAfter(bucket.to())) {
                     continue;
                 }
-                switch (record.getStatus()) {
-                    case DI_LAM -> diLam++;
-                    case NGHI_PHEP -> nghiPhep++;
-                    case DI_HOC -> diHoc++;
-                    case DI_CONG_TAC -> diCongTac++;
-                }
+                counts.merge(record.getStatus(), 1L, Long::sum);
             }
             trend.add(AttendanceTrendPointDto.builder()
                     .label(bucket.label())
-                    .diLam(diLam)
-                    .nghiPhep(nghiPhep)
-                    .diHoc(diHoc)
-                    .diCongTac(diCongTac)
+                    .statusBreakdown(statusCatalogService.buildBreakdown(counts))
                     .build());
         }
         return trend;

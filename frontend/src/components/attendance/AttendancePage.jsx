@@ -8,10 +8,13 @@ import { useAttendancePage } from '../../hooks/useAttendancePage';
 import { IconSend } from '../icons/Icons';
 import AttendanceHeader from './sections/AttendanceHeader';
 import AttendanceMobileSubheader from './sections/AttendanceMobileSubheader';
+import StableDataZone from '../shared/StableDataZone';
 import KpiBar from './sections/KpiBar';
 import HistoryViewBanner from './sections/HistoryViewBanner';
 import LockBanner from './sections/LockBanner';
 import StaffTableCard from './sections/StaffTableCard';
+import { HEAD_ATTENDANCE_MAIN_CLASS } from '../../constants/headLayout';
+import DatePillBar from '../dashboard/DatePillBar';
 import { HeadAiAssistantProvider } from '../../context/HeadAiAssistantContext';
 import HeadFlowPanel from '../ai/head/HeadFlowPanel';
 
@@ -26,6 +29,7 @@ export default function AttendancePage({
     flash,
     clearFlash,
     showSpinner,
+    refreshing,
     selectedDept,
     setSelectedDept,
     departments,
@@ -42,7 +46,7 @@ export default function AttendancePage({
     setUnlockTarget,
     handleUnlockConfirm,
     markedCount,
-    stats,
+    statusBreakdown,
     total,
     reportSent,
     reportBlocked,
@@ -53,8 +57,6 @@ export default function AttendancePage({
     handleSendReportConfirm,
     search,
     setSearch,
-    showFilter,
-    setShowFilter,
     statusFilter,
     setStatusFilter,
     filteredStaff,
@@ -82,12 +84,7 @@ export default function AttendancePage({
       onLogout={onLogout}
       mobileTopActions={mobileTopActions}
     >
-      <AttendanceMobileSubheader
-        deptName={selectedDeptName}
-        selectedDate={selectedDate}
-        recentDates={recentDates}
-        onDateChange={handleDateChange}
-      />
+      <AttendanceMobileSubheader deptName={selectedDeptName} />
 
       <div className="hidden lg:block shrink-0">
         <AttendanceHeader
@@ -116,22 +113,34 @@ export default function AttendancePage({
 
       {flash && <FlashBanner flash={flash} onClose={clearFlash} />}
 
-      <main className="max-lg:space-y-[clamp(0.75rem,2vw,1rem)] px-[clamp(0.75rem,3vw,1.25rem)] py-[clamp(0.75rem,2vw,1rem)] max-lg:pb-8 lg:flex lg:flex-col lg:gap-[clamp(0.75rem,2vw,1rem)] lg:flex-1 lg:min-h-0 lg:overflow-hidden lg:px-5 lg:py-5">
+      <main className={HEAD_ATTENDANCE_MAIN_CLASS}>
         {showSpinner ? (
           <div className="text-center py-20 text-content-muted animate-pulse">{UI.loading}</div>
         ) : (
           <>
-            <div className="shrink-0 space-y-2.5">
+            <div className="lg:hidden shrink-0 overflow-x-auto -mx-0.5 px-0.5">
+              <DatePillBar
+                variant="attendance"
+                compact
+                selectedDate={selectedDate}
+                recentDates={recentDates}
+                onDateChange={handleDateChange}
+              />
+            </div>
+
+            <div className="shrink-0 space-y-2.5 max-lg:space-y-4 lg:contents">
               {!isToday && <HistoryViewBanner selectedDate={selectedDate} />}
               {isToday && locked && !isAdmin && <LockBanner lockMessage={lockMessage} />}
-              <KpiBar markedCount={markedCount} total={total} stats={stats} />
+              <StableDataZone refreshing={refreshing} className="shrink-0">
+                <KpiBar markedCount={markedCount} total={total} statusBreakdown={statusBreakdown} />
+              </StableDataZone>
 
               <button
                 type="button"
                 onClick={handleSendReport}
                 disabled={tableDisabled || reportSent || reportBlocked}
                 title={reportBlocked ? UI.reportBlocked : undefined}
-                className="lg:hidden w-full inline-flex items-center justify-center gap-2 rounded-xl bg-success-fg hover:opacity-90 text-white text-sm font-semibold py-3 px-4 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="lg:hidden w-full inline-flex items-center justify-center gap-2 rounded-xl bg-attendance-report hover:bg-attendance-report-hover text-white text-sm font-semibold py-3 px-4 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <IconSend className="w-4 h-4 shrink-0" />
                 {reportSent ? UI.reportSent : MOBILE_UI.sendReportFull}
@@ -146,8 +155,6 @@ export default function AttendancePage({
               onQuickAction={handleQuickAction}
               search={search}
               onSearchChange={setSearch}
-              showFilter={showFilter}
-              onToggleFilter={() => setShowFilter((v) => !v)}
               statusFilter={statusFilter}
               onStatusFilterChange={setStatusFilter}
               page={page}
@@ -155,6 +162,8 @@ export default function AttendancePage({
               filteredCount={filteredCount}
               pageSize={pageSize}
               onPageChange={setPage}
+              showMobileFilterReset
+              refreshing={refreshing}
             />
           </>
         )}

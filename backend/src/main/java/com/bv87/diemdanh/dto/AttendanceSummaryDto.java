@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Builder
@@ -14,11 +15,11 @@ public class AttendanceSummaryDto {
     private final Integer deptCode;
     private final String deptCodeFormatted;
     private final String deptName;
+    /** UI display name: if unitCode exists, remove trailing "(unitCode)" suffix from deptName. */
+    private final String deptNameDisplay;
+    private final String unitCode;
     private final long total;
-    private final long diLam;
-    private final long nghiPhep;
-    private final long diHoc;
-    private final long diCongTac;
+    private final List<StatusBreakdownItemDto> statusBreakdown;
     private final boolean locked;
     private final boolean unlocked;
     private final boolean editable;
@@ -30,6 +31,9 @@ public class AttendanceSummaryDto {
     private final CompletionStatus completionStatus;
     private final boolean reportSubmitted;
     private final boolean reportBlocked;
+    private final boolean manualLocked;
+    /** Active HEAD login account exists for this department (required for reminders). */
+    private final boolean hasActiveHeadAccount;
 
     public static String formatDept(Integer deptCode) {
         return CodeFormatter.formatDeptCode(deptCode);

@@ -15,7 +15,7 @@ export const DiHocIcon = memo(function DiHocIcon({
   return <GraduationCap className={className} strokeWidth={strokeWidth} {...props} />;
 });
 
-/** Icon KPI trong ô vuông bo góc (màn chấm công, thống kê, admin dashboard) */
+/** Icon KPI trong ô vuông bo góc (màn Điểm danh, thống kê, admin dashboard) */
 export const DiHocKpiIcon = memo(function DiHocKpiIcon({
   boxClassName = `flex ${KPI_METRIC_ICON_BOX} shrink-0 items-center justify-center rounded-lg`,
   iconClassName = `${KPI_METRIC_ICON_SIZE} ${DI_HOC_ICON_COLOR}`,

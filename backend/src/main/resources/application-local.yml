@@ -41,6 +41,7 @@ app:
   security:
     cors:
       allowed-origin-patterns:
-        - "*"
+        - "http://localhost:5173"
+        - "http://127.0.0.1:5173"
     login-rate-limit:
       enabled: false

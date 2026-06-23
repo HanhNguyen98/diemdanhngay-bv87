@@ -19,4 +19,8 @@ public class StaffUpsertRequest {
     private Boolean active;
     /** Data URL ảnh đại diện (image/jpeg|png|gif|webp); null giữ nguyên khi cập nhật, chuỗi rỗng để xóa */
     private String avatarUrl;
+    /** Bắt buộc khi Admin đổi Đơn vị (luân chuyển) */
+    private String transferReason;
+    /** Bắt buộc true khi luân chuyển nhân viên đang là Trưởng đơn vị */
+    private Boolean revokeHeadOnTransfer;
 }

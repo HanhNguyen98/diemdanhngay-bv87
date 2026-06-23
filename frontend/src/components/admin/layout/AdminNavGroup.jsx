@@ -24,7 +24,7 @@ const AdminNavGroup = memo(function AdminNavGroup({
         onClick={() => setOpen((prev) => !prev)}
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
           isGroupActive
-            ? 'bg-sidebar-active text-primary'
+            ? 'bg-sidebar-active text-primary font-semibold'
             : 'text-content-muted hover:bg-white/60'
         }`}
         aria-expanded={open}
@@ -39,7 +39,7 @@ const AdminNavGroup = memo(function AdminNavGroup({
       </button>
 
       {open && (
-        <div className="mt-0.5 ml-4 pl-3 border-l border-gray-200/80 space-y-0.5">
+        <div className="mt-0.5 ml-4 pl-3 border-l border-line/80 space-y-0.5">
           {items.map(({ id, labelKey }) => {
             const isActive = activeTab === id;
             return (
@@ -49,7 +49,7 @@ const AdminNavGroup = memo(function AdminNavGroup({
                 onClick={() => onTabChange(id)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive
-                    ? 'bg-sidebar-active text-primary'
+                    ? 'bg-sidebar-active text-primary font-semibold'
                     : 'text-content-muted hover:bg-white/60'
                 }`}
               >

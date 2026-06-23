@@ -3,6 +3,7 @@ package com.bv87.diemdanh.service;
 import com.bv87.diemdanh.entity.AccountRole;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.AttendanceLockedException;
+import com.bv87.diemdanh.repository.AttendanceManualLockRepository;
 import com.bv87.diemdanh.repository.AttendanceUnlockRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.util.VietnamTimeService;
@@ -21,6 +22,7 @@ public class AttendanceLockService {
 
     private final VietnamTimeService timeService;
     private final AttendanceUnlockRepository unlockRepository;
+    private final AttendanceManualLockRepository manualLockRepository;
 
     /** @return true if current Vietnam time is after the 16:00 cutoff */
     public boolean isAfterLockTime() {
@@ -37,11 +39,21 @@ public class AttendanceLockService {
     }
 
     /**
-     * A department is locked when the date is today, time is past 16:00,
-     * and no unlock record exists.
+     * @return true when admin has manually locked the department before the daily cutoff
+     */
+    public boolean isManualLocked(Integer deptCode, LocalDate date) {
+        return manualLockRepository.existsByDeptCodeAndDate(deptCode, date);
+    }
+
+    /**
+     * A department is locked when the date is not today, admin locked early,
+     * or the date is today past 16:00 without an unlock record.
      */
     public boolean isDepartmentLocked(Integer deptCode, LocalDate date) {
         if (!date.equals(timeService.today())) {
+            return true;
+        }
+        if (isManualLocked(deptCode, date)) {
             return true;
         }
         if (!timeService.isAfterLockTime()) {
@@ -67,10 +79,7 @@ public class AttendanceLockService {
         if (timeService.isBeforeOpenWindow()) {
             return false;
         }
-        if (!timeService.isAfterLockTime()) {
-            return true;
-        }
-        return isUnlocked(deptCode, date);
+        return !isDepartmentLocked(deptCode, date);
     }
 
     /**
@@ -97,8 +106,8 @@ public class AttendanceLockService {
         if (timeService.isBeforeOpenWindow()) {
             throw new AccessDeniedException("Hệ thống mở cửa từ 06:00 sáng");
         }
-        if (timeService.isAfterLockTime() && !isUnlocked(targetDeptCode, date)) {
-            throw new AttendanceLockedException(buildLockMessage());
+        if (isDepartmentLocked(targetDeptCode, date)) {
+            throw new AttendanceLockedException(resolveLockMessage(targetDeptCode, date));
         }
     }
 
@@ -129,7 +138,7 @@ public class AttendanceLockService {
             return "Hệ thống mở cửa từ 06:00 sáng";
         }
         if (isDepartmentLocked(deptCode, date)) {
-            return buildLockMessage();
+            return resolveLockMessage(deptCode, date);
         }
         return null;
     }
@@ -137,5 +146,12 @@ public class AttendanceLockService {
     public String buildLockMessage() {
         return "Hệ thống đã tự động khóa lúc " + timeService.formatLockTime()
                 + ". Liên hệ Admin nếu cần chỉnh sửa.";
+    }
+
+    private String resolveLockMessage(Integer deptCode, LocalDate date) {
+        if (isManualLocked(deptCode, date)) {
+            return "Admin đã khóa sổ điểm danh cho Đơn vị hôm nay.";
+        }
+        return buildLockMessage();
     }
 }

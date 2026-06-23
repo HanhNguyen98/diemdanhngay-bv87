@@ -1,20 +1,56 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ADMIN_UI } from '../constants/admin';
-import { ATTENDANCE_PAGE_SIZE, STATUS_OPTIONS } from '../constants/attendance';
+import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
+import { useAttendanceStatusConfig } from '../context/AttendanceStatusContext';
 import { api } from '../api/client';
 import { adminApi } from '../services/api';
 import { downloadExcel } from '../utils/exportExcel';
-import { todayISO } from '../utils/formatters';
+import { formatDeptFilterLabel, todayISO } from '../utils/formatters';
+import { getDeptAttendanceDetailFilterDefaults } from '../utils/filterResetDefaults';
+import { buildBreakdownFromStaff } from '../utils/statusBreakdown';
+import { useCommittedSnapshot } from './useCommittedSnapshot';
+import { useLoadingPhase } from './useLoadingPhase';
 import { usePagination } from './usePagination';
 
 const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
 
-function statusLabel(status) {
-  if (!status) return 'Chưa chấm';
-  return STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
+function buildKpiFromSummary(summary) {
+  return {
+    total: summary.total,
+    statusBreakdown: summary.statusBreakdown ?? [],
+    unchecked: summary.uncheckedCount ?? 0,
+  };
+}
+
+function buildKpiFromStaff(staffList, statusCatalogItems) {
+  if (!staffList.length || !statusCatalogItems.length) return null;
+  const statusBreakdown = buildBreakdownFromStaff(staffList, statusCatalogItems);
+  const marked = statusBreakdown.reduce((sum, item) => sum + (item.count ?? 0), 0);
+  return {
+    total: staffList.length,
+    statusBreakdown,
+    unchecked: Math.max(0, staffList.length - marked),
+  };
+}
+
+function buildScopeLabel(deptCode, departments) {
+  const { dashboard: d } = ADMIN_UI;
+  if (deptCode == null) return d.kpiScopeHospital;
+  const dept = departments.find((item) => item.deptCode === deptCode);
+  return d.kpiScopeDept(formatDeptFilterLabel(dept));
 }
 
 export function useDeptAttendanceDetail() {
+  const { statusOptions, items: statusCatalogItems } = useAttendanceStatusConfig();
+
+  const statusLabel = useCallback(
+    (status) => {
+      if (!status) return 'Chưa chấm';
+      return statusOptions.find((o) => o.value === status)?.label || status;
+    },
+    [statusOptions],
+  );
+
   const [departments, setDepartments] = useState([]);
   const [deptLoading, setDeptLoading] = useState(true);
 
@@ -28,70 +64,130 @@ export function useDeptAttendanceDetail() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [kpiReady, setKpiReady] = useState(false);
+
+  const hasDataLoadedRef = useRef(false);
+
+  const {
+    snapshot: displayKpi,
+    commit: commitKpi,
+    reset: resetKpi,
+  } = useCommittedSnapshot(null);
+
+  const {
+    snapshot: displayScopeLabel,
+    commit: commitScopeLabel,
+    reset: resetScopeLabel,
+  } = useCommittedSnapshot('');
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     (async () => {
       setDeptLoading(true);
       try {
-        const depts = await adminApi.listDepartments();
-        if (cancelled) return;
-        setDepartments(depts);
-        if (depts.length > 0) {
-          const firstCode = depts[0].deptCode;
-          setDraftDeptCode(firstCode);
-          setAppliedDeptCode(firstCode);
-        }
+        const depts = await adminApi.listDepartments(undefined, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setDepartments(Array.isArray(depts) ? depts : []);
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        if (err.name === 'AbortError') return;
+        setError(err.message);
       } finally {
-        if (!cancelled) setDeptLoading(false);
+        if (!controller.signal.aborted) setDeptLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, []);
 
-  const loadData = useCallback(async (deptCode, date) => {
-    if (deptCode == null) return;
-    setLoading(true);
-    setError('');
-    try {
-      const pageData = await api.getAttendancePage(deptCode, date);
-      setSummary(pageData.summary);
-      setStaff(pageData.staff || []);
-    } catch (err) {
-      setSummary(null);
-      setStaff([]);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const commitDisplay = useCallback(
+    (deptCode, nextSummary, nextStaff, deptList) => {
+      const kpi =
+        deptCode != null && nextSummary
+          ? buildKpiFromSummary(nextSummary)
+          : buildKpiFromStaff(nextStaff, statusCatalogItems);
+      commitKpi(kpi);
+      commitScopeLabel(buildScopeLabel(deptCode, deptList));
+    },
+    [commitKpi, commitScopeLabel, statusCatalogItems],
+  );
+
+  const loadData = useCallback(
+    async (deptCode, date, deptList, signal) => {
+      const silent = hasDataLoadedRef.current;
+      if (!silent) {
+        setLoading(true);
+      }
+      setError('');
+      try {
+        if (deptCode == null) {
+          if (!deptList.length) {
+            setSummary(null);
+            setStaff([]);
+            if (!hasDataLoadedRef.current) {
+              resetKpi(null);
+              resetScopeLabel('');
+            }
+            return;
+          }
+          const pages = await Promise.all(
+            deptList.map((dept) => api.getAttendancePage(dept.deptCode, date, { signal })),
+          );
+          if (signal?.aborted) return;
+          const nextStaff = pages.flatMap((page) => page.staff || []);
+          setSummary(null);
+          setStaff(nextStaff);
+          commitDisplay(deptCode, null, nextStaff, deptList);
+          hasDataLoadedRef.current = true;
+          setKpiReady(true);
+          return;
+        }
+
+        const pageData = await api.getAttendancePage(deptCode, date, { signal });
+        if (signal?.aborted) return;
+        const nextSummary = pageData.summary;
+        const nextStaff = pageData.staff || [];
+        setSummary(nextSummary);
+        setStaff(nextStaff);
+        commitDisplay(deptCode, nextSummary, nextStaff, deptList);
+        hasDataLoadedRef.current = true;
+        setKpiReady(true);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        setSummary(null);
+        setStaff([]);
+        if (!hasDataLoadedRef.current) {
+          resetKpi(null);
+          resetScopeLabel('');
+        }
+        setError(err.message);
+      } finally {
+        if (!signal?.aborted && !silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [commitDisplay, resetKpi, resetScopeLabel],
+  );
 
   useEffect(() => {
-    if (appliedDeptCode != null) {
-      loadData(appliedDeptCode, appliedDate);
-    }
-  }, [appliedDeptCode, appliedDate, loadData]);
+    if (deptLoading) return undefined;
+    const controller = new AbortController();
+    loadData(appliedDeptCode, appliedDate, departments, controller.signal);
+    return () => controller.abort();
+  }, [appliedDeptCode, appliedDate, departments, deptLoading, loadData]);
 
   const applyFilter = useCallback(() => {
-    if (draftDeptCode == null) return;
     setAppliedDeptCode(draftDeptCode);
     setAppliedDate(draftDate);
   }, [draftDeptCode, draftDate]);
 
-  const kpi = useMemo(() => {
-    if (!summary) return null;
-    return {
-      total: summary.total,
-      diLam: summary.diLam,
-      nghiPhep: summary.nghiPhep,
-      diHoc: summary.diHoc,
-      diCongTac: summary.diCongTac,
-    };
-  }, [summary]);
+  const resetFilters = useCallback(() => {
+    const { deptCode, date } = getDeptAttendanceDetailFilterDefaults();
+    setDraftDeptCode(deptCode);
+    setDraftDate(date);
+    setAppliedDeptCode(deptCode);
+    setAppliedDate(date);
+    setError('');
+  }, []);
 
   const selectedDept = useMemo(
     () => departments.find((d) => d.deptCode === appliedDeptCode),
@@ -104,8 +200,12 @@ export function useDeptAttendanceDetail() {
     goToPage(1);
   }, [staff, goToPage]);
 
+  const combinedLoading = deptLoading || loading;
+  const { initialLoading, refreshing } = useLoadingPhase(combinedLoading);
+  const showKpiSpinner = !kpiReady && combinedLoading;
+
   const handleExport = useCallback(async () => {
-    if (!staff.length || !selectedDept) return;
+    if (!staff.length) return;
     setExporting(true);
     try {
       const { dashboard: d } = ADMIN_UI;
@@ -127,21 +227,25 @@ export function useDeptAttendanceDetail() {
     } finally {
       setExporting(false);
     }
-  }, [staff, selectedDept, appliedDate]);
+  }, [staff, statusLabel]);
 
   return {
     departments,
-    deptLoading,
     draftDeptCode,
     setDraftDeptCode,
     draftDate,
     setDraftDate,
     applyFilter,
+    resetFilters,
     summary,
-    kpi,
+    displayKpi,
+    displayScopeLabel,
     staff,
     paginated,
-    loading: deptLoading || loading,
+    initialLoading,
+    refreshing,
+    showKpiSpinner,
+    kpiReady,
     error,
     page,
     totalPages,

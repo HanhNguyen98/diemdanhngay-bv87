@@ -1,3 +1,5 @@
+import { notifySessionExpired } from './sessionEvents';
+
 const BASE = '/api';
 
 export class ApiError extends Error {
@@ -27,6 +29,9 @@ export async function apiRequest(path, options = {}) {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      notifySessionExpired();
+    }
     const err = await response.json().catch(() => ({}));
     throw new ApiError(resolveErrorMessage(response.status, err.message), response.status);
   }

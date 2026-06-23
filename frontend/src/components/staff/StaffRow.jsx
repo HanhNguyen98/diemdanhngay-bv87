@@ -1,19 +1,28 @@
 import { memo } from 'react';
-import { Eye, Image, Pencil, Trash2 } from 'lucide-react';
+import { Image, History, Pencil, Trash2 } from 'lucide-react';
 import { ADMIN_UI } from '../../constants/admin';
 import { getInitials } from '../../utils/formatters';
 import { ActionBtn } from '../admin/sections/ActionButtons';
 
-const StaffRow = memo(function StaffRow({ staff, onView, onEdit, onDelete, avatarOnly = false }) {
+const StaffRow = memo(function StaffRow({
+  staff,
+  onEdit,
+  onDelete,
+  onHistory,
+  avatarOnly = false,
+  hideDeptColumn = false,
+}) {
   return (
     <tr className="border-b border-gray-100 hover:bg-surface-page/80 transition-colors">
       <td className="py-4 px-4 text-sm text-primary font-medium tabular-nums">
         {staff.empCodeFormatted}
       </td>
-      <td className="py-4 px-4 text-sm text-content-muted">
-        <span className="text-xs text-primary tabular-nums mr-1">[{staff.deptCodeFormatted}]</span>
-        {staff.deptName}
-      </td>
+      {!hideDeptColumn && (
+        <td className="py-4 px-4 text-sm text-content-muted">
+          <span className="text-xs text-primary tabular-nums mr-1">[{staff.deptCodeFormatted}]</span>
+          {staff.deptName}
+        </td>
+      )}
       <td className="py-4 px-4">
         <div className="flex items-center gap-3">
           {staff.avatarUrl ? (
@@ -49,12 +58,6 @@ const StaffRow = memo(function StaffRow({ staff, onView, onEdit, onDelete, avata
       <td className="py-4 px-4">
         <div className="flex items-center gap-1.5 justify-end">
           <ActionBtn
-            icon={Eye}
-            onClick={() => onView(staff)}
-            colorClass="text-primary hover:bg-primary-light"
-            label="Xem"
-          />
-          <ActionBtn
             icon={avatarOnly ? Image : Pencil}
             onClick={() => onEdit(staff)}
             colorClass={
@@ -62,6 +65,14 @@ const StaffRow = memo(function StaffRow({ staff, onView, onEdit, onDelete, avata
             }
             label={avatarOnly ? 'Ảnh đại diện' : 'Sửa'}
           />
+          {!avatarOnly && onHistory && (
+            <ActionBtn
+              icon={History}
+              onClick={() => onHistory(staff)}
+              colorClass="text-info-fg hover:bg-info"
+              label={ADMIN_UI.staff.transferHistoryView}
+            />
+          )}
           {!avatarOnly && onDelete && (
             <ActionBtn
               icon={Trash2}

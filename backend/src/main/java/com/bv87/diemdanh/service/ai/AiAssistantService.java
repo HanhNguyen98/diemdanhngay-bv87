@@ -24,7 +24,7 @@ import java.util.concurrent.Executor;
 public class AiAssistantService {
 
     private static final String GREETING =
-            "Chào Admin, tôi có thể giúp gì cho bạn trong việc thống kê và quản lý chấm công hôm nay?";
+            "Chào Admin, tôi có thể giúp gì cho bạn trong việc thống kê và quản lý Điểm danh hôm nay?";
 
     private final AiIntentRouter intentRouter;
     private final AiToolService toolService;
@@ -113,7 +113,7 @@ public class AiAssistantService {
                 streamText(emitter, "Đã tổng hợp báo cáo trạng thái làm việc theo yêu cầu.");
             }
             case ATTENDANCE_DATE_PICKER -> {
-                streamText(emitter, "Vui lòng chọn ngày bạn muốn xuất báo cáo chấm công:");
+                streamText(emitter, "Vui lòng chọn ngày bạn muốn xuất báo cáo Điểm danh:");
                 sendEvent(emitter, "widget", Map.of("type", "date_picker", "payload", intent.getArgs()));
             }
             case ATTENDANCE_STATUS_EXECUTE -> {
@@ -123,7 +123,7 @@ public class AiAssistantService {
                 sendEvent(emitter, "widget", Map.of("type", "attendance_report_table", "payload", result));
                 sendEvent(emitter, "widget", Map.of("type", "download_card", "payload", result));
                 streamText(emitter, String.format(
-                        "Báo cáo chấm công ngày %s đã sẵn sàng.", result.get("dateFormatted")));
+                        "Báo cáo Điểm danh ngày %s đã sẵn sàng.", result.get("dateFormatted")));
             }
             case PENDING_DEPARTMENTS -> {
                 streamText(emitter, intent.getReplyHint());
@@ -132,7 +132,7 @@ public class AiAssistantService {
                 sendEvent(emitter, "widget", Map.of("type", "pending_dept_table", "payload", result));
                 int count = ((List<?>) result.get("departments")).size();
                 if (count == 0) {
-                    streamText(emitter, "Tất cả ĐƠN VỊ đã hoàn thành chấm công hôm nay.");
+                    streamText(emitter, "Tất cả ĐƠN VỊ đã hoàn thành Điểm danh hôm nay.");
                 } else {
                     streamText(emitter, String.format(
                             "Có %d ĐƠN VỊ đang ở trạng thái CHƯA XONG (chưa báo cáo).", count));
@@ -142,7 +142,7 @@ public class AiAssistantService {
             case UNKNOWN -> streamText(emitter,
                     "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng các nút gợi ý hoặc hỏi: "
                             + "\"Báo cáo trạng thái làm việc hôm nay\", "
-                            + "\"Xuất báo cáo chấm công ngày hôm nay\", "
+                            + "\"Xuất báo cáo Điểm danh ngày hôm nay\", "
                             + "\"Khoa nào chưa báo cáo?\"");
         }
     }
@@ -172,7 +172,7 @@ public class AiAssistantService {
                 widgets.add(Map.of("type", "download_card", "payload", result));
             }
             case "attendance_status_report" -> {
-                message = String.format("Báo cáo chấm công ngày %s đã sẵn sàng.", result.get("dateFormatted"));
+                message = String.format("Báo cáo Điểm danh ngày %s đã sẵn sàng.", result.get("dateFormatted"));
                 widgets.add(Map.of("type", "attendance_report_table", "payload", result));
                 widgets.add(Map.of("type", "download_card", "payload", result));
             }

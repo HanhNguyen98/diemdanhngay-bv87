@@ -21,6 +21,8 @@ export const api = {
 
   getDepartments: () => apiRequest('/departments'),
 
+  getAttendanceStatusTypes: () => apiRequest('/attendance/status-types'),
+
   getSessionStatus: () => apiRequest('/session/status'),
 
   getSummary: (deptCode, date) => {
@@ -42,11 +44,11 @@ export const api = {
     return apiRequest(`/attendance/staff?${params}`);
   },
 
-  getAttendancePage: (deptCode, date) => {
+  getAttendancePage: (deptCode, date, options = {}) => {
     const params = new URLSearchParams();
     if (deptCode != null) params.set('deptCode', deptCode);
     if (date) params.set('date', date);
-    return apiRequest(`/attendance/page?${params}`);
+    return apiRequest(`/attendance/page?${params}`, options);
   },
 
   updateAttendance: (empCode, status, note, date) => {
@@ -62,6 +64,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ deptCode, reason }),
     }),
+
+  relockDepartment: (deptCode) =>
+    apiRequest(`/attendance/unlock/${deptCode}`, { method: 'DELETE' }),
 
   submitReport: (deptCode, date) => {
     const params = new URLSearchParams();
@@ -101,4 +106,19 @@ export const api = {
     if (search?.trim()) params.set('search', search.trim());
     return apiRequest(`/attendance/statistics/history/export?${params}`);
   },
+};
+
+export const headApi = {
+  listStaff: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set('search', params.search);
+    const q = qs.toString();
+    return apiRequest(`/head/staff${q ? `?${q}` : ''}`);
+  },
+  getStaffStats: () => apiRequest('/head/staff/stats'),
+  updateStaffAvatar: (empCode, avatarUrl) =>
+    apiRequest(`/head/staff/${empCode}/avatar`, {
+      method: 'PATCH',
+      body: JSON.stringify({ avatarUrl }),
+    }),
 };

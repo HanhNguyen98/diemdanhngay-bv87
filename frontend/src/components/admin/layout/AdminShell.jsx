@@ -1,7 +1,10 @@
-import { memo } from 'react';
+import { memo, useCallback, useState } from 'react';
+import { MOBILE_SHELL_BOTTOM_PADDING_CLASS } from '../../../constants/adminTabs';
 import AdminSidebar from './AdminSidebar';
 import AdminTopBar from './AdminTopBar';
 import AdminFooter from './AdminFooter';
+import AdminMobileTopBar from './AdminMobileTopBar';
+import AdminMobileSideMenu from './AdminMobileSideMenu';
 
 const AdminShell = memo(function AdminShell({
   activeTab,
@@ -10,19 +13,42 @@ const AdminShell = memo(function AdminShell({
   onLogout,
   children,
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleTabChange = useCallback(
+    (tab) => {
+      onTabChange(tab);
+      setMenuOpen(false);
+    },
+    [onTabChange],
+  );
+
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-page">
+    <div className="admin-shell flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-surface-page lg:h-svh lg:max-h-svh">
       <AdminSidebar
         activeTab={activeTab}
-        onTabChange={onTabChange}
+        onTabChange={handleTabChange}
+        onLogout={onLogout}
+        user={user}
+        className="hidden lg:flex"
+      />
+      <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        <AdminMobileTopBar onMenuOpen={() => setMenuOpen(true)} />
+        <AdminTopBar activeTab={activeTab} />
+        <main className={`flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-y-contain lg:overflow-hidden px-[clamp(0.75rem,3vw,1.25rem)] py-3 ${MOBILE_SHELL_BOTTOM_PADDING_CLASS} lg:p-6`}>
+          {children}
+        </main>
+        <AdminFooter />
+      </div>
+
+      <AdminMobileSideMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
         onLogout={onLogout}
         user={user}
       />
-      <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        <AdminTopBar activeTab={activeTab} />
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden p-6">{children}</main>
-        <AdminFooter />
-      </div>
     </div>
   );
 });

@@ -3,7 +3,7 @@
  * Enum keys match backend AttendanceStatus values.
  */
 
-/** Trạng thái chấm công — khớp backend AttendanceStatus */
+/** Trạng thái Điểm danh — khớp backend AttendanceStatus */
 export const ATTENDANCE_STATUS = {
   DI_LAM: 'DI_LAM',
   NGHI_PHEP: 'NGHI_PHEP',
@@ -43,7 +43,7 @@ export const ATTENDANCE_TABLE_COLUMNS = [
   { key: 'rank', label: 'CẤP BẬC', align: 'left', width: '13%' },
   { key: 'position', label: 'CHỨC VỤ', align: 'left', width: '15%' },
   { key: 'status', label: 'TRẠNG THÁI HIỆN TẠI', align: 'left', width: '22%' },
-  { key: 'actions', label: 'CHẤM CÔNG NHANH', align: 'right', width: '20%' },
+  { key: 'actions', label: 'Điểm danh NHANH', align: 'right', width: '20%' },
 ];
 
 /** Trạng thái hiển thị trên badge (chưa chấm → UNCHECKED) */
@@ -69,7 +69,7 @@ export const STATUS_BADGE = {
     icon: 'briefcase',
   },
   UNCHECKED: {
-    label: 'CHƯA XÁC NHẬN',
+    label: 'CHƯA CHẤM',
     className: 'badge-status-pending',
     icon: 'pending',
   },
@@ -78,21 +78,25 @@ export const STATUS_BADGE = {
 export const DEFAULT_LOCK_MESSAGE =
   'Hệ thống đã tự động khóa. Liên hệ Admin nếu cần chỉnh sửa.';
 
-/** Ô vuông icon trên KPI card trạng thái chấm công */
+/** Ô vuông icon trên KPI card trạng thái Điểm danh */
 export const KPI_METRIC_ICON_BOX = 'h-11 w-11';
 export const KPI_METRIC_ICON_SIZE = 'h-5 w-5';
 
 export const UI = {
   appName: 'BỆNH VIỆN QUÂN Y 87',
   appSubtitleAdmin: 'Admin Center',
-  appSubtitleHead: 'HỆ THỐNG CHẤM CÔNG',
+  appSubtitleHead: 'Chương trình điểm danh',
   footerCopyright:
-    '© 2026 BỆNH VIỆN QUÂN Y 87 — Hệ thống Chấm công phát triển bởi Tham mưu - Hành chính',
+    '© 2026 BỆNH VIỆN QUÂN Y 87 — Chương trình điểm danh phát triển bởi Tham mưu - Hành chính',
   footerCopyrightMobile:
-    '© 2026 Hệ thống Chấm công phát triển bởi Tham mưu - Hành chính',
-  pageTitle: 'CHẤM CÔNG HẰNG NGÀY',
+    '© 2026 Chương trình điểm danh phát triển bởi Tham mưu - Hành chính',
+  pageTitle: 'Điểm danh HẰNG NGÀY',
   staffListTitle: 'Danh sách nhân sự',
-  kpiProgress: 'TIẾN ĐỘ CHẤM CÔNG',
+  kpiProgress: 'TIẾN ĐỘ Điểm danh',
+  kpiProgressLabel: 'Tiến độ Điểm danh',
+  kpiProgressSubtitle: 'Nhân viên đã có mặt hôm nay',
+  kpiRemaining: 'Còn lại',
+  kpiRate: 'TỶ LỆ',
   kpiPresent: 'ĐI LÀM',
   kpiAbsent: 'NGHỈ PHÉP',
   kpiStudy: 'ĐI HỌC',
@@ -113,34 +117,45 @@ export const UI = {
   searchPlaceholder: 'Tìm tên nhân viên hoặc mã số...',
   filterButton: 'Bộ lọc',
   filterByStatus: 'Lọc theo trạng thái',
+  filterClearStatus: 'Xóa lọc trạng thái',
   filterAll: 'Tất cả',
   filterUnchecked: 'Chưa chấm',
-  progressTitle: 'TIẾN ĐỘ CHẤM CÔNG',
+  progressTitle: 'TIẾN ĐỘ Điểm danh',
   quickReportTitle: 'Báo cáo nhanh',
   quickReportDesc: 'Gửi dữ liệu trực tiếp cho Admin tổng',
   sendReportButton: 'Gửi báo cáo',
-  sendReportFull: 'Gửi báo cáo cho Admin',
+  sendReportFull: 'Gửi báo cáo',
   reportSent: 'Đã gửi báo cáo',
   reportSendSuccess: 'Gửi báo cáo quân số thành công.',
   reportBlocked: 'Admin đã khóa gửi báo cáo cho ĐƠN VỊ hôm nay.',
-  reportIncomplete: 'Vui lòng chấm công đủ tất cả nhân viên trước khi gửi báo cáo.',
+  reportIncomplete: 'Vui lòng Điểm danh đủ tất cả nhân viên trước khi gửi báo cáo.',
   reportConfirm: 'Xác nhận gửi báo cáo quân số Đơn vị cho Admin?',
   sendReportModalTitle: 'Gửi báo cáo quân số',
   today: 'Hôm nay',
-  noStaff: 'Không có dữ liệu Nhân viên',
+  noStaff: 'Không có dữ liệu!',
   employees: 'nhân viên',
   headRole: 'Trưởng phòng',
   unlockedBadge: 'Đã mở khóa đặc cách',
-  quickActionsColumn: 'CHẤM CÔNG NHANH',
+  quickActionsColumn: 'Điểm danh NHANH',
   emptyCell: '—',
   breadcrumbSystem: 'Hệ thống',
-  breadcrumbAttendance: 'Chấm công',
+  breadcrumbAttendance: 'Điểm danh',
   breadcrumbStatistics: 'Thống kê',
   breadcrumbCatalog: 'Danh mục hành chính',
   headCatalog: 'Danh mục hành chính',
   headStaff: 'Nhân viên',
   staffAvatarTitle: 'Cập nhật ảnh đại diện',
   staffAvatarUpdateSuccess: 'Đã cập nhật ảnh đại diện thành công.',
+  staffAvatarUpdateFailed: 'Không thể cập nhật ảnh đại diện.',
+  staffAvatarSelectPhoto: 'Chọn ảnh',
+  staffAvatarSelectFromComputer: 'Chọn ảnh từ máy tính',
+  staffAvatarTakePhoto: 'Chụp ảnh',
+  staffAvatarDeleteCurrent: 'Xóa ảnh hiện tại',
+  staffAvatarNote:
+    'Vui lòng sử dụng ảnh chân dung rõ mặt để thuận tiện cho việc nhận diện nhân sự trong hệ thống bệnh viện.',
+  staffAvatarSave: 'Lưu thay đổi',
+  staffAvatarSaving: 'Đang lưu...',
+  staffAvatarIdPrefix: 'ID:',
   changePassword: 'Đổi mật khẩu',
   currentPassword: 'Mật khẩu hiện tại',
   newPassword: 'Mật khẩu mới',
@@ -162,7 +177,7 @@ export const HEAD_NAV_IDS = {
 
 /** Menu trưởng phòng (desktop sidebar) */
 export const HEAD_NAV = [
-  { id: HEAD_NAV_IDS.HOME, label: 'Chấm công', icon: 'clipboard' },
+  { id: HEAD_NAV_IDS.HOME, label: 'Điểm danh', icon: 'clipboard' },
   { id: HEAD_NAV_IDS.STATISTICS, label: 'Thống kê', icon: 'chart' },
 ];
 
@@ -176,39 +191,44 @@ export const HEAD_CATALOG_NAV = [
 export const HEAD_MOBILE_DRAWER_NAV = [...HEAD_NAV, ...HEAD_CATALOG_NAV];
 
 export const MOBILE_UI = {
-  sendReportFull: 'Gửi báo cáo cho Admin',
+  sendReportFull: 'Gửi báo cáo',
   staffListTitle: 'Danh sách nhân viên',
   statusLabel: 'Trạng thái',
 };
 
 export const ATTENDANCE_PAGE_SIZE = 20;
 
-/** Mobile trưởng phòng — chấm công / nhân viên (card cao, ít bản ghi/trang để có phân trang) */
-export const MOBILE_PAGE_SIZE = 5;
+/** Mobile trưởng phòng — Điểm danh / nhân viên (card cao, ít bản ghi/trang để luôn có phân trang) */
+export const MOBILE_PAGE_SIZE = 3;
+
+/** Mobile — lịch sử thống kê (ít bản ghi/trang hơn desktop) */
+export const MOBILE_STATISTICS_HISTORY_PAGE_SIZE = 5;
 
 /** Mobile trưởng phòng — tải toàn bộ lịch sử trong một lần scroll */
 export const MOBILE_HISTORY_FETCH_SIZE = 500;
 
-/** Màn thống kê lịch sử chấm công */
+/** Màn thống kê lịch sử Điểm danh */
 export const STATISTICS_UI = {
-  pageTitle: 'THỐNG KÊ LỊCH SỬ CHẤM CÔNG',
+  pageTitle: 'THỐNG KÊ LỊCH SỬ Điểm danh',
   timeRangeLabel: 'Khoảng thời gian',
   dateFromLabel: 'Từ ngày',
   dateToLabel: 'Đến ngày',
-  searchPlaceholder: 'Tìm tên nhân viên...',
-  applyFilter: 'Áp dụng bộ lọc',
-  kpiUnit: 'LƯỢT CHẤM CÔNG',
+  searchPlaceholder: 'Tìm tên nhân viên',
+  applyFilter: 'Tìm kiếm',
+  kpiUnit: 'LƯỢT Điểm danh',
   chartTitle: 'Xu hướng trạng thái chuyên cần (Theo thời gian)',
   chartLegendPresent: 'ĐI LÀM',
   chartLegendAbsent: 'NGHỈ PHÉP',
   chartLegendStudy: 'ĐI HỌC',
   chartLegendTrip: 'CÔNG TÁC',
-  noData: 'Chưa có dữ liệu trong khoảng thời gian đã chọn',
-  historyTitle: 'Lịch sử chấm công chi tiết',
+  noData: 'Không có dữ liệu!',
+  maxRangeDays: 366,
+  maxRangeExceeded: 'Khoảng thời gian tối đa là 366 ngày',
+  historyTitle: 'Danh sách chi tiết',
   exportExcel: 'Xuất Excel',
-  noHistory: 'Không có bản ghi chấm công trong khoảng đã chọn',
+  noHistory: 'Không có dữ liệu!',
   historyExportFilename: 'lich-su-cham-cong.xlsx',
-  historyExportSheet: 'Lịch sử chấm công',
+  historyExportSheet: 'Lịch sử Điểm danh',
   showingResults: (from, to, total) => `Hiển thị ${from}-${to} trên ${total} kết quả`,
   mobilePageTitle: 'Thống kê',
   mobileKpiUnit: 'LƯỢT',
@@ -216,6 +236,15 @@ export const STATISTICS_UI = {
   mobileResultsCount: (total) => `${total} kết quả`,
   mobileNotePrefix: 'Ghi chú:',
   mobileMsnvPrefix: 'MSNV:',
+};
+
+/** Calendar popover — chọn khoảng ngày (mobile) */
+export const DATE_RANGE_PICKER_UI = {
+  ariaLabel: 'Chọn khoảng thời gian',
+  pickStart: 'Chọn ngày bắt đầu',
+  pickEnd: 'Chọn ngày kết thúc',
+  clear: 'Xóa',
+  today: 'Hôm nay',
 };
 
 /** Preset khoảng thời gian — mobile thống kê (mockup pill) */

@@ -39,6 +39,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // CSRF disabled: SPA uses session cookie with SameSite=strict (prod).
+                // Do not enable wildcard CORS with credentials in production.
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
@@ -64,7 +66,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         List<String> originPatterns = securityProperties.getCors().getAllowedOriginPatterns();
         if (CollectionUtils.isEmpty(originPatterns)) {
-            originPatterns = List.of("*");
+            originPatterns = List.of("http://localhost:5173", "http://127.0.0.1:5173");
         }
         config.setAllowedOriginPatterns(originPatterns);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

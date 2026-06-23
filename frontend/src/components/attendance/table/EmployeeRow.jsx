@@ -13,7 +13,7 @@ const EmployeeRow = memo(function EmployeeRow({ staff, disabled, onQuickAction }
           <div className="min-w-0">
             <p className="text-sm font-bold text-slate-900 truncate">{staff.fullname}</p>
             <p className="text-xs text-slate-400 truncate mt-0.5">
-              {staff.empCodeFormatted}
+            ID: {staff.empCodeFormatted}
             </p>
           </div>
         </div>

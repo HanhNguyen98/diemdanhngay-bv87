@@ -1,7 +1,6 @@
 package com.bv87.diemdanh.service.ai;
 
 import com.bv87.diemdanh.entity.AiPendingAction;
-import com.bv87.diemdanh.entity.AttendanceStatus;
 import com.bv87.diemdanh.repository.AiPendingActionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,7 +30,7 @@ public class AiPendingActionStore {
     public record BatchAttendanceAction(
             Integer deptCode,
             LocalDate date,
-            AttendanceStatus status,
+            String status,
             String scope,
             List<Integer> empCodes,
             Instant expiresAt) {}
@@ -56,7 +55,7 @@ public class AiPendingActionStore {
     public String saveBatchAttendanceAction(
             Integer deptCode,
             LocalDate date,
-            AttendanceStatus status,
+            String status,
             String scope,
             List<Integer> empCodes) {
         purgeExpired();
@@ -64,7 +63,7 @@ public class AiPendingActionStore {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("deptCode", deptCode);
         payload.put("date", date.toString());
-        payload.put("status", status.name());
+        payload.put("status", status);
         payload.put("scope", scope);
         payload.put("empCodes", empCodes);
 
@@ -137,13 +136,13 @@ public class AiPendingActionStore {
             Map<String, Object> map = objectMapper.readValue(json, new TypeReference<>() {});
             Integer deptCode = ((Number) map.get("deptCode")).intValue();
             LocalDate date = LocalDate.parse(map.get("date").toString());
-            AttendanceStatus status = AttendanceStatus.valueOf(map.get("status").toString());
+            String status = map.get("status").toString();
             String scope = map.get("scope").toString();
             List<Integer> empCodes = objectMapper.convertValue(
                     map.get("empCodes"), new TypeReference<>() {});
             return new BatchAttendanceAction(deptCode, date, status, scope, empCodes, Instant.now());
         } catch (Exception ex) {
-            throw new IllegalStateException("Dữ liệu phiên chấm công hàng loạt không hợp lệ", ex);
+            throw new IllegalStateException("Dữ liệu phiên Điểm danh hàng loạt không hợp lệ", ex);
         }
     }
 }

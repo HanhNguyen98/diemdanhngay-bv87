@@ -3,6 +3,7 @@ package com.bv87.diemdanh.controller;
 import com.bv87.diemdanh.dto.*;
 import com.bv87.diemdanh.service.AttendanceService;
 import com.bv87.diemdanh.service.AttendanceStatisticsService;
+import com.bv87.diemdanh.service.AttendanceStatusCatalogService;
 import com.bv87.diemdanh.service.AuthService;
 import com.bv87.diemdanh.util.VietnamTimeService;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
     private final AttendanceStatisticsService statisticsService;
+    private final AttendanceStatusCatalogService statusCatalogService;
     private final AuthService authService;
     private final VietnamTimeService timeService;
 
@@ -33,6 +35,11 @@ public class AttendanceController {
     @GetMapping("/session/status")
     public ResponseEntity<SessionStatusDto> getSessionStatus() {
         return ResponseEntity.ok(attendanceService.getSessionStatus(authService.getAuthUser()));
+    }
+
+    @GetMapping("/attendance/status-types")
+    public ResponseEntity<List<AttendanceStatusTypeDto>> getActiveStatusTypes() {
+        return ResponseEntity.ok(statusCatalogService.listActive());
     }
 
     @GetMapping("/attendance/summary")
@@ -124,6 +131,14 @@ public class AttendanceController {
                         + String.format("%02d", request.getDeptCode())
                         + " trong ngày hôm nay"
         ));
+    }
+
+    @DeleteMapping("/attendance/unlock/{deptCode}")
+    public ResponseEntity<Map<String, String>> relockDepartment(@PathVariable Integer deptCode) {
+        attendanceService.relockDepartment(authService.getAuthUser(), deptCode);
+        return ResponseEntity.ok(Map.of(
+                "message",
+                "Đã khóa sổ lại cho Đơn vị " + String.format("%02d", deptCode)));
     }
 
     @PostMapping("/attendance/report-submit")

@@ -12,6 +12,10 @@ public class DepartmentUpsertRequest {
     private Integer deptCode;
     @NotBlank
     private String deptName;
+    /** Optional display unit code (e.g. C11); shown on mobile cards instead of dept_code */
+    private String unitCode;
+    @NotNull(message = "Nhóm Đơn vị là bắt buộc")
+    private Integer groupCode;
     private String location;
     private Integer headEmpCode;
     /** Data URL sơ đồ vị trí (image/jpeg|png|gif|webp); null hoặc rỗng để xóa */

@@ -5,6 +5,8 @@ import { adminApi } from '../services/api';
 import { downloadExcel } from '../utils/exportExcel';
 import { formatDateDMY } from '../utils/formatters';
 import { defaultReminderHistoryRange, formatLogDateTime } from '../utils/reminderHistory';
+import { getReminderHistoryFilterDefaults } from '../utils/filterResetDefaults';
+import { useLoadingPhase } from './useLoadingPhase';
 import { usePagination } from './usePagination';
 
 export function useReminderHistory({ enabled = true }) {
@@ -18,15 +20,23 @@ export function useReminderHistory({ enabled = true }) {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [deptFilter, setDeptFilterState] = useState(null);
+  const [appliedDeptFilter, setAppliedDeptFilter] = useState(null);
   const [error, setError] = useState('');
+
+  const setDeptFilterImmediate = useCallback((value) => {
+    setDeptFilterState(value);
+    setAppliedDeptFilter(value);
+  }, []);
 
   const refresh = useCallback(async (from, to) => {
     setLoading(true);
     setError('');
     try {
       const data = await adminApi.getReminderHistory(from, to);
-      setHistory(data.history || []);
-      setStats(data.stats || []);
+      setHistory(Array.isArray(data?.history) ? data.history : []);
+      setStats(Array.isArray(data?.stats) ? data.stats : []);
     } catch (err) {
       setError(err.message || 'Không tải được lịch sử nhắc nhở.');
       setHistory([]);
@@ -46,19 +56,56 @@ export function useReminderHistory({ enabled = true }) {
   }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      setDepartments([]);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    adminApi
+      .listDepartments(undefined, { signal: controller.signal })
+      .then((depts) => {
+        if (!controller.signal.aborted) {
+          setDepartments(Array.isArray(depts) ? depts : []);
+        }
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        setDepartments([]);
+      });
+
+    return () => controller.abort();
+  }, [enabled]);
+
+  useEffect(() => {
     if (!enabled) return;
     refresh(appliedFrom, appliedTo);
   }, [enabled, appliedFrom, appliedTo, refresh]);
 
-  const applyFilter = useCallback(() => {
+  const applyFilter = useCallback((deptOverride) => {
     if (dateFrom > dateTo) {
       setError('Từ ngày không được lớn hơn đến ngày.');
       return;
     }
     setError('');
+    const nextDept =
+      deptOverride === null || typeof deptOverride === 'number' ? deptOverride : deptFilter;
+    setDeptFilterState(nextDept);
     setAppliedFrom(dateFrom);
     setAppliedTo(dateTo);
-  }, [dateFrom, dateTo]);
+    setAppliedDeptFilter(nextDept);
+  }, [dateFrom, dateTo, deptFilter]);
+
+  const resetFilters = useCallback(() => {
+    const { deptCode, dateFrom, dateTo } = getReminderHistoryFilterDefaults();
+    setError('');
+    setDeptFilterState(deptCode);
+    setDateFrom(dateFrom);
+    setDateTo(dateTo);
+    setAppliedFrom(dateFrom);
+    setAppliedTo(dateTo);
+    setAppliedDeptFilter(deptCode);
+  }, []);
 
   const handleExportExcel = useCallback(() => {
     const { dashboard: d } = ADMIN_UI;
@@ -91,32 +138,45 @@ export function useReminderHistory({ enabled = true }) {
     }
   }, [appliedFrom, appliedTo, history]);
 
+  const filtered = useMemo(() => {
+    if (appliedDeptFilter == null) return history;
+    return history.filter((row) => row.deptCode === appliedDeptFilter);
+  }, [history, appliedDeptFilter]);
+
   const { page, totalPages, paginated, pageSize, goToPage } = usePagination(
-    history,
+    filtered,
     ATTENDANCE_PAGE_SIZE,
   );
 
   useEffect(() => {
     goToPage(1);
-  }, [appliedFrom, appliedTo, goToPage]);
+  }, [appliedFrom, appliedTo, appliedDeptFilter, goToPage]);
+
+  const { initialLoading, refreshing } = useLoadingPhase(loading);
 
   return {
     history,
     paginated,
-    filteredCount: history.length,
+    filteredCount: filtered.length,
     page,
     totalPages,
     pageSize,
     goToPage,
     stats,
+    departments,
     loading,
+    initialLoading,
+    refreshing,
     exporting,
     error,
+    deptFilter,
+    setDeptFilterImmediate,
     dateFrom,
     dateTo,
     setDateFrom,
     setDateTo,
     applyFilter,
+    resetFilters,
     handleExportExcel,
   };
 }

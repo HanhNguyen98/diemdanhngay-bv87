@@ -1,7 +1,6 @@
 package com.bv87.diemdanh.repository;
 
 import com.bv87.diemdanh.entity.AttendanceRecord;
-import com.bv87.diemdanh.entity.AttendanceStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -75,7 +74,7 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
             ORDER BY COUNT(ar) DESC
             """)
     List<Object[]> aggregateLeaveCountsByEmployee(
-            @Param("status") AttendanceStatus status,
+            @Param("status") String status,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             @Param("deptCode") Integer deptCode);

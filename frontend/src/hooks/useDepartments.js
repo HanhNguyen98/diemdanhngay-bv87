@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { adminApi } from '../services/api';
+import { useLoadingPhase } from './useLoadingPhase';
 
 export function useDepartments() {
   const [items, setItems] = useState([]);
@@ -15,7 +16,7 @@ export function useDepartments() {
 
     try {
       const depts = await adminApi.listDepartments();
-      setItems(depts);
+      setItems(Array.isArray(depts) ? depts : []);
     } catch (err) {
       setItems([]);
       errors.push(err.message);
@@ -37,6 +38,8 @@ export function useDepartments() {
 
     setLoading(false);
   }, []);
+
+  const { initialLoading, refreshing } = useLoadingPhase(loading);
 
   useEffect(() => {
     load();
@@ -68,5 +71,5 @@ export function useDepartments() {
     [load],
   );
 
-  return { items, stats, loading, error, reload: load, create, update, remove };
+  return { items, stats, loading, initialLoading, refreshing, error, reload: load, create, update, remove };
 }

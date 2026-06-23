@@ -73,6 +73,31 @@
 }
 
 @layer components {
+
+  /* ── Admin portal typography (Segoe UI — matches desktop breadcrumb) ── */
+  .admin-shell {
+    @apply font-sans antialiased;
+  }
+
+  /* Admin mobile: force all text to 1rem */
+  @media (max-width: 1023px) {
+    .admin-shell {
+      font-size: 1rem;
+    }
+
+    .admin-shell * {
+      font-size: 1rem;
+    }
+  }
+
+  .admin-section-title {
+    @apply text-sm font-bold text-gray-800;
+  }
+
+  .admin-cell-name {
+    @apply font-semibold text-gray-800;
+  }
+
   /* ── Status badges (mockup semantic colors) ── */
   .badge-success {
     @apply bg-success text-success-fg;
@@ -92,6 +117,16 @@
 
   .badge-neutral {
     @apply bg-neutral text-neutral-fg;
+  }
+
+  .badge-dept-active {
+    background-color: #1c8538;
+    @apply text-white;
+  }
+
+  .badge-dept-deleted {
+    background-color: theme('colors.danger.fg');
+    @apply text-white;
   }
 
   /* ── Staff table status pills (mockup 2) ── */
@@ -117,6 +152,14 @@
 
   .badge-status-pending {
     @apply bg-slate-100 text-slate-600;
+  }
+
+  .badge-status-purple {
+    @apply bg-violet-50 text-violet-700;
+  }
+
+  .badge-status-teal {
+    @apply bg-teal-50 text-teal-700;
   }
 
   /* Legacy aliases — prefer semantic names above */
@@ -168,7 +211,7 @@
     @apply pointer-events-none select-none;
   }
 
-  /* ── Table header — đồng bộ chấm công / thống kê / admin ── */
+  /* ── Table header — đồng bộ Điểm danh / thống kê / admin ── */
   .table-header-row {
     @apply bg-table-header border-b border-slate-200;
   }
@@ -203,6 +246,7 @@
       opacity: 0;
       transform: translateY(-4px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -217,6 +261,7 @@
    * Mobile @ 100% zoom: khóa đúng visual viewport (dvh), một vùng scroll.
    */
   @media (max-width: 1023px) {
+
     html,
     body,
     #root {

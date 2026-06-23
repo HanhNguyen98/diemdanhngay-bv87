@@ -1,7 +1,9 @@
 package com.bv87.diemdanh.service;
 
+import com.bv87.diemdanh.dto.AccountStatsDto;
 import com.bv87.diemdanh.dto.AccountUpsertRequest;
 import com.bv87.diemdanh.dto.AdminAccountDto;
+import com.bv87.diemdanh.dto.RegistryPageDto;
 import com.bv87.diemdanh.dto.ResetPasswordRequest;
 import com.bv87.diemdanh.entity.Account;
 import com.bv87.diemdanh.entity.AccountRole;
@@ -15,16 +17,23 @@ import com.bv87.diemdanh.repository.EmployeeRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.util.CodeFormatter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AdminAccountService {
+
+    private static final int MAX_REGISTRY_PAGE_SIZE = 500;
+    private static final String HEAD_DEPT_TAKEN_MESSAGE =
+            "Đơn vị này đã có tài khoản Trưởng đơn vị. "
+                    + "Vui lòng sửa hoặc xóa tài khoản hiện có trước khi tạo mới.";
 
     private final AccountRepository accountRepository;
     private final DepartmentRepository departmentRepository;
@@ -38,12 +47,47 @@ public class AdminAccountService {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminAccountDto> listAccounts(AuthUser authUser) {
+    public AccountStatsDto getAccountStats(AuthUser authUser) {
         assertAdmin(authUser);
-        return accountRepository.findAllWithDepartment().stream()
-                .sorted(Comparator.comparing(Account::getUsername))
+        long total = accountRepository.count();
+        long active = accountRepository.countByActiveTrue();
+        return AccountStatsDto.builder()
+                .total(total)
+                .active(active)
+                .inactive(total - active)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public RegistryPageDto<AdminAccountDto> listAccountsPage(
+            AuthUser authUser,
+            String search,
+            String role,
+            String status,
+            int page,
+            int pageSize) {
+        assertAdmin(authUser);
+        validateRegistryPage(page, pageSize);
+        AccountRole roleFilter = parseRoleFilter(role);
+        Boolean activeFilter = parseStatusFilter(status);
+        String q = normalizeRegistrySearch(search);
+        PageRequest pageable = PageRequest.of(page - 1, pageSize, Sort.by("username"));
+        Page<Account> result = accountRepository.searchPage(roleFilter, activeFilter, q, pageable);
+        List<AdminAccountDto> items = result.getContent().stream()
                 .map(this::toDto)
                 .toList();
+        return RegistryPageDto.<AdminAccountDto>builder()
+                .items(items)
+                .page(page)
+                .pageSize(pageSize)
+                .totalItems(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminAccountDto> listAccounts(AuthUser authUser) {
+        return listAccountsPage(authUser, null, null, null, 1, MAX_REGISTRY_PAGE_SIZE).getItems();
     }
 
     @Transactional
@@ -222,13 +266,11 @@ public class AdminAccountService {
     }
 
     private void validateHeadUniqueness(Account account, Long accountId, Integer empCode, Integer deptCode) {
-        if (!account.isActive()) {
-            return;
+        if (accountRepository.existsHeadByDeptCodeExcludingId(AccountRole.HEAD, deptCode, accountId)) {
+            throw new BusinessException(HEAD_DEPT_TAKEN_MESSAGE);
         }
-        if (accountRepository.existsActiveHeadByDeptCodeExcludingId(AccountRole.HEAD, deptCode, accountId)) {
-            throw new BusinessException("Đã có tài khoản trưởng phòng đang hoạt động cho Đơn vị này");
-        }
-        if (accountRepository.existsActiveByEmpCodeExcludingId(empCode, accountId)) {
+        if (account.isActive()
+                && accountRepository.existsActiveByEmpCodeExcludingId(empCode, accountId)) {
             throw new BusinessException("Nhân viên này đã được gắn với tài khoản đang hoạt động");
         }
     }
@@ -252,5 +294,43 @@ public class AdminAccountService {
                 .empCodeFormatted(empCode != null ? CodeFormatter.formatEmpCode(empCode) : null)
                 .active(account.isActive())
                 .build();
+    }
+
+    private void validateRegistryPage(int page, int pageSize) {
+        if (page < 1) {
+            throw new BusinessException("Số trang không hợp lệ");
+        }
+        if (pageSize < 1 || pageSize > MAX_REGISTRY_PAGE_SIZE) {
+            throw new BusinessException("Kích thước trang không hợp lệ");
+        }
+    }
+
+    private String normalizeRegistrySearch(String search) {
+        if (search == null || search.isBlank()) {
+            return null;
+        }
+        return search.trim();
+    }
+
+    private AccountRole parseRoleFilter(String role) {
+        if (role == null || role.isBlank()) {
+            return null;
+        }
+        try {
+            return AccountRole.valueOf(role);
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException("Bộ lọc vai trò không hợp lệ");
+        }
+    }
+
+    private Boolean parseStatusFilter(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        return switch (status) {
+            case "active" -> true;
+            case "inactive" -> false;
+            default -> throw new BusinessException("Bộ lọc trạng thái không hợp lệ");
+        };
     }
 }

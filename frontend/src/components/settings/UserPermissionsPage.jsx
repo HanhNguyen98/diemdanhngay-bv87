@@ -1,13 +1,15 @@
 import { lazy, Suspense } from 'react';
 import { ADMIN_UI } from '../../constants/admin';
 import { useAccountsPage } from '../../hooks/useAccountsPage';
+import AdminSubmenuBreadcrumb from '../admin/sections/AdminSubmenuBreadcrumb';
 import RegistryTableShell from '../admin/sections/RegistryTableShell';
-import RegistrySearchInput from '../admin/sections/RegistrySearchInput';
 import TablePagination from '../admin/sections/TablePagination';
 import FlashBanner from '../shared/FlashBanner';
 import InlineErrorBanner from '../shared/InlineErrorBanner';
 import AccountStatGrid from './AccountStatGrid';
 import AccountTable from './AccountTable';
+import AccountFilterBar from './AccountFilterBar';
+import AccountMobileSection from './mobile/AccountMobileSection';
 
 const AccountFormModal = lazy(() => import('./AccountFormModal'));
 const DeleteModal = lazy(() => import('../shared/DeleteModal'));
@@ -20,8 +22,16 @@ export default function UserPermissionsPage() {
     items,
     search,
     setSearch,
+    roleFilter,
+    setRoleFilter,
+    statusFilter,
+    setStatusFilter,
+    resetFilters,
+    togglingId,
     stats,
     loading,
+    initialLoading,
+    refreshing,
     error,
     paginated,
     filteredCount,
@@ -39,13 +49,18 @@ export default function UserPermissionsPage() {
     handleResetPassword,
     handleSave,
     handleDelete,
+    handleToggleActive,
+    formAccounts,
     flash,
     clearFlash,
   } = useAccountsPage();
 
+  const { accounts: a } = ADMIN_UI;
+
   return (
     <>
-      <div className="flex flex-col h-full min-h-0 gap-2">
+      <AdminSubmenuBreadcrumb parentLabelKey="settings" currentLabelKey="settingsUsers" />
+      <div className="flex flex-col lg:h-full lg:min-h-0 gap-2">
         {flash && <FlashBanner flash={flash} onClose={clearFlash} />}
         <InlineErrorBanner message={error} />
 
@@ -53,18 +68,53 @@ export default function UserPermissionsPage() {
           <AccountStatGrid stats={stats} />
         </div>
 
+        <div className="shrink-0 lg:hidden">
+          <AccountFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            roleFilter={roleFilter}
+            onRoleFilterChange={setRoleFilter}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            onAdd={() => setFormAccount({})}
+            onResetFilters={resetFilters}
+            loading={initialLoading}
+          />
+        </div>
+
+        <AccountMobileSection
+          totalCount={filteredCount}
+          items={paginated}
+          loading={loading}
+          initialLoading={initialLoading}
+          refreshing={refreshing}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          onEdit={setFormAccount}
+          onDelete={setDeleteAccount}
+          onResetPassword={setResetAccount}
+          onToggleActive={handleToggleActive}
+          togglingId={togglingId}
+        />
+
         <RegistryTableShell
-          actionLabel={ADMIN_UI.accounts.newButton}
-          onAction={() => setFormAccount({})}
-          searchControl={
-            <RegistrySearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={ADMIN_UI.accounts.searchPlaceholder}
-              widthClass="w-full sm:w-[340px]"
+          className="hidden lg:flex flex-1 min-h-0"
+          toolbar={
+            <AccountFilterBar
+              search={search}
+              onSearchChange={setSearch}
+              roleFilter={roleFilter}
+              onRoleFilterChange={setRoleFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              onAdd={() => setFormAccount({})}
+              onResetFilters={resetFilters}
+              loading={initialLoading}
             />
           }
-          loading={loading}
+          initialLoading={initialLoading}
+          refreshing={refreshing}
           loadingLabel={ADMIN_UI.loading}
           footer={
             <TablePagination
@@ -91,15 +141,15 @@ export default function UserPermissionsPage() {
               initial={formAccount.id ? formAccount : null}
               departments={departments}
               staffList={staffList}
-              accounts={items}
+              accounts={formAccounts}
               onSave={handleSave}
               onClose={() => setFormAccount(null)}
             />
           )}
           {deleteAccount && (
             <DeleteModal
-              title={ADMIN_UI.accounts.deleteTitle}
-              message={ADMIN_UI.accounts.deleteMessage(deleteAccount.username)}
+              title={a.deleteTitle}
+              message={a.deleteMessage(deleteAccount.username)}
               onConfirm={handleDelete}
               onClose={() => setDeleteAccount(null)}
               loading={deleteLoading}
