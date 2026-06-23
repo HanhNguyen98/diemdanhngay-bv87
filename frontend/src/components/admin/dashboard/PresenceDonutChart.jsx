@@ -49,7 +49,7 @@ const PresenceDonutChart = memo(function PresenceDonutChart({ kpi, scopeLabel, c
 
   return (
     <section
-      className={`bg-surface-white border border-line rounded-xl shadow-card min-h-0 ${
+      className={`bg-surface-white border border-line rounded-xl shadow-card min-h-0 min-w-0 max-w-full ${
         compact ? 'lg:hidden p-3' : 'p-4 h-full flex flex-col flex-1'
       }`}
     >

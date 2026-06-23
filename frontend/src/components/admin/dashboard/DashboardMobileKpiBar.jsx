@@ -1,10 +1,11 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useMemo } from 'react';
 import { Users } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { KPI_METRIC_ICON_BOX, KPI_METRIC_ICON_SIZE } from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
 import { mergeBreakdownWithCatalog } from '../../../utils/statusBreakdown';
 import AttendanceStatusTile from '../../attendance/sections/AttendanceStatusTile';
+import MobileHorizontalScroll from '../../shared/MobileHorizontalScroll';
 
 const TOTAL_CARD =
   'bg-surface-white border border-line rounded-xl px-3 py-2 shadow-card flex items-center gap-2.5';
@@ -15,6 +16,8 @@ export const ADMIN_KPI_PEEK_TILE_CLASS =
 
 const UNCHECKED_LABEL_CLASS =
   'text-[0.625rem] leading-[1.2] font-medium uppercase tracking-tight text-content-body line-clamp-2';
+
+const SCROLL_INNER_CLASS = 'gap-2 snap-x snap-mandatory pb-0.5 pr-1';
 
 const DashboardMobileKpiBar = memo(function DashboardMobileKpiBar({ kpi, scopeLabel }) {
   const { dashboard: d } = ADMIN_UI;
@@ -28,30 +31,8 @@ const DashboardMobileKpiBar = memo(function DashboardMobileKpiBar({ kpi, scopeLa
   const totalCards = items.length + 1;
   const showScrollPeek = totalCards > 3;
 
-  const scrollRef = useRef(null);
-  const [scrolledToEnd, setScrolledToEnd] = useState(false);
-
-  const updateScrollState = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 6;
-    setScrolledToEnd(atEnd);
-  }, []);
-
-  useEffect(() => {
-    updateScrollState();
-    const el = scrollRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return undefined;
-
-    const ro = new ResizeObserver(updateScrollState);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [items.length, updateScrollState]);
-
-  const showRightFade = showScrollPeek && !scrolledToEnd;
-
   return (
-    <section className="lg:hidden flex flex-col gap-2" aria-label="Tổng hợp quân số">
+    <section className="lg:hidden flex flex-col gap-2 min-w-0 max-w-full" aria-label="Tổng hợp quân số">
       {scopeLabel && (
         <p className="text-2xs text-content-muted truncate px-0.5" title={scopeLabel}>
           {scopeLabel}
@@ -69,49 +50,39 @@ const DashboardMobileKpiBar = memo(function DashboardMobileKpiBar({ kpi, scopeLa
         </div>
       </article>
 
-      <div className="relative">
-        <div
-          ref={scrollRef}
-          onScroll={updateScrollState}
-          className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-0.5 pr-1"
-          role="list"
-          aria-label="Thống kê theo trạng thái"
-        >
-          {items.map((item) => (
-            <AttendanceStatusTile
-              key={item.code}
-              label={item.badgeLabel || item.label}
-              count={item.count}
-              colorKey={item.colorKey}
-              iconKey={item.iconKey}
-              peek
-            />
-          ))}
-          <article
-            className={`${ADMIN_KPI_PEEK_TILE_CLASS} rounded-xl border border-line bg-surface-white shadow-card px-2 py-1.5 flex flex-col justify-between min-w-0`}
-            role="listitem"
-          >
-            <div className="flex items-start justify-between gap-1">
-              <div
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gray-400"
-                aria-hidden="true"
-              >
-                <span className="text-3xs font-semibold text-white leading-none">—</span>
-              </div>
-              <span className="text-sm font-semibold tabular-nums leading-none text-content-muted">
-                {String(unchecked).padStart(2, '0')}
-              </span>
-            </div>
-            <p className={UNCHECKED_LABEL_CLASS}>{d.chartUnchecked}</p>
-          </article>
-        </div>
-        {showRightFade && (
-          <div
-            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-surface-page from-30% via-surface-page/80 to-transparent"
-            aria-hidden="true"
+      <MobileHorizontalScroll
+        ariaLabel="Thống kê theo trạng thái"
+        innerClassName={SCROLL_INNER_CLASS}
+        showFade={showScrollPeek}
+      >
+        {items.map((item) => (
+          <AttendanceStatusTile
+            key={item.code}
+            label={item.badgeLabel || item.label}
+            count={item.count}
+            colorKey={item.colorKey}
+            iconKey={item.iconKey}
+            peek
           />
-        )}
-      </div>
+        ))}
+        <article
+          className={`${ADMIN_KPI_PEEK_TILE_CLASS} rounded-xl border border-line bg-surface-white shadow-card px-2 py-1.5 flex flex-col justify-between min-w-0`}
+          role="listitem"
+        >
+          <div className="flex items-start justify-between gap-1">
+            <div
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gray-400"
+              aria-hidden="true"
+            >
+              <span className="text-3xs font-semibold text-white leading-none">—</span>
+            </div>
+            <span className="text-sm font-semibold tabular-nums leading-none text-content-muted">
+              {String(unchecked).padStart(2, '0')}
+            </span>
+          </div>
+          <p className={UNCHECKED_LABEL_CLASS}>{d.chartUnchecked}</p>
+        </article>
+      </MobileHorizontalScroll>
     </section>
   );
 });

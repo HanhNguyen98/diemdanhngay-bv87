@@ -34,9 +34,9 @@ const FlashBanner = memo(function FlashBanner({ flash, onClose }) {
       role="status"
       aria-live="polite"
       className={`fixed z-[70] animate-fade-in border ${box} flex items-start
-        max-lg:top-14 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-[calc(100vw-1.5rem)] max-lg:max-w-md
+        max-lg:top-14 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-[min(calc(100dvw-1.5rem),28rem)] max-lg:max-w-md
         max-lg:rounded-lg max-lg:px-3 max-lg:py-2 max-lg:text-xs max-lg:gap-2 max-lg:shadow-md
-        lg:top-4 lg:right-4 lg:w-[min(100vw-2rem,22rem)] lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm lg:gap-2.5 lg:shadow-panel lg:items-center`}
+        lg:top-4 lg:right-4 lg:w-[min(calc(100dvw-2rem),22rem)] lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm lg:gap-2.5 lg:shadow-panel lg:items-center`}
     >
       <Icon className={`shrink-0 mt-0.5 max-lg:w-4 max-lg:h-4 lg:w-4 lg:h-4 lg:mt-0 ${iconClass}`} />
       <span className="flex-1 min-w-0 leading-snug break-words">{flash.message}</span>

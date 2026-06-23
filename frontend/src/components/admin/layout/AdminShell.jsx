@@ -24,7 +24,7 @@ const AdminShell = memo(function AdminShell({
   );
 
   return (
-    <div className="admin-shell flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-surface-page lg:h-svh lg:max-h-svh">
+    <div className="admin-shell flex h-[100dvh] max-h-[100dvh] max-w-full overflow-hidden bg-surface-page lg:h-svh lg:max-h-svh">
       <AdminSidebar
         activeTab={activeTab}
         onTabChange={handleTabChange}
@@ -32,10 +32,10 @@ const AdminShell = memo(function AdminShell({
         user={user}
         className="hidden lg:flex"
       />
-      <div className="flex-1 min-w-0 flex flex-col min-h-0">
+      <div className="flex-1 min-w-0 max-w-full flex flex-col min-h-0 overflow-x-hidden">
         <AdminMobileTopBar onMenuOpen={() => setMenuOpen(true)} />
         <AdminTopBar activeTab={activeTab} />
-        <main className={`flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-y-contain lg:overflow-hidden px-[clamp(0.75rem,3vw,1.25rem)] py-3 ${MOBILE_SHELL_BOTTOM_PADDING_CLASS} lg:p-6`}>
+        <main className={`mobile-page-y flex-1 min-h-0 flex flex-col overscroll-y-contain lg:overflow-hidden px-[clamp(0.75rem,3vw,1.25rem)] py-3 ${MOBILE_SHELL_BOTTOM_PADDING_CLASS} lg:p-6`}>
           {children}
         </main>
         <AdminFooter />

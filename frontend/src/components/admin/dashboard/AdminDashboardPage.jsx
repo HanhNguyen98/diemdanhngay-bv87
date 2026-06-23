@@ -66,14 +66,14 @@ export default function AdminDashboardPage() {
     <>
       <AdminSubmenuBreadcrumb parentLabelKey="dashboard" currentLabelKey="dashboardOverview" />
 
-      <div className="flex flex-col lg:h-full lg:min-h-0 gap-2 lg:gap-2">
+      <div className="flex flex-col lg:h-full lg:min-h-0 gap-2 lg:gap-2 min-w-0 max-w-full">
         {flash && <FlashBanner flash={flash} onClose={clearFlash} />}
 
         <div className="shrink-0">
           <DashboardKpiBar kpi={displayKpi} scopeLabel={kpiScopeLabel} />
         </div>
 
-        <div className="lg:hidden flex flex-col gap-2">
+        <div className="lg:hidden flex flex-col gap-2 min-w-0 max-w-full">
           <PresenceDonutChart kpi={displayKpi} scopeLabel={kpiScopeLabel} compact />
 
           <DeptProgressMobileSection

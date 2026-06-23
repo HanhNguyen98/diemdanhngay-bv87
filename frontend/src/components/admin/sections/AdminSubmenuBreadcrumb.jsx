@@ -3,7 +3,7 @@ import { ADMIN_UI } from '../../../constants/admin';
 import AdminBreadcrumb from './AdminBreadcrumb';
 
 const WRAPPER_CLASS =
-  'lg:hidden shrink-0 border-b border-line py-2.5 mb-4 -mt-3 -mx-[clamp(0.75rem,3vw,1.25rem)] px-[clamp(0.75rem,3vw,1.25rem)]';
+  'lg:hidden shrink-0 border-b border-line py-2.5 mb-4 -mt-3 -mx-[clamp(0.75rem,3vw,1.25rem)] px-[clamp(0.75rem,3vw,1.25rem)] min-w-0';
 
 const AdminSubmenuBreadcrumb = memo(function AdminSubmenuBreadcrumb({
   parentLabelKey,

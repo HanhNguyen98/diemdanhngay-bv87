@@ -6,6 +6,7 @@ import {
 import MobileFilterApplyRow from '../../admin/sections/MobileFilterApplyRow';
 import TextSearchInput from '../../shared/TextSearchInput';
 import DateRangePickerField from '../../ui/DateRangePickerField';
+import MobileHorizontalScroll from '../../shared/MobileHorizontalScroll';
 
 const pillActive = 'bg-primary text-white font-semibold shadow-sm';
 const pillInactive = 'bg-neutral text-content-body hover:bg-neutral/80';
@@ -28,27 +29,25 @@ const StatisticsMobileFilter = memo(function StatisticsMobileFilter({
         {STATISTICS_UI.timeRangeLabel}
       </span>
 
-      <div className="overflow-x-auto scrollbar-none -mx-0.5 px-0.5">
-        <div className="flex items-center gap-2 min-w-max">
-          {MOBILE_STATISTICS_PRESETS.map((preset) => {
-            const isActive = timePreset === preset.value;
-            return (
-              <button
-                key={preset.value}
-                type="button"
-                disabled={loading}
-                onClick={() => onPresetChange(preset.value)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-60 ${
-                  isActive ? pillActive : pillInactive
-                }`}
-                aria-pressed={isActive}
-              >
-                {preset.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <MobileHorizontalScroll innerClassName="items-center gap-2 min-w-max">
+        {MOBILE_STATISTICS_PRESETS.map((preset) => {
+          const isActive = timePreset === preset.value;
+          return (
+            <button
+              key={preset.value}
+              type="button"
+              disabled={loading}
+              onClick={() => onPresetChange(preset.value)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-60 ${
+                isActive ? pillActive : pillInactive
+              }`}
+              aria-pressed={isActive}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </MobileHorizontalScroll>
 
       {timePreset === 'CUSTOM' && (
         <DateRangePickerField

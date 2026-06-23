@@ -15,6 +15,7 @@ import LockBanner from './sections/LockBanner';
 import StaffTableCard from './sections/StaffTableCard';
 import { HEAD_ATTENDANCE_MAIN_CLASS } from '../../constants/headLayout';
 import DatePillBar from '../dashboard/DatePillBar';
+import MobileHorizontalScroll from '../shared/MobileHorizontalScroll';
 import { HeadAiAssistantProvider } from '../../context/HeadAiAssistantContext';
 import HeadFlowPanel from '../ai/head/HeadFlowPanel';
 
@@ -118,14 +119,16 @@ export default function AttendancePage({
           <div className="text-center py-20 text-content-muted animate-pulse">{UI.loading}</div>
         ) : (
           <>
-            <div className="lg:hidden shrink-0 overflow-x-auto -mx-0.5 px-0.5">
-              <DatePillBar
-                variant="attendance"
-                compact
-                selectedDate={selectedDate}
-                recentDates={recentDates}
-                onDateChange={handleDateChange}
-              />
+            <div className="lg:hidden shrink-0 min-w-0 max-w-full">
+              <MobileHorizontalScroll innerClassName="items-center justify-start gap-2 min-w-max py-0.5">
+                <DatePillBar
+                  variant="attendance"
+                  compact
+                  selectedDate={selectedDate}
+                  recentDates={recentDates}
+                  onDateChange={handleDateChange}
+                />
+              </MobileHorizontalScroll>
             </div>
 
             <div className="shrink-0 space-y-2.5 max-lg:space-y-4 lg:contents">

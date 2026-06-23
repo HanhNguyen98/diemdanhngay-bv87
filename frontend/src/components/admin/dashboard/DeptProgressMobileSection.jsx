@@ -24,10 +24,10 @@ const DeptProgressMobileSection = memo(function DeptProgressMobileSection({
   const { headerMeta, openReminderModal, refresh, refreshing } = ctx;
 
   return (
-    <section className="bg-surface-white border border-line rounded-xl shadow-card overflow-hidden">
+    <section className="bg-surface-white border border-line rounded-xl shadow-card overflow-hidden min-w-0 max-w-full">
       <div className="px-2.5 py-2 border-b border-line space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="admin-section-title">{d.progressTitle}</h3>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <h3 className="admin-section-title min-w-0 truncate">{d.progressTitle}</h3>
           <span className="text-4xs text-content-muted tabular-nums whitespace-nowrap shrink-0">
             {headerMeta.time} | {headerMeta.date}
           </span>

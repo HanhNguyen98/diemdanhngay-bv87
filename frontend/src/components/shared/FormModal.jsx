@@ -28,8 +28,8 @@ const FormModal = memo(function FormModal({
     ? 'max-h-[92dvh] lg:max-h-none'
     : 'max-h-[92dvh] sm:max-h-[85vh]';
   const bodyScrollClass = isFitContentDesktop
-    ? 'flex-1 min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-visible'
-    : 'flex-1 min-h-0 overflow-y-auto overscroll-y-contain';
+    ? 'flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-y-contain lg:overflow-visible'
+    : 'flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-y-contain';
 
   return (
     <div
@@ -40,7 +40,7 @@ const FormModal = memo(function FormModal({
       }
     >
       <div
-        className={`bg-surface-white shadow-panel w-full flex flex-col overflow-hidden animate-fade-in ${
+        className={`bg-surface-white shadow-panel w-full max-w-full min-w-0 flex flex-col overflow-hidden animate-fade-in ${
           centerMobile ? 'rounded-2xl' : 'rounded-t-2xl sm:rounded-2xl'
         } ${panelWidthClass} ${panelHeightClass}`}
       >

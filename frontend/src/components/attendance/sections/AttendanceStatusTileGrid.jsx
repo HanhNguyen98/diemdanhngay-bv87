@@ -1,64 +1,37 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo } from 'react';
 import { normalizeStatusBreakdown } from '../../../utils/statusBreakdown';
 import AttendanceStatusTile from './AttendanceStatusTile';
+import MobileHorizontalScroll from '../../shared/MobileHorizontalScroll';
 
 export const DESKTOP_STATUS_COLUMNS = 4;
 export const DESKTOP_STATUS_ROWS = 2;
+
+const SCROLL_INNER_CLASS = 'gap-2 snap-x snap-mandatory pb-0.5 pr-1 w-full';
 
 const AttendanceStatusTileScrollRow = memo(function AttendanceStatusTileScrollRow({
   items,
   className = '',
 }) {
-  const scrollRef = useRef(null);
-  const [scrolledToEnd, setScrolledToEnd] = useState(false);
   const showScrollPeek = items.length > 3;
 
-  const updateScrollState = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 6;
-    setScrolledToEnd(atEnd);
-  }, []);
-
-  useEffect(() => {
-    updateScrollState();
-    const el = scrollRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return undefined;
-
-    const ro = new ResizeObserver(updateScrollState);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [items.length, updateScrollState]);
-
-  const showRightFade = showScrollPeek && !scrolledToEnd;
-
   return (
-    <div className={`relative ${className}`}>
-      <div
-        ref={scrollRef}
-        onScroll={updateScrollState}
-        className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-0.5 pr-1 w-full"
-        role="list"
-        aria-label="Thống kê theo trạng thái"
-      >
-        {items.map((item) => (
-          <AttendanceStatusTile
-            key={item.code}
-            label={item.badgeLabel || item.label}
-            count={item.count}
-            colorKey={item.colorKey}
-            iconKey={item.iconKey}
-            peek
-          />
-        ))}
-      </div>
-      {showRightFade && (
-        <div
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-surface-page from-30% via-surface-page/80 to-transparent"
-          aria-hidden="true"
+    <MobileHorizontalScroll
+      className={className}
+      ariaLabel="Thống kê theo trạng thái"
+      innerClassName={SCROLL_INNER_CLASS}
+      showFade={showScrollPeek}
+    >
+      {items.map((item) => (
+        <AttendanceStatusTile
+          key={item.code}
+          label={item.badgeLabel || item.label}
+          count={item.count}
+          colorKey={item.colorKey}
+          iconKey={item.iconKey}
+          peek
         />
-      )}
-    </div>
+      ))}
+    </MobileHorizontalScroll>
   );
 });
 

@@ -83,10 +83,8 @@
   @media (max-width: 1023px) {
     .admin-shell {
       font-size: 1rem;
-    }
-
-    .admin-shell * {
-      font-size: 1rem;
+      min-width: 0;
+      max-width: 100%;
     }
   }
 
@@ -258,7 +256,7 @@
   }
 
   /*
-   * Mobile @ 100% zoom: khóa đúng visual viewport (dvh), một vùng scroll.
+   * Mobile @ 100% zoom: khóa đúng visual viewport (dvh), một vùng scroll dọc.
    */
   @media (max-width: 1023px) {
 
@@ -267,8 +265,34 @@
     #root {
       height: 100dvh;
       max-height: 100dvh;
+      max-width: 100%;
       overflow: hidden;
+      overflow-x: clip;
     }
+  }
+
+  /* Page-level vertical scroll — no horizontal pan on mobile */
+  .mobile-page-y {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-x: none;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* Intentional horizontal carousel — clip outer, scroll inner */
+  .mobile-h-scroll-outer {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .mobile-h-scroll-inner {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pinch-zoom;
   }
 
   .scrollbar-none {

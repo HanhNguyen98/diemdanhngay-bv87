@@ -72,7 +72,7 @@ export default function HeadFlowPanel() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[min(100vw-2rem,400px)] h-[min(75vh,560px)] flex flex-col rounded-2xl shadow-2xl border border-line bg-surface-white overflow-hidden max-lg:bottom-20">
+    <div className="fixed bottom-4 right-4 z-50 w-[min(calc(100dvw-2rem),400px)] h-[min(75dvh,560px)] flex flex-col rounded-2xl shadow-2xl border border-line bg-surface-white overflow-hidden max-lg:bottom-20">
       <header className="shrink-0 flex items-center justify-between gap-2 px-4 py-3 bg-primary text-white">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 shrink-0 overflow-hidden rounded-full ring-1 ring-white/25">

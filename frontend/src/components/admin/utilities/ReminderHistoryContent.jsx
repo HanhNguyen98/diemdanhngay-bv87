@@ -31,7 +31,7 @@ const ReminderHistoryContent = memo(function ReminderHistoryContent({
   onExport,
 }) {
   return (
-    <div className="flex flex-col h-full min-h-0 gap-2 w-full">
+    <div className="flex flex-col h-full min-h-0 gap-2 w-full min-w-0 max-w-full">
       <InlineErrorBanner message={error} className="shrink-0" />
 
       <section className={`${CARD} p-4`}>

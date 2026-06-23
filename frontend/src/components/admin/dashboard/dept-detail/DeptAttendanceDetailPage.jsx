@@ -84,8 +84,8 @@ function DeptAttendanceDetailContent() {
     <>
       <InlineErrorBanner message={error} className="shrink-0" />
 
-      <div className="lg:hidden space-y-4">
-        <div className="shrink-0 border-b border-line py-2.5 -mt-3 -mx-[clamp(0.75rem,3vw,1.25rem)] px-[clamp(0.75rem,3vw,1.25rem)]">
+      <div className="lg:hidden space-y-4 min-w-0 max-w-full">
+        <div className="shrink-0 border-b border-line py-2.5 -mt-3 -mx-[clamp(0.75rem,3vw,1.25rem)] px-[clamp(0.75rem,3vw,1.25rem)] min-w-0">
           <AdminBreadcrumb items={mobileBreadcrumb} mobileTruncate />
         </div>
 

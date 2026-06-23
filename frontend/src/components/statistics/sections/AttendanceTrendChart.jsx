@@ -17,30 +17,31 @@ import {
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
+import MobileHorizontalScroll from '../../shared/MobileHorizontalScroll';
+
 function ChartLegendPill({ series, compact = false }) {
   if (!series?.length) return null;
   return (
-    <div
-      className={`w-full overflow-x-auto scrollbar-none rounded-full border border-gray-200 bg-table-header ${
+    <MobileHorizontalScroll
+      className={`rounded-full border border-gray-200 bg-table-header ${
         compact ? 'px-3 py-2' : 'px-4 py-1.5'
       }`}
-      aria-label="Chú thích biểu đồ"
+      innerClassName="items-center justify-center gap-3 lg:gap-4 flex-nowrap min-w-max"
+      ariaLabel="Chú thích biểu đồ"
     >
-      <div className="flex items-center justify-center gap-3 lg:gap-4 flex-nowrap min-w-max">
-        {series.map((item) => (
-          <div key={item.key} className="flex items-center gap-2 shrink-0">
-            <span
-              className="h-[3px] w-5 shrink-0 rounded-full"
-              style={{ backgroundColor: item.color }}
-              aria-hidden="true"
-            />
-            <span className="text-3xs font-semibold text-content-heading uppercase tracking-wide leading-none whitespace-nowrap">
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+      {series.map((item) => (
+        <div key={item.key} className="flex items-center gap-2 shrink-0">
+          <span
+            className="h-[3px] w-5 shrink-0 rounded-full"
+            style={{ backgroundColor: item.color }}
+            aria-hidden="true"
+          />
+          <span className="text-3xs font-semibold text-content-heading uppercase tracking-wide leading-none whitespace-nowrap">
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </MobileHorizontalScroll>
   );
 }
 

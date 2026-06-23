@@ -40,7 +40,7 @@ const ReminderHistoryMobileSection = memo(function ReminderHistoryMobileSection(
   };
 
   return (
-    <div className="lg:hidden flex flex-col gap-2">
+    <div className="lg:hidden flex flex-col gap-2 min-w-0 max-w-full">
       <section className={LIST_SHELL}>
         <div className="px-3 py-2.5 border-b border-line flex items-center justify-between gap-2">
           <h3 className="admin-section-title flex items-center gap-2 text-xs uppercase">
