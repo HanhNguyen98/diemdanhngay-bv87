@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ADMIN_UI } from '../constants/admin';
-import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
+import { useResponsivePageSize } from './useResponsivePageSize';
 import { useAttendanceStatusConfig } from '../context/AttendanceStatusContext';
 import { api } from '../api/client';
 import { adminApi } from '../services/api';
@@ -11,8 +11,6 @@ import { buildBreakdownFromStaff } from '../utils/statusBreakdown';
 import { useCommittedSnapshot } from './useCommittedSnapshot';
 import { useLoadingPhase } from './useLoadingPhase';
 import { usePagination } from './usePagination';
-
-const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
 
 function buildKpiFromSummary(summary) {
   return {
@@ -41,6 +39,7 @@ function buildScopeLabel(deptCode, departments) {
 }
 
 export function useDeptAttendanceDetail() {
+  const pageSize = useResponsivePageSize();
   const { statusOptions, items: statusCatalogItems } = useAttendanceStatusConfig();
 
   const statusLabel = useCallback(
@@ -194,7 +193,7 @@ export function useDeptAttendanceDetail() {
     [departments, appliedDeptCode],
   );
 
-  const { page, totalPages, paginated, pageSize, goToPage } = usePagination(staff, PAGE_SIZE);
+  const { page, totalPages, paginated, goToPage } = usePagination(staff, pageSize);
 
   useEffect(() => {
     goToPage(1);

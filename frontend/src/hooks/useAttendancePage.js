@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef, startTransition, use
 import { api } from '../api/client';
 import { useAppBootstrap } from '../context/AppBootstrapContext';
 import {
-  ATTENDANCE_PAGE_SIZE,
-  MOBILE_PAGE_SIZE,
   UI,
   isAttendanceUnchecked,
 } from '../constants/attendance';
@@ -12,7 +10,7 @@ import { formatDeptCode, getRecentDates, todayISO } from '../utils/formatters';
 import { buildBreakdownFromStaff } from '../utils/statusBreakdown';
 import { useAttendanceCache } from './useAttendanceCache';
 import { useFlashMessage } from './useFlashMessage';
-import { useIsMobile } from './useIsMobile';
+import { useResponsivePageSize } from './useResponsivePageSize';
 
 function applyStaffPatch(list, empCode, patch) {
   return list.map((s) => (s.empCode === empCode ? { ...s, ...patch } : s));
@@ -27,8 +25,7 @@ function applyStaffPatch(list, empCode, patch) {
  */
 export function useAttendancePage(user) {
   const { statusBadge, items: statusCatalogItems } = useAttendanceStatusConfig();
-  const isMobile = useIsMobile();
-  const pageSize = isMobile ? MOBILE_PAGE_SIZE : ATTENDANCE_PAGE_SIZE;
+  const pageSize = useResponsivePageSize();
   const isAdmin = user.role === 'ADMIN';
   const { fetchAttendanceDepartments } = useAppBootstrap();
   const [departments, setDepartments] = useState([]);

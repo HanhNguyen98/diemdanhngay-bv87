@@ -6,9 +6,7 @@ import { adminApi } from '../services/api';
 import { useDepartments } from './useDepartments';
 import { useFlashMessage } from './useFlashMessage';
 import { useLoadingPhase } from './useLoadingPhase';
-import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
-
-const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
+import { useResponsivePageSize } from './useResponsivePageSize';
 
 function buildAccountPayload(account, overrides = {}) {
   const payload = {
@@ -29,6 +27,7 @@ function buildAccountPayload(account, overrides = {}) {
 }
 
 export function useAccountsPage() {
+  const pageSize = useResponsivePageSize();
   const { items: departments } = useDepartments();
   const [items, setItems] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -68,7 +67,7 @@ export function useAccountsPage() {
         role: roleFilter || undefined,
         status: statusFilter || undefined,
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
         signal,
       });
       if (signal?.aborted) return;
@@ -84,7 +83,7 @@ export function useAccountsPage() {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [search, roleFilter, statusFilter, page]);
+  }, [search, roleFilter, statusFilter, page, pageSize]);
 
   useEffect(() => {
     loadStats();
@@ -101,7 +100,7 @@ export function useAccountsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, roleFilter, statusFilter]);
+  }, [search, roleFilter, statusFilter, pageSize]);
 
   const loadFormRefs = useCallback(async () => {
     try {
@@ -220,7 +219,7 @@ export function useAccountsPage() {
     filteredCount: totalItems,
     page,
     totalPages,
-    pageSize: PAGE_SIZE,
+    pageSize,
     goToPage,
     formAccount,
     setFormAccount,

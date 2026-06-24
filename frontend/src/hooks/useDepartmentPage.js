@@ -19,11 +19,10 @@ import { useExcelRegistryActions } from './useExcelRegistryActions';
 
 import { mapDepartmentImportRows } from '../utils/excelImport';
 import { getDepartmentRegistryFilterDefaults } from '../utils/filterResetDefaults';
-import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
-
-const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
+import { useResponsivePageSize } from './useResponsivePageSize';
 
 export function useDepartmentPage() {
+  const pageSize = useResponsivePageSize();
   const { items, stats, loading, initialLoading, refreshing, error, create, update, remove, reload } = useDepartments();
   const {
     items: groups,
@@ -84,7 +83,7 @@ export function useDepartmentPage() {
 
   const showGroupColumn = groupFilter === '';
 
-  const { page, totalPages, paginated, pageSize, goToPage } = usePagination(filtered, PAGE_SIZE);
+  const { page, totalPages, paginated, goToPage } = usePagination(filtered, pageSize);
 
   useEffect(() => {
     goToPage(1);

@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../api/client';
 import {
-  MOBILE_STATISTICS_HISTORY_PAGE_SIZE,
+  MOBILE_HISTORY_FETCH_SIZE,
   STATISTICS_HISTORY_EXCEL_HEADERS,
-  STATISTICS_HISTORY_PAGE_SIZE,
   STATISTICS_UI,
 } from '../constants/attendance';
 import { downloadExcel } from '../utils/exportExcel';
@@ -11,7 +10,7 @@ import { daysBetweenInclusive, getStatisticsDateRange, todayISO } from '../utils
 import { getStatisticsFilterDefaults } from '../utils/filterResetDefaults';
 import { useCommittedSnapshot } from './useCommittedSnapshot';
 import { useFlashMessage } from './useFlashMessage';
-import { useIsMobile } from './useIsMobile';
+import { useResponsivePageSize } from './useResponsivePageSize';
 import { useLoadingPhase } from './useLoadingPhase';
 
 function initialRange() {
@@ -27,8 +26,7 @@ function initialRange() {
  */
 export function useStatisticsPage(user) {
   const deptCode = user.deptCode;
-  const isMobile = useIsMobile();
-  const historyPageSize = isMobile ? MOBILE_STATISTICS_HISTORY_PAGE_SIZE : STATISTICS_HISTORY_PAGE_SIZE;
+  const historyPageSize = useResponsivePageSize();
   const defaultRange = useMemo(() => initialRange(), []);
   const { flash, showWarning, showError, clearFlash } = useFlashMessage();
 
@@ -164,6 +162,10 @@ export function useStatisticsPage(user) {
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyPageSize]);
 
   const applyDateRange = useCallback(
     (from, to, searchVal = appliedSearch) => {

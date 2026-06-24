@@ -24,7 +24,7 @@ export const ADMIN_CACHEABLE_TAB_IDS = new Set([
 export const ADMIN_HASH_PREFIX = '#admin/';
 
 /** Mobile admin — tiến độ điểm danh theo ĐƠN VỊ (card + phân trang) */
-export const MOBILE_DEPT_PROGRESS_PAGE_SIZE = 3;
+export const MOBILE_DEPT_PROGRESS_PAGE_SIZE = 10;
 export const DESKTOP_DEPT_PROGRESS_PAGE_SIZE = 20;
 
 /** Phân trang mobile (ADMIN) — không có nền thanh, giống màn Đơn vị mobile */

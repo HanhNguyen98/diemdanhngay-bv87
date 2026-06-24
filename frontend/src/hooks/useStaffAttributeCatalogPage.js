@@ -1,11 +1,9 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
+import { getTextSearchFilterDefaults } from '../utils/filterResetDefaults';
 import { useFlashMessage } from './useFlashMessage';
 import { usePagination } from './usePagination';
 import { useExcelRegistryActions } from './useExcelRegistryActions';
-import { getTextSearchFilterDefaults } from '../utils/filterResetDefaults';
-
-const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
+import { useResponsivePageSize } from './useResponsivePageSize';
 
 /**
  * @param {{
@@ -20,6 +18,7 @@ const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
  * }} config
  */
 export function useStaffAttributeCatalogPage(config) {
+  const pageSize = useResponsivePageSize();
   const { items, stats, loading, initialLoading, refreshing, error, create, update, remove } = config.useCatalog();
   const { flash, showSuccess, showError, showWarning, clearFlash } = useFlashMessage();
 
@@ -38,7 +37,7 @@ export function useStaffAttributeCatalogPage(config) {
     });
   }, [items, search, config]);
 
-  const { page, totalPages, paginated, pageSize, goToPage } = usePagination(filtered, PAGE_SIZE);
+  const { page, totalPages, paginated, goToPage } = usePagination(filtered, pageSize);
 
   useEffect(() => {
     goToPage(1);

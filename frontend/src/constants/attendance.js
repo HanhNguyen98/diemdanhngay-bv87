@@ -196,13 +196,16 @@ export const MOBILE_UI = {
   statusLabel: 'Trạng thái',
 };
 
-export const ATTENDANCE_PAGE_SIZE = 20;
+export const DESKTOP_PAGE_SIZE = 20;
 
-/** Mobile trưởng phòng — Điểm danh / nhân viên (card cao, ít bản ghi/trang để luôn có phân trang) */
-export const MOBILE_PAGE_SIZE = 3;
+/** Alias — desktop list/table page size */
+export const ATTENDANCE_PAGE_SIZE = DESKTOP_PAGE_SIZE;
 
-/** Mobile — lịch sử thống kê (ít bản ghi/trang hơn desktop) */
-export const MOBILE_STATISTICS_HISTORY_PAGE_SIZE = 5;
+/** Mobile — card lists and paginated results (max-lg) */
+export const MOBILE_PAGE_SIZE = 10;
+
+/** Mobile — lịch sử thống kê (same as MOBILE_PAGE_SIZE) */
+export const MOBILE_STATISTICS_HISTORY_PAGE_SIZE = MOBILE_PAGE_SIZE;
 
 /** Mobile trưởng phòng — tải toàn bộ lịch sử trong một lần scroll */
 export const MOBILE_HISTORY_FETCH_SIZE = 500;
@@ -264,7 +267,7 @@ export const STATISTICS_HISTORY_COLUMNS = [
 
 export const STATISTICS_HISTORY_EXCEL_HEADERS = ['Ngày', 'Họ và tên', 'Mã số', 'Trạng thái', 'Ghi chú'];
 
-export const STATISTICS_HISTORY_PAGE_SIZE = 10;
+export const STATISTICS_HISTORY_PAGE_SIZE = DESKTOP_PAGE_SIZE;
 
 export const TIME_RANGE_PRESETS = [
   { value: 'THIS_MONTH', label: 'Tháng này' },

@@ -14,6 +14,10 @@ export function usePagination(items, pageSize = 4) {
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
 
   useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
     if (page > totalPages) {
       setPage(totalPages);
     }

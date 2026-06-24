@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { ADMIN_UI } from '../constants/admin';
-import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
 import {
   STATUS_CATALOG_EXCEL,
   buildStatusCatalogExportSheet,
@@ -11,10 +10,10 @@ import { useStatusCatalog } from './useStatusCatalog';
 import { useFlashMessage } from './useFlashMessage';
 import { usePagination } from './usePagination';
 import { useExcelRegistryActions } from './useExcelRegistryActions';
-
-const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
+import { useResponsivePageSize } from './useResponsivePageSize';
 
 export function useStatusCatalogPage() {
+  const pageSize = useResponsivePageSize();
   const { items, stats, loading, initialLoading, refreshing, error, create, update, remove } = useStatusCatalog();
   const { flash, showSuccess, showError, showWarning, clearFlash } = useFlashMessage();
 
@@ -34,7 +33,7 @@ export function useStatusCatalogPage() {
     );
   }, [items, search]);
 
-  const { page, totalPages, paginated, pageSize, goToPage } = usePagination(filtered, PAGE_SIZE);
+  const { page, totalPages, paginated, goToPage } = usePagination(filtered, pageSize);
 
   useEffect(() => {
     goToPage(1);

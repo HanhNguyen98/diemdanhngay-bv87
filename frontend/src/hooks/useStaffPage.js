@@ -10,12 +10,11 @@ import { useFlashMessage } from './useFlashMessage';
 import { useExcelRegistryActions } from './useExcelRegistryActions';
 import { mapStaffImportRows } from '../utils/excelImport';
 import { getStaffRegistryFilterDefaults } from '../utils/filterResetDefaults';
-import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
 import { useStaffCatalogOptions } from './useStaffCatalogOptions';
-
-const PAGE_SIZE = ATTENDANCE_PAGE_SIZE;
+import { useResponsivePageSize } from './useResponsivePageSize';
 
 export function useStaffPage() {
+  const pageSize = useResponsivePageSize();
   const { items: departments } = useDepartments();
   const [page, setPage] = useState(1);
   const {
@@ -35,7 +34,7 @@ export function useStaffPage() {
     create,
     update,
     remove,
-  } = useStaff({ page, pageSize: PAGE_SIZE });
+  } = useStaff({ page, pageSize });
   const { rankNames, positionNames } = useStaffCatalogOptions();
   const { flash, showSuccess, showWarning, showError, clearFlash } = useFlashMessage();
 
@@ -46,7 +45,7 @@ export function useStaffPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [deptFilter, search]);
+  }, [deptFilter, search, pageSize]);
 
   const goToPage = useCallback(
     (next) => {
@@ -134,7 +133,7 @@ export function useStaffPage() {
     filteredCount: totalItems,
     page,
     totalPages,
-    pageSize: PAGE_SIZE,
+    pageSize,
     goToPage,
     formStaff,
     setFormStaff,

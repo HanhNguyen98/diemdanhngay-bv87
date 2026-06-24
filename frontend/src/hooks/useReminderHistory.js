@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ADMIN_UI } from '../constants/admin';
-import { ATTENDANCE_PAGE_SIZE } from '../constants/attendance';
 import { adminApi } from '../services/api';
 import { downloadExcel } from '../utils/exportExcel';
 import { formatDateDMY } from '../utils/formatters';
@@ -8,8 +7,10 @@ import { defaultReminderHistoryRange, formatLogDateTime } from '../utils/reminde
 import { getReminderHistoryFilterDefaults } from '../utils/filterResetDefaults';
 import { useLoadingPhase } from './useLoadingPhase';
 import { usePagination } from './usePagination';
+import { useResponsivePageSize } from './useResponsivePageSize';
 
 export function useReminderHistory({ enabled = true }) {
+  const pageSize = useResponsivePageSize();
   const initialRange = useMemo(() => defaultReminderHistoryRange(), []);
 
   const [dateFrom, setDateFrom] = useState(initialRange.from);
@@ -143,9 +144,9 @@ export function useReminderHistory({ enabled = true }) {
     return history.filter((row) => row.deptCode === appliedDeptFilter);
   }, [history, appliedDeptFilter]);
 
-  const { page, totalPages, paginated, pageSize, goToPage } = usePagination(
+  const { page, totalPages, paginated, goToPage } = usePagination(
     filtered,
-    ATTENDANCE_PAGE_SIZE,
+    pageSize,
   );
 
   useEffect(() => {
