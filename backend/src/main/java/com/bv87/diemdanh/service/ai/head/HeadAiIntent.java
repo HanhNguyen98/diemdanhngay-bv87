@@ -13,6 +13,7 @@ public class HeadAiIntent {
         GREETING,
         STATUS_PICKER,
         BATCH_ATTENDANCE_EXECUTE,
+        LIST_MISSING_PUNCHES,
         UNKNOWN
     }
 

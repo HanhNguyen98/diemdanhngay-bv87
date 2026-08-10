@@ -4,6 +4,8 @@ import com.bv87.diemdanh.util.CodeFormatter;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.Instant;
+
 @Getter
 @Builder
 public class StaffAttendanceDto {
@@ -19,6 +21,12 @@ public class StaffAttendanceDto {
     private final String status;
     private final String statusLabel;
     private final String note;
+    /** Effective check-in (rule C); null if not set. */
+    private final Instant checkInAt;
+    /** Effective check-out (MAX OUT); null if not set. */
+    private final Instant checkOutAt;
+    /** FINGERPRINT | MANUAL | ADMIN — null when no day record. */
+    private final String source;
 
     public static String formatEmp(Integer empCode) {
         return CodeFormatter.formatEmpCode(empCode);

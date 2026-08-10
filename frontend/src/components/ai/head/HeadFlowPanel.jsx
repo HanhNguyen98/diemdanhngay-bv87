@@ -54,9 +54,8 @@ export default function HeadFlowPanel() {
         storageKey={AI_FAB_STORAGE_KEYS.head}
         getDefaultPosition={getHeadAiFabDefaultPosition}
         onActivate={toggleOpen}
-        disabled={tableDisabled}
         ariaLabel={HEAD_AI_ASSISTANT_UI.title}
-        title={tableDisabled ? HEAD_AI_ASSISTANT_UI.disabledHint : HEAD_AI_ASSISTANT_UI.title}
+        title={HEAD_AI_ASSISTANT_UI.title}
       >
         <span className="w-6 h-6 shrink-0 overflow-hidden rounded-full ring-1 ring-white/30">
           <AppLogo
@@ -124,17 +123,22 @@ export default function HeadFlowPanel() {
         )}
 
         <div className="flex flex-wrap gap-1.5 mb-2">
-          {HEAD_AI_ASSISTANT_UI.quickActions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              disabled={loading || tableDisabled}
-              onClick={() => handleQuickAction(action.id)}
-              className="h-7 px-2.5 rounded-full border border-line bg-surface-white text-2xs sm:text-xs text-primary font-medium hover:bg-primary-light hover:border-primary/30 transition-colors disabled:opacity-50 whitespace-nowrap"
-            >
-              {action.label}
-            </button>
-          ))}
+          {HEAD_AI_ASSISTANT_UI.quickActions.map((action) => {
+            const writeBlocked =
+              tableDisabled && HEAD_AI_ASSISTANT_UI.writeActions.includes(action.id);
+            return (
+              <button
+                key={action.id}
+                type="button"
+                disabled={loading || writeBlocked}
+                title={writeBlocked ? HEAD_AI_ASSISTANT_UI.disabledHint : undefined}
+                onClick={() => handleQuickAction(action.id)}
+                className="h-7 px-2.5 rounded-full border border-line bg-surface-white text-2xs sm:text-xs text-primary font-medium hover:bg-primary-light hover:border-primary/30 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {action.label}
+              </button>
+            );
+          })}
         </div>
 
         <form onSubmit={handleSubmit} className="relative">
@@ -144,12 +148,12 @@ export default function HeadFlowPanel() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={HEAD_AI_ASSISTANT_UI.placeholder}
-            disabled={loading || tableDisabled}
+            disabled={loading}
             className="w-full h-10 rounded-xl border border-line pl-3 pr-11 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:bg-neutral"
           />
           <button
             type="submit"
-            disabled={loading || tableDisabled || !input.trim()}
+            disabled={loading || !input.trim()}
             className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-primary hover:bg-primary-light disabled:opacity-40"
             aria-label={HEAD_AI_ASSISTANT_UI.sendLabel}
           >

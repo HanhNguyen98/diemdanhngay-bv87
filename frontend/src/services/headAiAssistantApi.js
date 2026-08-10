@@ -102,6 +102,7 @@ export function confirmHeadBatchAttendance(actionId) {
 
 const QUICK_ACTION_TOOLS = {
   batch_attendance: 'batch_attendance',
+  list_missing_punches: 'list_missing_punches',
 };
 
 export function executeHeadAiToolFallback(quickAction, params = {}) {

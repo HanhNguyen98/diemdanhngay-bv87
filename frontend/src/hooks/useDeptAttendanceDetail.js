@@ -208,12 +208,23 @@ export function useDeptAttendanceDetail() {
     setExporting(true);
     try {
       const { dashboard: d } = ADMIN_UI;
-      const headers = ['Họ và tên', 'Mã nhân viên', 'Cấp bậc', 'Chức vụ', 'Trạng thái', 'Ghi chú'];
+      const headers = [
+        'Họ và tên',
+        'Mã nhân viên',
+        'Cấp bậc',
+        'Chức vụ',
+        'Giờ vào',
+        'Giờ ra',
+        'Trạng thái',
+        'Ghi chú',
+      ];
       const rows = staff.map((s) => [
         s.fullname,
         s.empCodeFormatted,
         s.rankName || '',
         s.positionName || '',
+        s.checkInAt ? new Date(s.checkInAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
+        s.checkOutAt ? new Date(s.checkOutAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
         statusLabel(s.status),
         s.note || '',
       ]);
@@ -227,6 +238,44 @@ export function useDeptAttendanceDetail() {
       setExporting(false);
     }
   }, [staff, statusLabel]);
+
+  const fillAttendanceTimes = useCallback(
+    async (body) => {
+      const updated = await adminApi.fillAttendanceTimes(body);
+      setStaff((prev) =>
+        prev.map((row) => (row.empCode === updated.empCode ? { ...row, ...updated } : row)),
+      );
+      await loadData(appliedDeptCode, appliedDate, departments, undefined);
+      return updated;
+    },
+    [appliedDate, appliedDeptCode, departments, loadData],
+  );
+
+  const clearAttendanceDay = useCallback(
+    async (body) => {
+      const updated = await adminApi.clearAttendance(body);
+      setStaff((prev) =>
+        prev.map((row) => (row.empCode === updated.empCode ? { ...row, ...updated } : row)),
+      );
+      await loadData(appliedDeptCode, appliedDate, departments, undefined);
+      return updated;
+    },
+    [appliedDate, appliedDeptCode, departments, loadData],
+  );
+
+  const saveManualRange = useCallback(
+    async ({ empCode, status, fromDate, toDate }) => {
+      const result = await api.updateAttendanceManualRange({
+        empCode,
+        status,
+        fromDate,
+        toDate,
+      });
+      await loadData(appliedDeptCode, appliedDate, departments, undefined);
+      return result;
+    },
+    [appliedDate, appliedDeptCode, departments, loadData],
+  );
 
   return {
     departments,
@@ -252,7 +301,11 @@ export function useDeptAttendanceDetail() {
     goToPage,
     filteredCount: staff.length,
     selectedDept,
+    appliedDate,
     exporting,
     handleExport,
+    fillAttendanceTimes,
+    clearAttendanceDay,
+    saveManualRange,
   };
 }

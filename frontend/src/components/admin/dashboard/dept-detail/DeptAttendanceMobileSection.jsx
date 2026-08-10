@@ -11,6 +11,11 @@ const DeptAttendanceMobileSection = memo(function DeptAttendanceMobileSection({
   totalPages,
   totalItems,
   onPageChange,
+  onOpenScanLogs,
+  onOpenManualSchedule,
+  onFillTimes,
+  onQuickAction,
+  onClearAttendance,
 }) {
   const { dashboard: d } = ADMIN_UI;
 
@@ -30,6 +35,11 @@ const DeptAttendanceMobileSection = memo(function DeptAttendanceMobileSection({
         items={items}
         initialLoading={initialLoading}
         refreshing={refreshing}
+        onOpenScanLogs={onOpenScanLogs}
+        onOpenManualSchedule={onOpenManualSchedule}
+        onFillTimes={onFillTimes}
+        onQuickAction={onQuickAction}
+        onClearAttendance={onClearAttendance}
       />
 
       {!initialLoading && (

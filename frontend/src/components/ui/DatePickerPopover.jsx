@@ -34,13 +34,12 @@ const DayCell = memo(function DayCell({ iso, isSelected, isToday, disabled, onSe
     <button
       type="button"
       onClick={() => onSelect(iso)}
-      className={`h-9 w-9 mx-auto rounded-lg text-sm font-medium transition-colors ${
-        isSelected
+      className={`h-9 w-9 mx-auto rounded-lg text-sm font-medium transition-colors ${isSelected
           ? 'bg-primary text-white shadow-sm'
           : isToday
             ? 'bg-primary-light text-primary ring-1 ring-primary/30'
             : 'text-content-muted hover:bg-neutral'
-      }`}
+        }`}
     >
       {day}
     </button>

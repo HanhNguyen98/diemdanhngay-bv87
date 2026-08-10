@@ -8,6 +8,8 @@ const AttendanceTable = memo(function AttendanceTable({
   staffList,
   disabled,
   onQuickAction,
+  onOpenScanLogs,
+  onOpenManualSchedule,
   page,
   totalPages,
   filteredCount,
@@ -32,11 +34,7 @@ const AttendanceTable = memo(function AttendanceTable({
                 const thClass = col.key === 'actions' ? 'table-th-right' : 'table-th-left';
 
                 return (
-                  <th
-                    key={col.key}
-                    scope="col"
-                    className={thClass}
-                  >
+                  <th key={col.key} scope="col" className={thClass}>
                     {col.label}
                   </th>
                 );
@@ -56,6 +54,8 @@ const AttendanceTable = memo(function AttendanceTable({
                   staff={staff}
                   disabled={disabled}
                   onQuickAction={onQuickAction}
+                  onOpenScanLogs={onOpenScanLogs}
+                  onOpenManualSchedule={onOpenManualSchedule}
                 />
               ))
             )}

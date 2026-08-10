@@ -1,4 +1,4 @@
-# Deploy Production — Điểm danh BV87
+# Deploy Production — Chấm công BV87
 
 ## Kiến trúc
 
@@ -68,7 +68,7 @@ docker compose -f deploy/docker-compose.prod.yml --profile tunnel up -d --build
 ## Kiểm tra sau deploy
 
 - [ ] Login admin / trưởng phòng
-- [ ] Điểm danh mobile HEAD
+- [ ] Chấm công mobile HEAD
 - [ ] Dashboard + Trợ lý AI (SSE + Excel)
 - [ ] Web khảo sát `:8080` vẫn hoạt động
 
@@ -78,3 +78,15 @@ docker compose -f deploy/docker-compose.prod.yml --profile tunnel up -d --build
 git pull
 docker compose -f deploy/docker-compose.prod.yml up -d --build
 ```
+
+## Fingerprint Agent trên PC khoa (P4a)
+
+Web **không** chạy SDK. Mỗi khoa: 1 Windows PC + ZK9500 + Agent (`fingerprint-agent/`).
+
+1. Cài JDK 17+, driver ZK, copy `agent.properties` (token + PIN từ Admin → Cài đặt → Quản lý token vân tay).  
+2. `api.baseUrl` = BE LAN (vd. `http://192.170.182.14:8081` hoặc cổng API thực tế).  
+3. Autostart: `install-autostart.ps1` → `wscript //B start-agent-silent.vbs` (`javaw`, không flash). Debug: `start-agent.bat`. Build JAR: `scripts/build-agent-jar.ps1`.  
+4. Watchdog (crash): `install-watchdog.ps1` → Task Scheduler `wscript //B watchdog-agent.vbs` mỗi 2 phút (+ PID `logs/agent.pid`).  
+5. `device.autoOpen=true` — mở Agent là tự kết nối máy quét.  
+
+Chi tiết classpath / runbook: `fingerprint-agent/README.md` + `docs/SPEC_FINGERPRINT.md` §9.4–§9.5.

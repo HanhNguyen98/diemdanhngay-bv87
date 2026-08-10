@@ -27,7 +27,7 @@ public class SystemSettings {
     @Column(name = "login_avatar_url", columnDefinition = "MEDIUMTEXT")
     private String loginAvatarUrl;
 
-    /** HH:mm — giờ tự động chốt sổ điểm danh; null = dùng application.yml */
+    /** HH:mm — giờ tự động chốt sổ Chấm công; null = dùng application.yml */
     @Column(name = "attendance_lock_time", length = 5)
     private String attendanceLockTime;
 

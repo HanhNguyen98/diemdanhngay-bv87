@@ -7,9 +7,11 @@ package com.bv87.diemdanh.entity;
 public enum AttendanceStatus {
 
     DI_LAM("Đi làm"),
+    DI_TRE("Đi trễ"),
     NGHI_PHEP("Nghỉ phép"),
     DI_HOC("Đi học"),
-    DI_CONG_TAC("Đi công tác");
+    DI_CONG_TAC("Đi công tác"),
+    THAI_SAN("Thai sản");
 
     private final String label;
 

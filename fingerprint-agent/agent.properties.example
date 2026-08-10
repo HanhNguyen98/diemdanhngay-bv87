@@ -1,0 +1,23 @@
+# Fingerprint Agent — BV87 (fork from ZKFinger Demo2)
+# Copy native ZKFinger DLLs next to this folder or set java.library.path when running.
+
+api.baseUrl=http://localhost:8082
+kiosk.token=local-kiosk-dept-02
+# P2.1b/c — success/fail beep on Chấm công (true|false)
+sound.enabled=true
+# P2.1d — PIN to enter Enroll mode (required; leave empty = block Enroll)
+enroll.pin=8700
+# Seconds idle in Enroll before auto-return to Attendance (default 120)
+enroll.idleSeconds=120
+# Seconds idle on PIN dialog before auto-close (default 60)
+enroll.pinIdleSeconds=60
+# P4a — auto-open ZK9500 after API bootstrap (true|false)
+device.autoOpen=true
+# Retries if USB not ready yet (default 3)
+device.autoOpenRetries=3
+# Delay between retries in ms (default 2000)
+device.autoOpenRetryMs=2000
+# P4 §9.5.2 — Admin Online heartbeat (true|false)
+heartbeat.enabled=true
+# Seconds between heartbeats (default 30; Admin Offline after ~90s)
+heartbeat.intervalSeconds=30

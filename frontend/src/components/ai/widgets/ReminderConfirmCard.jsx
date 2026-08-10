@@ -1,6 +1,20 @@
 import { useMemo, useState } from 'react';
 import { AI_ASSISTANT_UI } from '../../../constants/aiAssistant';
 
+function deptMissingLabel(dept) {
+  const total = dept.missingCount;
+  if (total != null) {
+    const checkout = dept.missingCheckoutCount ?? 0;
+    const unmarked = dept.unmarkedCount ?? 0;
+    const parts = [];
+    if (checkout > 0) parts.push(`${checkout} thiếu giờ ra`);
+    if (unmarked > 0) parts.push(`${unmarked} chưa chấm`);
+    if (parts.length === 0) return `${total} thiếu`;
+    return `${total} · ${parts.join(', ')}`;
+  }
+  return `${dept.markedCount}/${dept.total} · ${dept.progressPercent}%`;
+}
+
 export default function ReminderConfirmCard({ payload, onConfirm, onCancel, loading }) {
   const departments = payload?.departments || [];
   const [selected, setSelected] = useState(() => departments.map((d) => d.deptCode));
@@ -27,11 +41,16 @@ export default function ReminderConfirmCard({ payload, onConfirm, onCancel, load
   };
 
   return (
-    <div className="mt-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-      <p className="text-sm font-semibold text-gray-800">{AI_ASSISTANT_UI.widgets.reminderTitle}</p>
-      <p className="text-xs text-content-muted mt-0.5">{AI_ASSISTANT_UI.widgets.reminderHint}</p>
+    <div className="mt-2 rounded-xl border border-line bg-surface-white p-3 shadow-sm">
+      <p className="text-sm font-semibold text-navy">{AI_ASSISTANT_UI.widgets.reminderTitle}</p>
+      <p className="text-xs text-content-muted mt-0.5">
+        {AI_ASSISTANT_UI.widgets.reminderHintPrefix}
+        {payload?.dateFormatted
+          ? ` ngày ${payload.dateFormatted}:`
+          : `${AI_ASSISTANT_UI.widgets.reminderHintDefaultYesterday}:`}
+      </p>
 
-      <label className="flex items-center gap-2 mt-3 mb-2 text-xs font-medium text-gray-700 cursor-pointer">
+      <label className="flex items-center gap-2 mt-3 mb-2 text-xs font-medium text-navy cursor-pointer">
         <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" />
         {AI_ASSISTANT_UI.widgets.reminderSelectAll}
       </label>
@@ -46,11 +65,11 @@ export default function ReminderConfirmCard({ payload, onConfirm, onCancel, load
                 onChange={() => toggle(dept.deptCode)}
                 className="rounded shrink-0"
               />
-              <span className="flex-1 min-w-0 truncate text-gray-800">
+              <span className="flex-1 min-w-0 truncate text-navy">
                 [{dept.deptCodeFormatted}] {dept.deptName}
               </span>
-              <span className="shrink-0 text-content-muted tabular-nums whitespace-nowrap">
-                {dept.markedCount}/{dept.total} · {dept.progressPercent}%
+              <span className="shrink-0 text-content-muted tabular-nums whitespace-nowrap text-right">
+                {deptMissingLabel(dept)}
               </span>
             </label>
           </li>
@@ -62,7 +81,7 @@ export default function ReminderConfirmCard({ payload, onConfirm, onCancel, load
           type="button"
           onClick={onCancel}
           disabled={loading}
-          className="h-8 px-3 rounded-lg border border-gray-200 text-xs text-content-muted hover:bg-neutral disabled:opacity-60"
+          className="h-8 px-3 rounded-lg border border-line text-xs text-content-muted hover:bg-neutral disabled:opacity-60"
         >
           {AI_ASSISTANT_UI.widgets.reminderCancel}
         </button>

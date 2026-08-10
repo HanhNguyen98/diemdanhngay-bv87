@@ -19,4 +19,8 @@ public class AdminStaffDto {
     private final boolean hasActiveHeadAccount;
     private final boolean isDepartmentCatalogHead;
     private final String headAccountUsername;
+    /** True when an active fingerprint template exists (P1). */
+    private final boolean fingerprintRegistered;
+    /** Active template finger note when registered (P2.2). */
+    private final String fingerLabel;
 }

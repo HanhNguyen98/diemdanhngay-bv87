@@ -15,7 +15,7 @@
     <artifactId>diemdanh</artifactId>
     <version>1.0.0</version>
     <name>diemdanh-bv87</name>
-    <description>Chương trình điểm danh</description>
+    <description>Bệnh viện Quân y 87 | Chương trình chấm công</description>
 
     <properties>
         <java.version>17</java.version>

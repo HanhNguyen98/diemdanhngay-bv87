@@ -7,6 +7,11 @@ const DeptAttendanceStaffCardList = memo(function DeptAttendanceStaffCardList({
   items,
   initialLoading,
   refreshing = false,
+  onOpenScanLogs,
+  onOpenManualSchedule,
+  onFillTimes,
+  onQuickAction,
+  onClearAttendance,
 }) {
   const { dashboard: d } = ADMIN_UI;
 
@@ -29,7 +34,15 @@ const DeptAttendanceStaffCardList = memo(function DeptAttendanceStaffCardList({
       {refreshing && <RefreshOverlay />}
       <div className="flex flex-col gap-2 px-2.5 py-2" role="list">
         {items.map((staff) => (
-          <DeptAttendanceStaffCard key={staff.empCode} staff={staff} />
+          <DeptAttendanceStaffCard
+            key={staff.empCode}
+            staff={staff}
+            onOpenScanLogs={onOpenScanLogs}
+            onOpenManualSchedule={onOpenManualSchedule}
+            onFillTimes={onFillTimes}
+            onQuickAction={onQuickAction}
+            onClearAttendance={onClearAttendance}
+          />
         ))}
       </div>
     </div>

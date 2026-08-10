@@ -46,11 +46,10 @@ const DepartmentRow = memo(function DepartmentRow({
                 ? ADMIN_UI.departments.viewLocationMap
                 : ADMIN_UI.departments.locationMapEmpty
             }
-            className={`shrink-0 rounded-md p-0.5 lg:p-1 transition-colors ${
-              hasLocationMap
+            className={`shrink-0 rounded-md p-0.5 lg:p-1 transition-colors ${hasLocationMap
                 ? 'text-primary hover:bg-primary-light cursor-pointer'
                 : 'text-content-muted/40 cursor-not-allowed'
-            }`}
+              }`}
             aria-label={
               hasLocationMap
                 ? ADMIN_UI.departments.viewLocationMap

@@ -28,7 +28,8 @@ export function useAiAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
     createMessage('assistant', {
-      content: 'Chào Admin, tôi có thể giúp gì cho bạn trong việc thống kê và quản lý Điểm danh hôm nay?',
+      content:
+        'Chào Admin, tôi có thể giúp thống kê Chấm công, xem ĐƠN VỊ còn thiếu dữ liệu chấm công và gửi nhắc nhở (mặc định ngày hôm qua).',
       streaming: false,
     }),
   ]);
@@ -55,7 +56,7 @@ export function useAiAssistant() {
   }, []);
 
   const send = useCallback(
-    async ({ message = '', quickAction = null } = {}) => {
+    async ({ message = '', quickAction = null, date = null } = {}) => {
       const trimmed = message.trim();
       if (!quickAction && !trimmed) return;
       if (loading) return;
@@ -81,7 +82,7 @@ export function useAiAssistant() {
 
       try {
         await streamAiChat(
-          { message: trimmed, quickAction },
+          { message: trimmed, quickAction, ...(date ? { date } : {}) },
           {
             signal: controller.signal,
             onEvent: (event, data) => {
@@ -211,9 +212,12 @@ export function useAiAssistant() {
     [dismissWidget],
   );
 
-  const triggerBatchReminders = useCallback(() => {
-    send({ quickAction: 'batch_reminders' });
-  }, [send]);
+  const triggerBatchReminders = useCallback(
+    (date) => {
+      send({ quickAction: 'remind_missing_punch_depts', date: date || null });
+    },
+    [send],
+  );
 
   const toggleOpen = useCallback(() => {
     setOpen((v) => !v);

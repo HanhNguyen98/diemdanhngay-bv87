@@ -103,7 +103,7 @@ public class AttendanceStatusCatalogService {
         long usage = repository.countUsageByCode(type.getCode());
         if (usage > 0) {
             throw new BusinessException(
-                    "Không thể xóa trạng thái đang được dùng trong " + usage + " bản ghi Điểm danh. "
+                    "Không thể xóa trạng thái đang được dùng trong " + usage + " bản ghi Chấm công. "
                             + "Hãy chuyển sang Ngưng hoạt động.");
         }
         repository.delete(type);
@@ -112,7 +112,7 @@ public class AttendanceStatusCatalogService {
     @Transactional(readOnly = true)
     public void assertActiveStatus(String statusCode) {
         if (statusCode == null || statusCode.isBlank()) {
-            throw new BusinessException("Trạng thái điểm danh không được để trống");
+            throw new BusinessException("Trạng thái Chấm công không được để trống");
         }
         AttendanceStatusType type = repository.findByCode(statusCode)
                 .orElseThrow(() -> new BusinessException("Trạng thái không hợp lệ: " + statusCode));

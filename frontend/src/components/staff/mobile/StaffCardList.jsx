@@ -7,6 +7,7 @@ const StaffCardList = memo(function StaffCardList({
   onEdit,
   onDelete,
   onHistory,
+  onDeleteFingerprint,
   avatarOnly = false,
   hideDeptColumn = false,
 }) {
@@ -29,6 +30,7 @@ const StaffCardList = memo(function StaffCardList({
           onEdit={onEdit}
           onDelete={onDelete}
           onHistory={onHistory}
+          onDeleteFingerprint={onDeleteFingerprint}
         />
       ))}
     </div>

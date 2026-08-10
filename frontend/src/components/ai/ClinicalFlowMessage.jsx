@@ -63,7 +63,7 @@ function WidgetRenderer({
         <PendingDeptTable
           payload={widget.payload}
           loading={loading}
-          onSendReminders={onTriggerReminders}
+          onSendReminders={() => onTriggerReminders?.(widget.payload?.date)}
         />
       );
     default:

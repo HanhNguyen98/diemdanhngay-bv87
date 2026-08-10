@@ -26,7 +26,7 @@ const DeptAttendanceMobileFilter = memo(function DeptAttendanceMobileFilter({
   return (
     <section
       className="lg:hidden bg-surface-white border border-line rounded-xl px-3 py-3 shadow-card space-y-3"
-      aria-label="Bộ lọc chi tiết điểm danh"
+      aria-label="Bộ lọc chi tiết Chấm công"
     >
       <StaffDeptFilter
         departments={departments}

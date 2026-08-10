@@ -44,7 +44,7 @@ const AdminSidebar = memo(function AdminSidebar({ activeTab, onTabChange, onLogo
         >
           <AppLogo logoUrl={branding.logoUrl} />
           <div className="min-w-0 flex-1">
-            <p className="text-3xs font-bold text-brand-title leading-tight whitespace-nowrap">
+            <p className="text-2xs font-bold text-brand-title leading-tight whitespace-nowrap">
               {branding.portalTitle}
             </p>
             <p className="text-4xs text-content-muted tracking-wide mt-0.5 whitespace-nowrap">

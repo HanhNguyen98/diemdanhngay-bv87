@@ -13,7 +13,7 @@ public class BrandingUpdateRequest {
     private String logoUrl;
     /** Data URL ảnh đại diện màn đăng nhập; null giữ nguyên, chuỗi rỗng để xóa */
     private String loginAvatarUrl;
-    /** HH:mm — giờ chốt sổ điểm danh */
+    /** HH:mm — giờ chốt sổ Chấm công */
     private String attendanceLockTime;
     /** HH:mm — giờ tự động gửi nhắc nhở */
     private String attendanceReminderTime;

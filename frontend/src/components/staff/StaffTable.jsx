@@ -8,10 +8,11 @@ const StaffTable = memo(function StaffTable({
   onEdit,
   onDelete,
   onHistory,
+  onDeleteFingerprint,
   avatarOnly = false,
   hideDeptColumn = false,
 }) {
-  const colSpan = hideDeptColumn ? 6 : 7;
+  const colSpan = hideDeptColumn ? 7 : 8;
 
   return (
     <table className="w-full text-sm">
@@ -25,6 +26,7 @@ const StaffTable = memo(function StaffTable({
             <th className="table-th-left">{ADMIN_UI.staff.columns.rank}</th>
             <th className="table-th-left">{ADMIN_UI.staff.columns.position}</th>
             <th className="table-th-left">{ADMIN_UI.staff.columns.status}</th>
+            <th className="table-th-left">{ADMIN_UI.staff.columns.fingerprint}</th>
             <th className="table-th-right">{ADMIN_UI.staff.columns.actions}</th>
           </tr>
         </thead>
@@ -41,6 +43,7 @@ const StaffTable = memo(function StaffTable({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onHistory={onHistory}
+                onDeleteFingerprint={onDeleteFingerprint}
               />
             ))
           )}

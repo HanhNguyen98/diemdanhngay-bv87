@@ -54,14 +54,12 @@ const StaffAttributeCatalogCard = memo(function StaffAttributeCatalogCard({
                 className="peer sr-only"
               />
               <div
-                className={`w-10 h-5 rounded-full transition-colors border border-line ${
-                  item.active ? 'bg-primary border-primary/30' : 'bg-neutral'
-                } ${toggling ? 'opacity-70' : ''}`}
+                className={`w-10 h-5 rounded-full transition-colors border border-line ${item.active ? 'bg-primary border-primary/30' : 'bg-neutral'
+                  } ${toggling ? 'opacity-70' : ''}`}
               >
                 <div
-                  className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-150 ${
-                    item.active ? 'translate-x-5' : 'translate-x-0'
-                  }`}
+                  className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-150 ${item.active ? 'translate-x-5' : 'translate-x-0'
+                    }`}
                 />
               </div>
             </label>
@@ -86,11 +84,10 @@ const StaffAttributeCatalogCard = memo(function StaffAttributeCatalogCard({
                   : 'Xóa'
               }
               aria-label="Xóa"
-              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
-                deleteBlocked
+              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${deleteBlocked
                   ? 'text-danger-fg/40 cursor-not-allowed'
                   : 'text-danger-fg hover:bg-danger'
-              }`}
+                }`}
             >
               <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
             </button>

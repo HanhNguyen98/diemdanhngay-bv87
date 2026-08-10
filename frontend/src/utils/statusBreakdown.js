@@ -31,6 +31,25 @@ export const KPI_LABEL_CLASS_BY_COLOR = {
   amber: 'text-warning-dark',
 };
 
+/** Status KPI card label — bold black uppercase, safe for Vietnamese diacritics. */
+export const KPI_STATUS_LABEL_CLASS =
+  'font-bold uppercase text-black line-clamp-2 break-words';
+
+/** Desktop / fluid tile label size + P3c weight/color. */
+export const KPI_STATUS_LABEL_CLASS_DEFAULT =
+  `mt-1 text-3xs leading-snug tracking-wide ${KPI_STATUS_LABEL_CLASS}`;
+
+/** Peek / dense mobile tile label size + P3c weight/color. */
+export const KPI_STATUS_LABEL_CLASS_PEEK =
+  `mt-1 text-[0.625rem] leading-snug tracking-tight ${KPI_STATUS_LABEL_CLASS}`;
+
+/** Admin/Statistics KpiMetricCard status label. */
+export const KPI_STATUS_LABEL_CLASS_METRIC =
+  `mt-1 text-2xs leading-snug tracking-wider ${KPI_STATUS_LABEL_CLASS} max-w-full`;
+
+export const KPI_STATUS_LABEL_CLASS_METRIC_COMPACT =
+  `mt-1 text-3xs leading-snug tracking-wide ${KPI_STATUS_LABEL_CLASS} max-w-full`;
+
 export const CHART_COLOR_BY_COLOR_KEY = {
   green: '#2563EB',
   red: '#14B8A6',

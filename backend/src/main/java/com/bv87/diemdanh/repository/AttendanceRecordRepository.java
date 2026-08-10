@@ -62,6 +62,13 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
             @Param("to") LocalDate to,
             @Param("search") String search);
 
+    @Query("SELECT ar FROM AttendanceRecord ar JOIN FETCH ar.employee e "
+            + "WHERE e.empCode = :empCode AND ar.attendanceDate >= :from AND ar.attendanceDate <= :to")
+    List<AttendanceRecord> findByEmpCodeAndDateBetween(
+            @Param("empCode") Integer empCode,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
     @Query("""
             SELECT e.empCode, e.fullname, d.deptCode, d.deptName, COUNT(ar)
             FROM AttendanceRecord ar

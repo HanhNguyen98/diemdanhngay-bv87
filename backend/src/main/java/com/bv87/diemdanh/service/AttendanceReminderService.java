@@ -1,6 +1,8 @@
 package com.bv87.diemdanh.service;
 
 import com.bv87.diemdanh.dto.AttendanceSummaryDto;
+import com.bv87.diemdanh.dto.MissingPunchItemDto;
+import com.bv87.diemdanh.dto.MissingPunchesResponseDto;
 import com.bv87.diemdanh.dto.ReminderDeptStatDto;
 import com.bv87.diemdanh.dto.ReminderHistoryDto;
 import com.bv87.diemdanh.dto.ReminderHistoryItemDto;
@@ -41,13 +43,28 @@ public class AttendanceReminderService {
 
     @Transactional
     public SendReminderResultDto sendManualReminders(AuthUser authUser, List<Integer> deptCodes) {
+        // Default target = yesterday (P5 missing-punch model)
+        return sendManualReminders(authUser, deptCodes, timeService.today().minusDays(1));
+    }
+
+    /**
+     * Manual reminders for departments with missing punches on {@code attendanceDate}.
+     *
+     * @param attendanceDate day the missing-punch queue refers to (usually D−1)
+     */
+    @Transactional
+    public SendReminderResultDto sendManualReminders(
+            AuthUser authUser, List<Integer> deptCodes, LocalDate attendanceDate) {
         if (!authUser.isAdmin()) {
             throw new AccessDeniedException("Chỉ Admin mới được gửi nhắc nhở");
         }
         if (deptCodes == null || deptCodes.isEmpty()) {
             throw new BusinessException("Chọn ít nhất một Đơn vị");
         }
-        return dispatchReminders(timeService.today(), deptCodes, ReminderTriggerType.MANUAL, authUser);
+        if (attendanceDate == null) {
+            throw new BusinessException("Thiếu ngày Chấm công để nhắc nhở");
+        }
+        return dispatchReminders(attendanceDate, deptCodes, ReminderTriggerType.MANUAL, authUser);
     }
 
     @Transactional
@@ -59,16 +76,19 @@ public class AttendanceReminderService {
         if (!timeService.isReminderMinute()) {
             return;
         }
-        List<AttendanceSummaryDto> summaries = attendanceService.getAllSummariesForSystem(today);
-        List<Integer> incompleteDeptCodes = summaries.stream()
-                .filter(s -> s.getCompletionStatus() == CompletionStatus.INCOMPLETE)
-                .map(AttendanceSummaryDto::getDeptCode)
+        // P5 — remind about yesterday's missing punches (not today's incomplete submit)
+        LocalDate targetDate = today.minusDays(1);
+        MissingPunchesResponseDto missing = attendanceService.listMissingPunchesForSystem(targetDate);
+        List<Integer> incompleteDeptCodes = missing.getItems().stream()
+                .map(MissingPunchItemDto::getDeptCode)
+                .distinct()
                 .toList();
         if (incompleteDeptCodes.isEmpty()) {
-            reminderLogRepository.save(buildAutoMarkerLog(today, "Không có ĐƠN VỊ chưa hoàn thành."));
+            reminderLogRepository.save(buildAutoMarkerLog(today,
+                    "Không có ĐƠN VỊ thiếu dữ liệu chấm công ngày " + targetDate.format(DATE_FMT) + "."));
             return;
         }
-        dispatchReminders(today, incompleteDeptCodes, ReminderTriggerType.AUTO, null);
+        dispatchReminders(targetDate, incompleteDeptCodes, ReminderTriggerType.AUTO, null);
     }
 
     private AttendanceReminderLog buildAutoMarkerLog(LocalDate date, String message) {
@@ -90,6 +110,11 @@ public class AttendanceReminderService {
         Map<Integer, AttendanceSummaryDto> summaryMap = summaries.stream()
                 .collect(Collectors.toMap(AttendanceSummaryDto::getDeptCode, s -> s));
 
+        // P5 — gate on missing-punch queue, not CompletionStatus.COMPLETED
+        MissingPunchesResponseDto missing = attendanceService.listMissingPunchesForSystem(date);
+        Map<Integer, Long> missingCountByDept = missing.getItems().stream()
+                .collect(Collectors.groupingBy(MissingPunchItemDto::getDeptCode, Collectors.counting()));
+
         String reminderTime = settingsService.getResolvedReminderTime();
         int sent = 0;
         int skippedNoHead = 0;
@@ -102,7 +127,8 @@ public class AttendanceReminderService {
             if (summary == null) {
                 continue;
             }
-            if (summary.getCompletionStatus() == CompletionStatus.COMPLETED) {
+            long missingCount = missingCountByDept.getOrDefault(deptCode, 0L);
+            if (missingCount <= 0) {
                 continue;
             }
 
@@ -116,12 +142,12 @@ public class AttendanceReminderService {
             }
 
             Account head = heads.get(0);
-            String body = buildReminderBody(summary, date, reminderTime);
+            String body = buildReminderBody(summary, date, reminderTime, missingCount);
             Notification notification = new Notification();
             notification.setRecipientId(head.getId());
             notification.setSenderId(adminId);
             notification.setType(NotificationType.ATTENDANCE_REMINDER);
-            notification.setTitle("Nhắc hoàn thành Điểm danh");
+            notification.setTitle("Nhắc thiếu dữ liệu Chấm công");
             notification.setBody(body);
             notification.setDeptCode(deptCode);
             notification.setAttendanceDate(date);
@@ -169,11 +195,14 @@ public class AttendanceReminderService {
         }
     }
 
-    private String buildReminderBody(AttendanceSummaryDto summary, LocalDate date, String reminderTime) {
+    private String buildReminderBody(
+            AttendanceSummaryDto summary, LocalDate date, String reminderTime, long missingCount) {
         return summary.getDeptName()
                 + " ngày " + date.format(DATE_FMT)
-                + " (" + summary.getMarkedCount() + "/" + summary.getTotal() + ", chưa xong). "
-                + "Hoàn thành trước " + reminderTime + ".";
+                + " còn " + missingCount + " trường hợp thiếu giờ ra / chưa chấm"
+                + " (" + summary.getMarkedCount() + "/" + summary.getTotal()
+                + " đã có trạng thái). Vui lòng rà soát thiếu giờ ra hoặc gán ngoại lệ."
+                + " (Nhắc lúc " + reminderTime + ")";
     }
 
     @Transactional(readOnly = true)
@@ -241,7 +270,7 @@ public class AttendanceReminderService {
             List<String> skippedNames,
             List<String> sentNames) {
         if (sent == 0 && skippedNoHead == 0) {
-            return "Không có ĐƠN VỊ chưa hoàn thành để gửi nhắc nhở.";
+            return "Không có ĐƠN VỊ nào còn thiếu dữ liệu chấm công để gửi nhắc nhở.";
         }
         StringBuilder sb = new StringBuilder();
         if (sent > 0) {

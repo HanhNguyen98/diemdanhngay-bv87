@@ -7,12 +7,14 @@ import com.bv87.diemdanh.entity.Department;
 import com.bv87.diemdanh.entity.DepartmentGroup;
 import com.bv87.diemdanh.entity.Employee;
 import com.bv87.diemdanh.entity.EmployeeDepartmentAssignment;
+import com.bv87.diemdanh.entity.EmployeeFingerprint;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AccountRepository;
 import com.bv87.diemdanh.repository.DepartmentGroupRepository;
 import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.repository.EmployeeDepartmentAssignmentRepository;
+import com.bv87.diemdanh.repository.EmployeeFingerprintRepository;
 import com.bv87.diemdanh.repository.EmployeeRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.util.CodeAllocator;
@@ -52,6 +54,7 @@ public class AdminService {
     private final EmployeeRepository employeeRepository;
     private final AccountRepository accountRepository;
     private final EmployeeDepartmentAssignmentRepository assignmentRepository;
+    private final EmployeeFingerprintRepository employeeFingerprintRepository;
     private final AuditService auditService;
     private final VietnamTimeService vietnamTimeService;
     private final StaffRankCatalogService staffRankCatalogService;
@@ -248,8 +251,9 @@ public class AdminService {
         String q = normalizeRegistrySearch(search);
         PageRequest pageable = PageRequest.of(page - 1, pageSize, Sort.by("empCode"));
         Page<Employee> result = employeeRepository.searchPage(deptCode, q, pageable);
+        Map<Integer, String> fpLabels = fingerprintLabelsByEmpCode(result.getContent());
         List<AdminStaffDto> items = result.getContent().stream()
-                .map(this::toStaffDto)
+                .map(emp -> toStaffDto(emp, fpLabels))
                 .toList();
         return RegistryPageDto.<AdminStaffDto>builder()
                 .items(items)
@@ -361,11 +365,14 @@ public class AdminService {
 
     public List<AdminStaffDto> listStaffForHead(AuthUser authUser, String search) {
         Integer deptCode = requireHeadDeptCode(authUser);
-        return employeeRepository.findByDeptCode(deptCode).stream()
+        List<Employee> employees = employeeRepository.findByDeptCode(deptCode).stream()
                 .filter(Employee::isActive)
                 .filter(e -> matchesSearch(e, search))
                 .sorted(Comparator.comparing(Employee::getEmpCode))
-                .map(this::toStaffDto)
+                .toList();
+        Map<Integer, String> fpLabels = fingerprintLabelsByEmpCode(employees);
+        return employees.stream()
+                .map(emp -> toStaffDto(emp, fpLabels))
                 .toList();
     }
 
@@ -441,13 +448,42 @@ public class AdminService {
         return name.replaceAll(regex, "").trim();
     }
 
+    private Map<Integer, String> fingerprintLabelsByEmpCode(List<Employee> employees) {
+        if (employees == null || employees.isEmpty()) {
+            return Map.of();
+        }
+        List<Integer> codes = employees.stream().map(Employee::getEmpCode).toList();
+        return employeeFingerprintRepository.findAllByActiveTrueAndEmpCodeIn(codes).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        EmployeeFingerprint::getEmpCode,
+                        fp -> fp.getFingerLabel() != null ? fp.getFingerLabel() : "",
+                        (a, b) -> a));
+    }
+
     private AdminStaffDto toStaffDto(Employee emp) {
+        return toStaffDto(emp, null);
+    }
+
+    private AdminStaffDto toStaffDto(Employee emp, Map<Integer, String> fingerprintLabels) {
         Department dept = emp.getDepartment();
         List<Account> linkedAccounts = accountRepository.findAllByEmployee_EmpCode(emp.getEmpCode());
         var activeHeadAccount = linkedAccounts.stream()
                 .filter(a -> a.getRole() == AccountRole.HEAD && a.isActive())
                 .findFirst();
         boolean catalogHead = departmentRepository.existsByHeadEmpCode(emp.getEmpCode());
+        String fingerLabel = null;
+        boolean fingerprintRegistered;
+        if (fingerprintLabels != null) {
+            fingerprintRegistered = fingerprintLabels.containsKey(emp.getEmpCode());
+            if (fingerprintRegistered) {
+                String label = fingerprintLabels.get(emp.getEmpCode());
+                fingerLabel = (label != null && !label.isBlank()) ? label : null;
+            }
+        } else {
+            var fp = employeeFingerprintRepository.findFirstByEmpCodeAndActiveTrue(emp.getEmpCode());
+            fingerprintRegistered = fp.isPresent();
+            fingerLabel = fp.map(EmployeeFingerprint::getFingerLabel).orElse(null);
+        }
 
         return AdminStaffDto.builder()
                 .empCode(emp.getEmpCode())
@@ -463,6 +499,8 @@ public class AdminService {
                 .hasActiveHeadAccount(activeHeadAccount.isPresent())
                 .isDepartmentCatalogHead(catalogHead)
                 .headAccountUsername(activeHeadAccount.map(Account::getUsername).orElse(null))
+                .fingerprintRegistered(fingerprintRegistered)
+                .fingerLabel(fingerLabel)
                 .build();
     }
 

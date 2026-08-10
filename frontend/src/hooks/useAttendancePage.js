@@ -12,13 +12,9 @@ import { useAttendanceCache } from './useAttendanceCache';
 import { useFlashMessage } from './useFlashMessage';
 import { useResponsivePageSize } from './useResponsivePageSize';
 
-function applyStaffPatch(list, empCode, patch) {
-  return list.map((s) => (s.empCode === empCode ? { ...s, ...patch } : s));
-}
-
 /**
- * State và handlers cho màn Điểm danh (HEAD + ADMIN preview).
- * Luồng: fetch → optimistic update → gửi báo cáo → khóa sau 16:00.
+ * State và handlers cho màn Chấm công (HEAD + ADMIN preview).
+ * Luồng: fetch → manual-range ngoại lệ; dữ liệu realtime Admin (P5 — bỏ gửi báo cáo).
  *
  * @param {{ role: string, deptCode?: string|number }} user - Session đăng nhập
  * @returns {object} Props cho `AttendancePage` (flash, staffList phân trang, handlers…)
@@ -35,16 +31,16 @@ export function useAttendancePage(user) {
   const [staffList, setStaffList] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const { flash, showSuccess, showWarning, showError, clearFlash } = useFlashMessage();
   const [unlockTarget, setUnlockTarget] = useState(null);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
-  const [reportSent, setReportSent] = useState(false);
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportSending, setReportSending] = useState(false);
+  const [manualRangeTarget, setManualRangeTarget] = useState(null);
+  const [manualRangeSaving, setManualRangeSaving] = useState(false);
+  const [missingPunches, setMissingPunches] = useState([]);
+  const [missingLoading, setMissingLoading] = useState(false);
 
   const cache = useAttendanceCache();
   const fetchIdRef = useRef(0);
@@ -146,55 +142,53 @@ export function useAttendancePage(user) {
     [cache, selectedDate, selectedDept, statusCatalogItems],
   );
 
-  const submitAttendance = useCallback(
-    async (empCode, status, note = null) => {
-      if (submitting) return;
-
-      const snapshot = staffListRef.current;
-      const optimistic = {
-        recordId: -1,
-        status,
-        note,
-        statusLabel: statusBadge[status]?.label || status,
-      };
-
-      setSubmitting(true);
-      setStaffList((prev) => {
-        const next = applyStaffPatch(prev, empCode, optimistic);
-        syncBreakdown(next);
-        return next;
-      });
-
-      try {
-        const updated = await api.updateAttendance(empCode, status, note, selectedDate);
-        setStaffList((prev) => {
-          const next = applyStaffPatch(prev, empCode, {
-            recordId: updated.recordId,
-            status: updated.status,
-            statusLabel: updated.statusLabel,
-            note: updated.note,
-          });
-          syncBreakdown(next);
-          return next;
-        });
-      } catch (err) {
-        setStaffList(snapshot);
-        if (summaryRef.current) {
-          syncBreakdown(snapshot);
-        }
-        showError(err.message);
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [selectedDate, showError, statusBadge, submitting, syncBreakdown],
-  );
+  // SPEC §4.8.1 — FE quick-action only opens manual-range modal (no single-day PUT)
 
   const handleQuickAction = useCallback(
     (empCode, action) => {
-      submitAttendance(empCode, action);
+      const staff = staffListRef.current.find((s) => s.empCode === empCode);
+      if (!staff) return;
+      setManualRangeTarget({
+        staff,
+        status: action,
+        statusLabel: statusBadge[action]?.label || action,
+      });
     },
-    [submitAttendance],
+    [statusBadge],
+  );
+
+  const handleManualRangeConfirm = useCallback(
+    async ({ fromDate, toDate }) => {
+      if (!manualRangeTarget || manualRangeSaving) return;
+      const { staff, status } = manualRangeTarget;
+      setManualRangeSaving(true);
+      try {
+        const result = await api.updateAttendanceManualRange({
+          empCode: staff.empCode,
+          status,
+          fromDate,
+          toDate,
+        });
+        showSuccess(result.message || 'Đã cập nhật Chấm công.');
+        setManualRangeTarget(null);
+        cache.invalidate(selectedDept, selectedDate);
+        await fetchAttendance(selectedDept, selectedDate, { force: true, silent: true });
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        setManualRangeSaving(false);
+      }
+    },
+    [
+      manualRangeTarget,
+      manualRangeSaving,
+      selectedDept,
+      selectedDate,
+      cache,
+      fetchAttendance,
+      showSuccess,
+      showError,
+    ],
   );
 
   const handleUnlockConfirm = async (reason) => {
@@ -206,47 +200,41 @@ export function useAttendancePage(user) {
   };
 
   useEffect(() => {
-    setReportSent(Boolean(summary?.reportSubmitted));
-  }, [summary?.reportSubmitted]);
+    let cancelled = false;
+    async function loadMissing() {
+      if (!selectedDept || !selectedDate) {
+        setMissingPunches([]);
+        return;
+      }
+      setMissingLoading(true);
+      try {
+        const data = await api.getMissingPunches(selectedDept, selectedDate);
+        if (!cancelled) {
+          setMissingPunches(data?.items ?? []);
+        }
+      } catch {
+        if (!cancelled) {
+          setMissingPunches([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setMissingLoading(false);
+        }
+      }
+    }
+    loadMissing();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDept, selectedDate, staffList]);
 
   const selectedDeptInfo = departments.find((d) => d.deptCode === selectedDept);
   const selectedDeptName = selectedDeptInfo?.deptName || summary?.deptName || '';
   const locked = summary?.locked ?? false;
   const editable = (summary?.editable ?? false) && isToday;
-  const tableDisabled = !editable || locked || submitting;
-
-  const markedCount = useMemo(
-    () => staffList.filter((s) => !isAttendanceUnchecked(s)).length,
-    [staffList],
-  );
-
-  const handleSendReport = useCallback(() => {
-    if (summary?.reportBlocked) {
-      showWarning(UI.reportBlocked);
-      return;
-    }
-    if (markedCount < staffList.length) {
-      showWarning(UI.reportIncomplete);
-      return;
-    }
-    setReportModalOpen(true);
-  }, [markedCount, staffList.length, summary?.reportBlocked, showWarning]);
-
-  const handleSendReportConfirm = useCallback(async () => {
-    setReportSending(true);
-    try {
-      await api.submitReport(selectedDept, selectedDate);
-      setReportSent(true);
-      showSuccess(UI.reportSendSuccess);
-      setReportModalOpen(false);
-      cache.invalidate(selectedDept, selectedDate);
-      await fetchAttendance(selectedDept, selectedDate, { force: true, silent: true });
-    } catch (err) {
-      showError(err.message);
-    } finally {
-      setReportSending(false);
-    }
-  }, [cache, fetchAttendance, selectedDate, selectedDept, showSuccess, showError]);
+  // P5 — soft-lock via summary.editable; reportBlocked still locks HEAD
+  const reportBlocked = Boolean(summary?.reportBlocked);
+  const tableDisabled = !editable || (!isAdmin && reportBlocked) || manualRangeSaving;
 
   const statusBreakdown = useMemo(() => {
     if (staffList.length > 0 && statusCatalogItems.length > 0) {
@@ -312,21 +300,15 @@ export function useAttendancePage(user) {
     unlocked: summary?.unlocked,
     editable,
     tableDisabled,
-    submitting,
     unlockTarget,
     setUnlockTarget,
     handleUnlockConfirm,
-    markedCount,
     statusBreakdown,
     total: summary?.total || staffList.length,
     pageSize,
-    reportSent,
     reportBlocked: summary?.reportBlocked ?? false,
-    reportModalOpen,
-    setReportModalOpen,
-    reportSending,
-    handleSendReport,
-    handleSendReportConfirm,
+    missingPunches,
+    missingLoading,
     search,
     setSearch,
     statusFilter,
@@ -338,6 +320,10 @@ export function useAttendancePage(user) {
     totalPages,
     filteredCount: filteredStaff.length,
     handleQuickAction,
+    manualRangeTarget,
+    setManualRangeTarget,
+    manualRangeSaving,
+    handleManualRangeConfirm,
     refreshAttendance,
   };
 }

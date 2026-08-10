@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,8 @@ import java.util.concurrent.Executor;
 public class AiAssistantService {
 
     private static final String GREETING =
-            "Chào Admin, tôi có thể giúp gì cho bạn trong việc thống kê và quản lý Điểm danh hôm nay?";
+            "Chào Admin, tôi có thể giúp thống kê Chấm công, xem ĐƠN VỊ còn thiếu dữ liệu chấm công "
+                    + "và gửi nhắc nhở (mặc định ngày hôm qua).";
 
     private final AiIntentRouter intentRouter;
     private final AiToolService toolService;
@@ -45,7 +47,7 @@ public class AiAssistantService {
         this.executor = executor;
     }
 
-    public SseEmitter streamChat(AuthUser authUser, String message, String quickAction) {
+    public SseEmitter streamChat(AuthUser authUser, String message, String quickAction, LocalDate preferredDate) {
         assertAdmin(authUser);
         SseEmitter emitter = new SseEmitter(120_000L);
         emitter.onTimeout(emitter::complete);
@@ -53,7 +55,7 @@ public class AiAssistantService {
 
         executor.execute(() -> {
             try {
-                AiIntent intent = intentRouter.route(quickAction, message);
+                AiIntent intent = intentRouter.route(quickAction, message, preferredDate);
                 handleIntentStream(authUser, emitter, intent);
                 sendEvent(emitter, "done", Map.of());
                 emitter.complete();
@@ -113,7 +115,7 @@ public class AiAssistantService {
                 streamText(emitter, "Đã tổng hợp báo cáo trạng thái làm việc theo yêu cầu.");
             }
             case ATTENDANCE_DATE_PICKER -> {
-                streamText(emitter, "Vui lòng chọn ngày bạn muốn xuất báo cáo Điểm danh:");
+                streamText(emitter, "Vui lòng chọn ngày bạn muốn xuất báo cáo Chấm công:");
                 sendEvent(emitter, "widget", Map.of("type", "date_picker", "payload", intent.getArgs()));
             }
             case ATTENDANCE_STATUS_EXECUTE -> {
@@ -123,42 +125,45 @@ public class AiAssistantService {
                 sendEvent(emitter, "widget", Map.of("type", "attendance_report_table", "payload", result));
                 sendEvent(emitter, "widget", Map.of("type", "download_card", "payload", result));
                 streamText(emitter, String.format(
-                        "Báo cáo Điểm danh ngày %s đã sẵn sàng.", result.get("dateFormatted")));
+                        "Báo cáo Chấm công ngày %s đã sẵn sàng.", result.get("dateFormatted")));
             }
             case PENDING_DEPARTMENTS -> {
                 streamText(emitter, intent.getReplyHint());
                 sendPing(emitter);
-                Map<String, Object> result = toolService.listPendingDepartments(authUser);
+                Map<String, Object> result = toolService.listMissingPunchDepartments(authUser, intent.getArgs());
                 sendEvent(emitter, "widget", Map.of("type", "pending_dept_table", "payload", result));
                 int count = ((List<?>) result.get("departments")).size();
+                String dateLabel = String.valueOf(result.get("dateFormatted"));
                 if (count == 0) {
-                    streamText(emitter, "Tất cả ĐƠN VỊ đã hoàn thành Điểm danh hôm nay.");
+                    streamText(emitter, "Không có ĐƠN VỊ nào còn thiếu dữ liệu chấm công ngày " + dateLabel + ".");
                 } else {
                     streamText(emitter, String.format(
-                            "Có %d ĐƠN VỊ đang ở trạng thái CHƯA XONG (chưa báo cáo).", count));
+                            "Có %d ĐƠN VỊ còn thiếu dữ liệu chấm công ngày %s.", count, dateLabel));
                 }
             }
-            case BATCH_REMINDERS -> emitBatchReminders(authUser, emitter, intent.getReplyHint());
+            case BATCH_REMINDERS -> emitBatchReminders(authUser, emitter, intent);
             case UNKNOWN -> streamText(emitter,
                     "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng các nút gợi ý hoặc hỏi: "
                             + "\"Báo cáo trạng thái làm việc hôm nay\", "
-                            + "\"Xuất báo cáo Điểm danh ngày hôm nay\", "
-                            + "\"Khoa nào chưa báo cáo?\"");
+                            + "\"Xuất báo cáo Chấm công ngày hôm nay\", "
+                            + "\"Khoa nào thiếu dữ liệu chấm công hôm qua?\"");
         }
     }
 
-    private void emitBatchReminders(AuthUser authUser, SseEmitter emitter, String hint)
+    private void emitBatchReminders(AuthUser authUser, SseEmitter emitter, AiIntent intent)
             throws IOException, InterruptedException {
-        streamText(emitter, hint);
+        streamText(emitter, intent.getReplyHint());
         sendPing(emitter);
-        Map<String, Object> preview = toolService.previewBatchReminders(authUser);
+        Map<String, Object> preview = toolService.previewMissingPunchReminders(authUser, intent.getArgs());
         sendEvent(emitter, "widget", Map.of("type", "reminder_confirm", "payload", preview));
         int count = ((List<?>) preview.get("departments")).size();
+        String dateLabel = String.valueOf(preview.get("dateFormatted"));
         if (count == 0) {
-            streamText(emitter, "Tất cả ĐƠN VỊ đã hoàn thành điểm danh hôm nay.");
+            streamText(emitter, "Không có ĐƠN VỊ nào còn thiếu dữ liệu chấm công ngày " + dateLabel + ".");
         } else {
             streamText(emitter, String.format(
-                    "Tìm thấy %d ĐƠN VỊ CHƯA XONG. Vui lòng xác nhận trước khi gửi.", count));
+                    "Tìm thấy %d ĐƠN VỊ còn thiếu dữ liệu chấm công ngày %s. Vui lòng xác nhận trước khi gửi.",
+                    count, dateLabel));
         }
     }
 
@@ -172,20 +177,30 @@ public class AiAssistantService {
                 widgets.add(Map.of("type", "download_card", "payload", result));
             }
             case "attendance_status_report" -> {
-                message = String.format("Báo cáo Điểm danh ngày %s đã sẵn sàng.", result.get("dateFormatted"));
+                message = String.format("Báo cáo Chấm công ngày %s đã sẵn sàng.", result.get("dateFormatted"));
                 widgets.add(Map.of("type", "attendance_report_table", "payload", result));
                 widgets.add(Map.of("type", "download_card", "payload", result));
             }
-            case "batch_reminders" -> {
+            case "batch_reminders", "remind_missing_punch_depts" -> {
                 int count = ((List<?>) result.get("departments")).size();
+                String dateLabel = String.valueOf(result.get("dateFormatted"));
                 message = count == 0
-                        ? "Không có ĐƠN VỊ nào cần nhắc nhở."
-                        : String.format("Tìm thấy %d ĐƠN VỊ CHƯA XONG. Vui lòng xác nhận.", count);
+                        ? "Không có ĐƠN VỊ nào cần nhắc nhở ngày " + dateLabel + "."
+                        : String.format(
+                                "Tìm thấy %d ĐƠN VỊ còn thiếu dữ liệu chấm công ngày %s. Vui lòng xác nhận.",
+                                count, dateLabel);
                 widgets.add(Map.of("type", "reminder_confirm", "payload", result));
+            }
+            case "list_missing_punches", "list_pending_departments" -> {
+                int count = ((List<?>) result.get("departments")).size();
+                String dateLabel = String.valueOf(result.get("dateFormatted"));
+                message = count == 0
+                        ? "Không có ĐƠN VỊ nào còn thiếu dữ liệu chấm công ngày " + dateLabel + "."
+                        : String.format("Có %d ĐƠN VỊ còn thiếu dữ liệu chấm công ngày %s.", count, dateLabel);
+                widgets.add(Map.of("type", "pending_dept_table", "payload", result));
             }
             default -> {
                 message = "Đã xử lý yêu cầu.";
-                widgets.add(Map.of("type", "pending_dept_table", "payload", result));
             }
         }
         return AiToolResultDto.builder().message(message).widgets(widgets).build();

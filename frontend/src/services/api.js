@@ -33,6 +33,18 @@ export const adminApi = {
   toggleDeptLock: (deptCode) =>
     apiRequest(`/admin/attendance/toggle-lock/${deptCode}`, { method: 'POST' }),
 
+  fillAttendanceTimes: (body) =>
+    apiRequest('/admin/attendance/times', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  clearAttendance: (body) =>
+    apiRequest('/admin/attendance/clear', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   getNextDeptCode: () => apiRequest('/admin/departments/next-code'),
   listDepartments: (groupCode, options = {}) => {
     const q = groupCode != null ? `?groupCode=${groupCode}` : '';
@@ -138,6 +150,24 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ newPassword, confirmPassword }),
     }),
+
+  listFingerprints: (deptCode) => {
+    const qs = deptCode != null ? `?deptCode=${deptCode}` : '';
+    return apiRequest(`/admin/fingerprints${qs}`);
+  },
+
+  listKioskTokens: () => apiRequest('/admin/fingerprint/kiosk-tokens'),
+  createKioskToken: (body) =>
+    apiRequest('/admin/fingerprint/kiosk-tokens', { method: 'POST', body: JSON.stringify(body) }),
+  setKioskEnrollPin: (id, body) =>
+    apiRequest(`/admin/fingerprint/kiosk-tokens/${id}/enroll-pin`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  revokeKioskToken: (id) =>
+    apiRequest(`/admin/fingerprint/kiosk-tokens/${id}/revoke`, { method: 'POST' }),
+  rotateKioskToken: (id) =>
+    apiRequest(`/admin/fingerprint/kiosk-tokens/${id}/rotate`, { method: 'POST' }),
 };
 
 export { headApi } from '../api/client';

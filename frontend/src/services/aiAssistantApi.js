@@ -23,7 +23,7 @@ function parseSseBlock(block) {
 
 /**
  * POST + SSE stream (tránh timeout Ngrok nhờ token streaming).
- * @param {{ message?: string, quickAction?: string }} payload
+ * @param {{ message?: string, quickAction?: string, date?: string }} payload
  * @param {{ onEvent: (event: string, data: unknown) => void, signal?: AbortSignal }} handlers
  */
 export async function streamAiChat(payload, { onEvent, signal }) {
@@ -110,7 +110,9 @@ function todayIsoDate() {
 }
 
 const QUICK_ACTION_FALLBACKS = {
-  batch_reminders: () => executeAiTool('batch_reminders', {}),
+  batch_reminders: () => executeAiTool('remind_missing_punch_depts', {}),
+  remind_missing_punch_depts: () => executeAiTool('remind_missing_punch_depts', {}),
+  list_missing_punches: () => executeAiTool('list_missing_punches', {}),
   work_status_report: () =>
     executeAiTool('work_status_report', {
       fromDate: todayIsoDate(),

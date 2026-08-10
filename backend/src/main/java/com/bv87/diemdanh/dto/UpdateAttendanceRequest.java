@@ -10,7 +10,7 @@ import lombok.Setter;
 public class UpdateAttendanceRequest {
     @NotNull(message = "Mã nhân viên không được để trống")
     private Integer empCode;
-    @NotBlank(message = "Trạng thái điểm danh không được để trống")
+    @NotBlank(message = "Trạng thái Chấm công không được để trống")
     private String status;
     private String note;
 }

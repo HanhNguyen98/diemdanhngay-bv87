@@ -51,6 +51,23 @@ export const api = {
     return apiRequest(`/attendance/page?${params}`, options);
   },
 
+  getScanLogs: (empCode, date, page = 1, pageSize = 20) => {
+    const params = new URLSearchParams();
+    params.set('empCode', empCode);
+    if (date) params.set('date', date);
+    params.set('page', String(page));
+    params.set('pageSize', String(pageSize));
+    return apiRequest(`/attendance/scan-logs?${params}`);
+  },
+
+  getManualSchedule: (empCode, from, to) => {
+    const params = new URLSearchParams();
+    params.set('empCode', String(empCode));
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return apiRequest(`/attendance/manual-schedule?${params}`);
+  },
+
   updateAttendance: (empCode, status, note, date) => {
     const params = date ? `?date=${date}` : '';
     return apiRequest(`/attendance${params}`, {
@@ -58,6 +75,18 @@ export const api = {
       body: JSON.stringify({ empCode, status, note }),
     });
   },
+
+  updateAttendanceManualRange: ({ empCode, status, fromDate, toDate, note }) =>
+    apiRequest('/attendance/manual-range', {
+      method: 'PUT',
+      body: JSON.stringify({ empCode, status, fromDate, toDate, note }),
+    }),
+
+  previewAttendanceManualRange: ({ empCode, fromDate, toDate }) =>
+    apiRequest('/attendance/manual-range/preview', {
+      method: 'POST',
+      body: JSON.stringify({ empCode, fromDate, toDate }),
+    }),
 
   unlockDepartment: (deptCode, reason) =>
     apiRequest('/attendance/unlock', {
@@ -74,6 +103,14 @@ export const api = {
     if (date) params.set('date', date);
     const q = params.toString();
     return apiRequest(`/attendance/report-submit${q ? `?${q}` : ''}`, { method: 'POST' });
+  },
+
+  getMissingPunches: (deptCode, date) => {
+    const params = new URLSearchParams();
+    if (deptCode != null) params.set('deptCode', deptCode);
+    if (date) params.set('date', date);
+    const q = params.toString();
+    return apiRequest(`/attendance/missing-punches${q ? `?${q}` : ''}`);
   },
 
   getNotifications: () => apiRequest('/notifications'),
@@ -121,4 +158,5 @@ export const headApi = {
       method: 'PATCH',
       body: JSON.stringify({ avatarUrl }),
     }),
+  listFingerprints: () => apiRequest('/head/fingerprints'),
 };

@@ -73,6 +73,26 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getAttendancePage(authService.getAuthUser(), deptCode, targetDate));
     }
 
+    @GetMapping("/attendance/scan-logs")
+    public ResponseEntity<ScanLogPageDto> getScanLogs(
+            @RequestParam Integer empCode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        LocalDate targetDate = date != null ? date : timeService.today();
+        return ResponseEntity.ok(attendanceService.listScanLogs(
+                authService.getAuthUser(), empCode, targetDate, page, pageSize));
+    }
+
+    @GetMapping("/attendance/manual-schedule")
+    public ResponseEntity<ManualScheduleDto> getManualSchedule(
+            @RequestParam Integer empCode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(attendanceService.listManualSchedule(
+                authService.getAuthUser(), empCode, from, to));
+    }
+
     @GetMapping("/attendance/statistics")
     public ResponseEntity<AttendanceStatisticsDto> getStatistics(
             @RequestParam(required = false) Integer deptCode,
@@ -121,6 +141,20 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.saveAttendance(authService.getAuthUser(), request, targetDate));
     }
 
+    @PutMapping("/attendance/manual-range")
+    public ResponseEntity<ManualAttendanceRangeResultDto> updateAttendanceManualRange(
+            @Valid @RequestBody ManualAttendanceRangeRequest request) {
+        return ResponseEntity.ok(
+                attendanceService.saveManualAttendanceRange(authService.getAuthUser(), request));
+    }
+
+    @PostMapping("/attendance/manual-range/preview")
+    public ResponseEntity<ManualAttendanceRangePreviewDto> previewAttendanceManualRange(
+            @Valid @RequestBody ManualAttendanceRangePreviewRequest request) {
+        return ResponseEntity.ok(
+                attendanceService.previewManualAttendanceRange(authService.getAuthUser(), request));
+    }
+
     @PostMapping("/attendance/unlock")
     public ResponseEntity<Map<String, String>> unlockDepartment(
             @Valid @RequestBody UnlockDepartmentRequest request) {
@@ -141,12 +175,21 @@ public class AttendanceController {
                 "Đã khóa sổ lại cho Đơn vị " + String.format("%02d", deptCode)));
     }
 
+    @GetMapping("/attendance/missing-punches")
+    public ResponseEntity<MissingPunchesResponseDto> getMissingPunches(
+            @RequestParam(required = false) Integer deptCode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        LocalDate targetDate = date != null ? date : timeService.today();
+        return ResponseEntity.ok(
+                attendanceService.listMissingPunches(authService.getAuthUser(), deptCode, targetDate));
+    }
+
     @PostMapping("/attendance/report-submit")
     public ResponseEntity<Map<String, String>> submitReport(
             @RequestParam(required = false) Integer deptCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         LocalDate targetDate = date != null ? date : timeService.today();
         attendanceService.submitReport(authService.getAuthUser(), deptCode, targetDate);
-        return ResponseEntity.ok(Map.of("message", "Đã gửi báo cáo thành công"));
+        return ResponseEntity.ok(Map.of("message", "Chức năng đã ngừng sử dụng"));
     }
 }

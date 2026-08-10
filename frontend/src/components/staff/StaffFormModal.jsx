@@ -200,7 +200,7 @@ export default function StaffFormModal({ initial, departments, onSave, onClose }
           placeholder={ADMIN_UI.staff.transferReasonPlaceholder}
           required
         />
-       
+
       </div>
 
       {requiresHeadRevoke && (

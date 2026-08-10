@@ -45,3 +45,12 @@ app:
         - "http://127.0.0.1:5173"
     login-rate-limit:
       enabled: false
+    kiosk:
+      lan-gate-enabled: false
+  fingerprint:
+    # Local P1: change token per department PC; hashed into fingerprint_kiosk_tokens on startup
+    online-threshold-seconds: 90
+    bootstrap-kiosk-tokens:
+      - dept-code: 2
+        token: "local-kiosk-dept-02"
+        label: "Kiosk local Đơn vị 02"

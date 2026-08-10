@@ -2,7 +2,14 @@ import { memo } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { ADMIN_UI } from '../../constants/admin';
 
-const DeleteModal = memo(function DeleteModal({ title, message, onConfirm, onClose, loading }) {
+const DeleteModal = memo(function DeleteModal({
+  title,
+  message,
+  onConfirm,
+  onClose,
+  loading,
+  confirmLabel,
+}) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
       <div className="bg-surface-white rounded-2xl shadow-panel w-full max-w-md overflow-hidden animate-fade-in">
@@ -32,7 +39,7 @@ const DeleteModal = memo(function DeleteModal({ title, message, onConfirm, onClo
               disabled={loading}
               className="px-4 py-2.5 rounded-lg bg-danger-fg text-white font-medium hover:opacity-90 disabled:opacity-60"
             >
-              {loading ? 'Đang xử lý...' : ADMIN_UI.form.confirmDelete}
+              {loading ? 'Đang xử lý...' : confirmLabel || ADMIN_UI.form.confirmDelete}
             </button>
           </div>
         </div>

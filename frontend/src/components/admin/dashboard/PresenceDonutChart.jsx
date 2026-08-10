@@ -49,16 +49,15 @@ const PresenceDonutChart = memo(function PresenceDonutChart({ kpi, scopeLabel, c
 
   return (
     <section
-      className={`bg-surface-white border border-line rounded-xl shadow-card min-h-0 min-w-0 max-w-full ${
-        compact ? 'lg:hidden p-3' : 'p-4 h-full flex flex-col flex-1'
-      }`}
+      className={`bg-surface-white border border-line rounded-xl shadow-card min-h-0 min-w-0 max-w-full ${compact ? 'lg:hidden p-3' : 'p-4 h-full flex flex-col flex-1'
+        }`}
     >
       <h3 className="admin-section-title">
         {ADMIN_UI.dashboard.presenceTitle}
       </h3>
       {scopeLabel && (
         <p
-          className={`text-content-muted truncate ${compact ? 'text-4xs mt-0.5' : 'text-2xs mt-0.5'}`}
+          className={`text-content-muted truncate ${compact ? 'text-2xs mt-0' : 'text-xs mt-0 leading-snug'}`}
           title={scopeLabel}
         >
           {scopeLabel}
@@ -95,9 +94,8 @@ const PresenceDonutChart = memo(function PresenceDonutChart({ kpi, scopeLabel, c
         )}
       </div>
       <ul
-        className={`shrink-0 overflow-y-auto ${
-          compact ? 'mt-1.5 max-h-[5.5rem] space-y-1' : 'mt-3 max-h-40 space-y-1.5'
-        }`}
+        className={`shrink-0 overflow-y-auto ${compact ? 'mt-1.5 max-h-[5.5rem] space-y-1' : 'mt-3 max-h-40 space-y-1.5'
+          }`}
       >
         {legendItems.map((s) => (
           <li
@@ -109,9 +107,8 @@ const PresenceDonutChart = memo(function PresenceDonutChart({ kpi, scopeLabel, c
               {s.label}
             </span>
             <span
-              className={`font-semibold text-content-heading tabular-nums shrink-0 ${
-                compact ? '' : 'ml-auto'
-              }`}
+              className={`font-semibold text-content-heading tabular-nums shrink-0 ${compact ? '' : 'ml-auto'
+                }`}
             >
               {s.value}
             </span>

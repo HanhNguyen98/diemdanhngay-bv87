@@ -63,9 +63,8 @@ const ExcelTaskMenu = memo(function ExcelTaskMenu({
         type="button"
         disabled={disabled || importing}
         onClick={() => setOpen((value) => !value)}
-        className={`inline-flex items-center gap-1 rounded-lg border border-line text-content-muted hover:bg-neutral transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap ${
-          compact ? 'h-9 px-2.5 text-xs justify-center' : 'h-8 px-2.5 text-sm gap-1.5'
-        }`}
+        className={`inline-flex items-center gap-1 rounded-lg border border-line text-content-muted hover:bg-neutral transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap ${compact ? 'h-9 px-2.5 text-xs justify-center' : 'h-8 px-2.5 text-sm gap-1.5'
+          }`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={compact ? excel.menuLabel : undefined}

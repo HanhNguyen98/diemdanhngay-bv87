@@ -14,7 +14,7 @@ const KpiBar = memo(function KpiBar({ markedCount, total, statusBreakdown }) {
 
   return (
     <>
-      <section className="lg:hidden flex flex-col gap-2.5" aria-label="Tổng hợp Điểm danh">
+      <section className="lg:hidden flex flex-col gap-2.5" aria-label="Tổng hợp Chấm công">
         <KpiProgressWideBanner
           markedCount={markedCount}
           total={total}
@@ -27,7 +27,7 @@ const KpiBar = memo(function KpiBar({ markedCount, total, statusBreakdown }) {
 
       <section
         className="hidden lg:flex lg:gap-3 lg:items-stretch w-full"
-        aria-label="Tổng hợp Điểm danh"
+        aria-label="Tổng hợp Chấm công"
       >
         <KpiProgressWideBanner
           markedCount={markedCount}

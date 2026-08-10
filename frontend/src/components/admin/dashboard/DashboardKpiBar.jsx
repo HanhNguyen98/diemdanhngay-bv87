@@ -8,7 +8,8 @@ import { StatusBreakdownIcon } from '../../shared/StatusBreakdownIcon';
 import { KpiMetricCard } from '../../shared/StatusBreakdownKpiGrid';
 import DashboardMobileKpiBar from './DashboardMobileKpiBar';
 
-const CARD = 'bg-surface-white border border-line rounded-xl px-4 py-3 shadow-card flex items-center gap-3';
+const CARD =
+  'bg-surface-white border border-line rounded-xl px-3 py-2.5 shadow-card flex items-center gap-3 min-h-[4.75rem]';
 
 const DashboardKpiBar = memo(function DashboardKpiBar({ kpi, scopeLabel }) {
   const { dashboard: d } = ADMIN_UI;
@@ -23,9 +24,9 @@ const DashboardKpiBar = memo(function DashboardKpiBar({ kpi, scopeLabel }) {
     <>
       <DashboardMobileKpiBar kpi={kpi} scopeLabel={scopeLabel} />
 
-      <div className="hidden lg:flex lg:flex-col lg:gap-1.5">
+      <div className="hidden lg:flex lg:flex-col lg:gap-1">
         {scopeLabel && (
-          <p className="text-2xs text-content-muted truncate" title={scopeLabel}>
+          <p className="text-xs text-content-muted truncate -mt-2 leading-snug" title={scopeLabel}>
             {scopeLabel}
           </p>
         )}
@@ -37,16 +38,18 @@ const DashboardKpiBar = memo(function DashboardKpiBar({ kpi, scopeLabel }) {
           <div className={`${KPI_METRIC_ICON_BOX} rounded-lg flex items-center justify-center shrink-0 bg-primary-light text-primary`}>
             <Users className={KPI_METRIC_ICON_SIZE} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">{kpi?.total ?? 0}</p>
-            <p className="text-3xs font-semibold text-content-muted uppercase mt-1">{d.kpiTotal}</p>
+            <p className="mt-1 text-2xs tracking-wider font-bold uppercase leading-snug text-black line-clamp-2 max-w-full">
+              {d.kpiTotal}
+            </p>
           </div>
         </article>
 
         {items.map((item) => (
           <KpiMetricCard
             key={item.code}
-            label={item.label}
+            label={item.badgeLabel || item.label}
             value={item.count ?? 0}
             iconBgClass={KPI_BG_BY_COLOR[item.colorKey] || 'bg-neutral'}
           >

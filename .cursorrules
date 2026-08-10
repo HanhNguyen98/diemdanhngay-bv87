@@ -1,5 +1,17 @@
 # DIEM DANH BV87 — CURSOR RULES
 
+## 0. SPEC-FIRST WORKFLOW (MANDATORY)
+
+Any product/UI/API change request must follow this order — **no exceptions**:
+
+1. **Write the requirement into the binding `.md` first** (usually `docs/SPEC_*.md`; fingerprint → `docs/SPEC_FINGERPRINT.md`).
+2. **Then implement code** that complies with that `.md` only.
+3. Do **not** invent behaviour, screens, or API fields outside the written SPEC.
+4. If code and SPEC diverge, **update SPEC first**, then align code — never “fix in code only” and leave SPEC stale.
+5. Checklist / phase rows in the SPEC must be updated when a ticket adds UI polish or API contracts.
+
+---
+
 ## 1. LANGUAGE POLICY (MANDATORY)
 
 | Layer | Language | Examples |

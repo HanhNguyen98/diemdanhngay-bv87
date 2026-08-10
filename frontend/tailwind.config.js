@@ -78,7 +78,7 @@ export default {
         dept: {
           active: '#1C8538',
         },
-        /* ── KPI icon backgrounds (mockup Điểm danh) ── */
+        /* ── KPI icon backgrounds (mockup Chấm công) ── */
         kpi: {
           present: '#DEFBE8',
           duty: '#FDF2C9',
@@ -105,7 +105,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Montserrat', 'system-ui', 'Segoe UI', 'sans-serif'],
       },
       /* Toàn hệ thống +0.20rem so với scale Tailwind mặc định */
       fontSize: {

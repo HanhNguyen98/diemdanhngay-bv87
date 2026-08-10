@@ -1,17 +1,38 @@
 import { memo } from 'react';
-import { Image, History, Pencil, Trash2 } from 'lucide-react';
+import { Fingerprint, History, Image, Pencil, Trash2 } from 'lucide-react';
 import { ADMIN_UI } from '../../constants/admin';
 import { getInitials } from '../../utils/formatters';
 import { ActionBtn } from '../admin/sections/ActionButtons';
+
+function FingerprintBadge({ registered, fingerLabel }) {
+  const label = registered
+    ? (fingerLabel?.trim() || ADMIN_UI.staff.fingerprintLabelFallback)
+    : ADMIN_UI.staff.fingerprintMissing;
+  return (
+    <span
+      className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+        registered ? 'badge-success' : 'badge-neutral'
+      }`}
+      title={registered && fingerLabel?.trim() ? fingerLabel.trim() : undefined}
+    >
+      {registered && fingerLabel?.trim()
+        ? `${ADMIN_UI.staff.fingerprintRegistered} — ${fingerLabel.trim()}`
+        : label}
+    </span>
+  );
+}
 
 const StaffRow = memo(function StaffRow({
   staff,
   onEdit,
   onDelete,
   onHistory,
+  onDeleteFingerprint,
   avatarOnly = false,
   hideDeptColumn = false,
 }) {
+  const registered = Boolean(staff.fingerprintRegistered);
+
   return (
     <tr className="border-b border-gray-100 hover:bg-surface-page/80 transition-colors">
       <td className="py-4 px-4 text-sm text-primary font-medium tabular-nums">
@@ -45,7 +66,6 @@ const StaffRow = memo(function StaffRow({
       <td className="py-4 px-4 text-sm text-content-muted">
         {staff.positionName || '—'}
       </td>
-   
       <td className="py-4 px-4">
         <span
           className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -54,6 +74,9 @@ const StaffRow = memo(function StaffRow({
         >
           {staff.active ? ADMIN_UI.staff.active : ADMIN_UI.staff.inactive}
         </span>
+      </td>
+      <td className="py-4 px-4">
+        <FingerprintBadge registered={registered} fingerLabel={staff.fingerLabel} />
       </td>
       <td className="py-4 px-4">
         <div className="flex items-center gap-1.5 justify-end">
@@ -71,6 +94,14 @@ const StaffRow = memo(function StaffRow({
               onClick={() => onHistory(staff)}
               colorClass="text-info-fg hover:bg-info"
               label={ADMIN_UI.staff.transferHistoryView}
+            />
+          )}
+          {registered && onDeleteFingerprint && (
+            <ActionBtn
+              icon={Fingerprint}
+              onClick={() => onDeleteFingerprint(staff)}
+              colorClass="text-warning-fg hover:bg-warning"
+              label={ADMIN_UI.staff.fingerprintDeleteLabel}
             />
           )}
           {!avatarOnly && onDelete && (

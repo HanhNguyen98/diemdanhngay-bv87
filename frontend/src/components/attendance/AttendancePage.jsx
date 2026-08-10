@@ -1,11 +1,11 @@
+import { useEffect, useState } from 'react';
 import UnlockModal from '../UnlockModal';
 import HeadAppShell from '../layout/HeadAppShell';
-import SendReportModal from './SendReportModal';
+import ManualStatusRangeModal from './ManualStatusRangeModal';
 import NotificationBell from '../shared/NotificationBell';
 import FlashBanner from '../shared/FlashBanner';
-import { HEAD_NAV_IDS, MOBILE_UI, UI } from '../../constants/attendance';
+import { HEAD_NAV_IDS, UI } from '../../constants/attendance';
 import { useAttendancePage } from '../../hooks/useAttendancePage';
-import { IconSend } from '../icons/Icons';
 import AttendanceHeader from './sections/AttendanceHeader';
 import AttendanceMobileSubheader from './sections/AttendanceMobileSubheader';
 import StableDataZone from '../shared/StableDataZone';
@@ -13,11 +13,13 @@ import KpiBar from './sections/KpiBar';
 import HistoryViewBanner from './sections/HistoryViewBanner';
 import LockBanner from './sections/LockBanner';
 import StaffTableCard from './sections/StaffTableCard';
+import ScanLogModal from './ScanLogModal';
+import ManualScheduleModal from './ManualScheduleModal';
+import MissingPunchBanner from './MissingPunchBanner';
 import { HEAD_ATTENDANCE_MAIN_CLASS } from '../../constants/headLayout';
 import DatePillBar from '../dashboard/DatePillBar';
 import MobileHorizontalScroll from '../shared/MobileHorizontalScroll';
-import { HeadAiAssistantProvider } from '../../context/HeadAiAssistantContext';
-import HeadFlowPanel from '../ai/head/HeadFlowPanel';
+import { useHeadAiSession } from '../../context/HeadAiSessionContext';
 
 export default function AttendancePage({
   user,
@@ -40,27 +42,20 @@ export default function AttendancePage({
     isToday,
     handleDateChange,
     locked,
-    lockMessage,
     unlocked,
     tableDisabled,
     unlockTarget,
     setUnlockTarget,
     handleUnlockConfirm,
-    markedCount,
     statusBreakdown,
     total,
-    reportSent,
     reportBlocked,
-    reportModalOpen,
-    setReportModalOpen,
-    reportSending,
-    handleSendReport,
-    handleSendReportConfirm,
+    missingPunches,
+    missingLoading,
     search,
     setSearch,
     statusFilter,
     setStatusFilter,
-    filteredStaff,
     pagedStaff,
     page,
     setPage,
@@ -68,10 +63,26 @@ export default function AttendancePage({
     filteredCount,
     pageSize,
     handleQuickAction,
+    manualRangeTarget,
+    setManualRangeTarget,
+    manualRangeSaving,
+    handleManualRangeConfirm,
     refreshAttendance,
   } = useAttendancePage(user);
 
-  const isHead = user.role === 'HEAD';
+  const { registerAttendanceSession } = useHeadAiSession();
+  const [scanLogStaff, setScanLogStaff] = useState(null);
+  const [manualScheduleStaff, setManualScheduleStaff] = useState(null);
+
+  useEffect(() => {
+    return registerAttendanceSession({
+      selectedDate,
+      tableDisabled,
+      onBatchComplete: refreshAttendance,
+    });
+  }, [registerAttendanceSession, selectedDate, tableDisabled, refreshAttendance]);
+
+  const markedCount = statusBreakdown?.reduce((sum, s) => sum + (s.count || 0), 0) ?? 0;
 
   const mobileTopActions = (
     <NotificationBell onAttendanceNavigate={handleDateChange} variant="attendance" />
@@ -101,10 +112,6 @@ export default function AttendancePage({
               ? () => setUnlockTarget({ deptCode: selectedDept, deptName: selectedDeptName })
               : null
           }
-          reportSent={reportSent}
-          reportBlocked={reportBlocked}
-          tableDisabled={tableDisabled}
-          onSendReport={handleSendReport}
           onNotificationDate={handleDateChange}
           departments={departments}
           selectedDept={selectedDept}
@@ -133,21 +140,13 @@ export default function AttendancePage({
 
             <div className="shrink-0 space-y-2.5 max-lg:space-y-4 lg:contents">
               {!isToday && <HistoryViewBanner selectedDate={selectedDate} />}
-              {isToday && locked && !isAdmin && <LockBanner lockMessage={lockMessage} />}
+              {isToday && reportBlocked && !isAdmin && (
+                <LockBanner lockMessage={UI.reportBlocked} />
+              )}
+              <MissingPunchBanner items={missingPunches} loading={missingLoading} />
               <StableDataZone refreshing={refreshing} className="shrink-0">
                 <KpiBar markedCount={markedCount} total={total} statusBreakdown={statusBreakdown} />
               </StableDataZone>
-
-              <button
-                type="button"
-                onClick={handleSendReport}
-                disabled={tableDisabled || reportSent || reportBlocked}
-                title={reportBlocked ? UI.reportBlocked : undefined}
-                className="lg:hidden w-full inline-flex items-center justify-center gap-2 rounded-xl bg-attendance-report hover:bg-attendance-report-hover text-white text-sm font-semibold py-3 px-4 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <IconSend className="w-4 h-4 shrink-0" />
-                {reportSent ? UI.reportSent : MOBILE_UI.sendReportFull}
-              </button>
             </div>
 
             <StaffTableCard
@@ -156,6 +155,8 @@ export default function AttendancePage({
               mobileStaffList={pagedStaff}
               disabled={tableDisabled}
               onQuickAction={handleQuickAction}
+              onOpenScanLogs={setScanLogStaff}
+              onOpenManualSchedule={setManualScheduleStaff}
               search={search}
               onSearchChange={setSearch}
               statusFilter={statusFilter}
@@ -172,6 +173,21 @@ export default function AttendancePage({
         )}
       </main>
 
+      {scanLogStaff && (
+        <ScanLogModal
+          staff={scanLogStaff}
+          date={selectedDate}
+          onClose={() => setScanLogStaff(null)}
+        />
+      )}
+
+      {manualScheduleStaff && (
+        <ManualScheduleModal
+          staff={manualScheduleStaff}
+          onClose={() => setManualScheduleStaff(null)}
+        />
+      )}
+
       {unlockTarget && (
         <UnlockModal
           deptCode={unlockTarget.deptCode}
@@ -181,22 +197,16 @@ export default function AttendancePage({
         />
       )}
 
-      {reportModalOpen && (
-        <SendReportModal
-          onConfirm={handleSendReportConfirm}
-          onClose={() => setReportModalOpen(false)}
-          loading={reportSending}
+      {manualRangeTarget && (
+        <ManualStatusRangeModal
+          staff={manualRangeTarget.staff}
+          status={manualRangeTarget.status}
+          statusLabel={manualRangeTarget.statusLabel}
+          defaultDate={selectedDate}
+          loading={manualRangeSaving}
+          onConfirm={handleManualRangeConfirm}
+          onClose={() => !manualRangeSaving && setManualRangeTarget(null)}
         />
-      )}
-
-      {isHead && (
-        <HeadAiAssistantProvider
-          selectedDate={selectedDate}
-          tableDisabled={tableDisabled}
-          onBatchComplete={refreshAttendance}
-        >
-          <HeadFlowPanel />
-        </HeadAiAssistantProvider>
       )}
     </HeadAppShell>
   );

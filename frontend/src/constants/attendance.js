@@ -3,13 +3,23 @@
  * Enum keys match backend AttendanceStatus values.
  */
 
-/** Trạng thái Điểm danh — khớp backend AttendanceStatus */
+/** Trạng thái Chấm công — khớp backend AttendanceStatus / catalog */
 export const ATTENDANCE_STATUS = {
   DI_LAM: 'DI_LAM',
+  DI_TRE: 'DI_TRE',
   NGHI_PHEP: 'NGHI_PHEP',
   DI_HOC: 'DI_HOC',
   DI_CONG_TAC: 'DI_CONG_TAC',
+  THAI_SAN: 'THAI_SAN',
 };
+
+/** Status HEAD được gán thủ công (không gồm DI_LAM / DI_TRE từ vân tay) */
+export const MANUAL_ATTENDANCE_STATUSES = [
+  ATTENDANCE_STATUS.NGHI_PHEP,
+  ATTENDANCE_STATUS.DI_HOC,
+  ATTENDANCE_STATUS.DI_CONG_TAC,
+  ATTENDANCE_STATUS.THAI_SAN,
+];
 
 /** Bộ lọc trạng thái trên bảng */
 export const ATTENDANCE_FILTER = {
@@ -17,34 +27,113 @@ export const ATTENDANCE_FILTER = {
   UNCHECKED: 'UNCHECKED',
 };
 
-/** Chưa chấm: backend trả recordId và status đều null */
+/** Chưa có status (OUT-only / chưa chấm) — badge CHƯA CHẤM + quick-action HEAD. */
+export function isAttendanceBlank(staff) {
+  return staff == null || staff.status == null;
+}
+
+/**
+ * Hợp lệ “đã chấm” — SPEC §4.5:
+ * - Thủ công vắng: chỉ cần status
+ * - DI_LAM / DI_TRE: đủ giờ vào + giờ ra
+ */
+export function isAttendanceComplete(staff) {
+  if (staff == null || staff.status == null) return false;
+  if (MANUAL_ATTENDANCE_STATUSES.includes(staff.status)) return true;
+  if (
+    staff.status === ATTENDANCE_STATUS.DI_LAM ||
+    staff.status === ATTENDANCE_STATUS.DI_TRE
+  ) {
+    return Boolean(staff.checkInAt && staff.checkOutAt);
+  }
+  return false;
+}
+
+/** Chưa hợp lệ (tiến độ / filter Chưa chấm / KPI). */
 export function isAttendanceUnchecked(staff) {
-  return staff.recordId == null || staff.status == null;
+  return !isAttendanceComplete(staff);
+}
+
+/**
+ * Có mặt từ vân tay nhưng thiếu giờ ra — SPEC §4.5.1.
+ * Badge vẫn hiện DI_LAM/DI_TRE; KPI chưa tính đã chấm.
+ */
+export function isMissingCheckout(staff) {
+  if (staff == null) return false;
+  if (
+    staff.status !== ATTENDANCE_STATUS.DI_LAM &&
+    staff.status !== ATTENDANCE_STATUS.DI_TRE
+  ) {
+    return false;
+  }
+  return Boolean(staff.checkInAt) && !staff.checkOutAt;
 }
 
 export const STATUS_OPTIONS = [
   { value: ATTENDANCE_STATUS.DI_LAM, label: 'Đi làm' },
+  { value: ATTENDANCE_STATUS.DI_TRE, label: 'Đi trễ' },
   { value: ATTENDANCE_STATUS.NGHI_PHEP, label: 'Nghỉ phép' },
   { value: ATTENDANCE_STATUS.DI_HOC, label: 'Đi học' },
   { value: ATTENDANCE_STATUS.DI_CONG_TAC, label: 'Công tác' },
+  { value: ATTENDANCE_STATUS.THAI_SAN, label: 'Thai sản' },
 ];
 
-/** 4 nút chấm nhanh — khớp mockup */
+/** Nút chấm nhanh — chỉ 4 status thủ công (SPEC) */
 export const QUICK_ACTIONS = [
-  { value: ATTENDANCE_STATUS.DI_LAM, color: 'green', icon: 'check' },
   { value: ATTENDANCE_STATUS.NGHI_PHEP, color: 'red', icon: 'x' },
   { value: ATTENDANCE_STATUS.DI_HOC, color: 'yellow', icon: 'graduation' },
   { value: ATTENDANCE_STATUS.DI_CONG_TAC, color: 'blue', icon: 'briefcase' },
+  { value: ATTENDANCE_STATUS.THAI_SAN, color: 'purple', icon: 'baby' },
 ];
 
-/** Cột bảng — khớp mockup toolbar + grid header */
+/** Cột bảng — giờ vào/ra (lớp A) + thao tác gồm Chi tiết quét (lớp B) */
 export const ATTENDANCE_TABLE_COLUMNS = [
-  { key: 'employee', label: 'NHÂN VIÊN', align: 'left', width: '30%' },
-  { key: 'rank', label: 'CẤP BẬC', align: 'left', width: '13%' },
-  { key: 'position', label: 'CHỨC VỤ', align: 'left', width: '15%' },
-  { key: 'status', label: 'TRẠNG THÁI HIỆN TẠI', align: 'left', width: '22%' },
-  { key: 'actions', label: 'Điểm danh NHANH', align: 'right', width: '20%' },
+  { key: 'employee', label: 'NHÂN VIÊN', align: 'left', width: '22%' },
+  { key: 'rank', label: 'CẤP BẬC', align: 'left', width: '11%' },
+  { key: 'position', label: 'CHỨC VỤ', align: 'left', width: '12%' },
+  { key: 'checkIn', label: 'GIỜ VÀO', align: 'left', width: '10%' },
+  { key: 'checkOut', label: 'GIỜ RA', align: 'left', width: '10%' },
+  { key: 'status', label: 'TRẠNG THÁI', align: 'left', width: '16%' },
+  { key: 'actions', label: 'THAO TÁC', align: 'right', width: '19%' },
 ];
+
+export const SCAN_DIRECTION_LABEL = {
+  IN: 'Vào',
+  OUT: 'Ra',
+  REJECTED: 'Từ chối',
+};
+
+export const SCAN_LOG_UI = {
+  title: 'Chi tiết quét',
+  colTime: 'Thời điểm',
+  colDirection: 'Hướng',
+  colScore: 'Độ khớp vân tay',
+  colMessage: 'Ghi chú',
+  empty: 'Chưa có lần quét trong ngày này.',
+  loading: 'Đang tải...',
+  close: 'Đóng',
+  openLink: 'Chi tiết quét',
+  loadError: 'Không tải được lịch sử quét.',
+};
+
+/** Modal lịch thủ công theo NV — SPEC §3.2.2 */
+export const MANUAL_SCHEDULE_UI = {
+  title: 'Lịch thủ công',
+  openLink: 'Lịch thủ công',
+  filterFrom: 'Từ',
+  filterTo: 'Đến',
+  filterSearch: 'Tìm',
+  colFrom: 'Từ ngày',
+  colTo: 'Đến ngày',
+  colDays: 'Số ngày',
+  colStatus: 'Trạng thái',
+  empty: 'Chưa có lịch nghỉ phép / đi học / công tác / thai sản trong khoảng đã chọn.',
+  loading: 'Đang tải...',
+  close: 'Đóng',
+  loadError: 'Không tải được lịch thủ công.',
+  invalidOrder: 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
+  tooLong: 'Khoảng xem tối đa 400 ngày.',
+};
 
 /** Trạng thái hiển thị trên badge (chưa chấm → UNCHECKED) */
 export const STATUS_BADGE = {
@@ -52,6 +141,11 @@ export const STATUS_BADGE = {
     label: 'ĐI LÀM',
     className: 'badge-status-present',
     icon: 'check',
+  },
+  [ATTENDANCE_STATUS.DI_TRE]: {
+    label: 'ĐI TRỄ',
+    className: 'badge-status-duty',
+    icon: 'late',
   },
   [ATTENDANCE_STATUS.NGHI_PHEP]: {
     label: 'NGHỈ PHÉP',
@@ -68,6 +162,11 @@ export const STATUS_BADGE = {
     className: 'badge-status-trip',
     icon: 'briefcase',
   },
+  [ATTENDANCE_STATUS.THAI_SAN]: {
+    label: 'THAI SẢN',
+    className: 'badge-status-purple',
+    icon: 'baby',
+  },
   UNCHECKED: {
     label: 'CHƯA CHẤM',
     className: 'badge-status-pending',
@@ -78,22 +177,22 @@ export const STATUS_BADGE = {
 export const DEFAULT_LOCK_MESSAGE =
   'Hệ thống đã tự động khóa. Liên hệ Admin nếu cần chỉnh sửa.';
 
-/** Ô vuông icon trên KPI card trạng thái Điểm danh */
+/** Ô vuông icon trên KPI card trạng thái Chấm công */
 export const KPI_METRIC_ICON_BOX = 'h-11 w-11';
 export const KPI_METRIC_ICON_SIZE = 'h-5 w-5';
 
 export const UI = {
   appName: 'BỆNH VIỆN QUÂN Y 87',
   appSubtitleAdmin: 'Admin Center',
-  appSubtitleHead: 'Chương trình điểm danh',
+  appSubtitleHead: 'Chương trình chấm công',
   footerCopyright:
-    '© 2026 BỆNH VIỆN QUÂN Y 87 — Chương trình điểm danh phát triển bởi Tham mưu - Hành chính',
+    '© 2026 BỆNH VIỆN QUÂN Y 87 — Bệnh viện Quân y 87 | Chương trình chấm công phát triển bởi Tham mưu - Hành chính',
   footerCopyrightMobile:
-    '© 2026 Chương trình điểm danh phát triển bởi Tham mưu - Hành chính',
-  pageTitle: 'Điểm danh HẰNG NGÀY',
+    '© 2026 Bệnh viện Quân y 87 | Chương trình chấm công phát triển bởi Tham mưu - Hành chính',
+  pageTitle: 'Chấm công HẰNG NGÀY',
   staffListTitle: 'Danh sách nhân sự',
-  kpiProgress: 'TIẾN ĐỘ Điểm danh',
-  kpiProgressLabel: 'Tiến độ Điểm danh',
+  kpiProgress: 'TIẾN ĐỘ Chấm công',
+  kpiProgressLabel: 'Tiến độ Chấm công',
   kpiProgressSubtitle: 'Nhân viên đã có mặt hôm nay',
   kpiRemaining: 'Còn lại',
   kpiRate: 'TỶ LỆ',
@@ -120,26 +219,33 @@ export const UI = {
   filterClearStatus: 'Xóa lọc trạng thái',
   filterAll: 'Tất cả',
   filterUnchecked: 'Chưa chấm',
-  progressTitle: 'TIẾN ĐỘ Điểm danh',
-  quickReportTitle: 'Báo cáo nhanh',
-  quickReportDesc: 'Gửi dữ liệu trực tiếp cho Admin tổng',
-  sendReportButton: 'Gửi báo cáo',
-  sendReportFull: 'Gửi báo cáo',
-  reportSent: 'Đã gửi báo cáo',
-  reportSendSuccess: 'Gửi báo cáo quân số thành công.',
-  reportBlocked: 'Admin đã khóa gửi báo cáo cho ĐƠN VỊ hôm nay.',
-  reportIncomplete: 'Vui lòng Điểm danh đủ tất cả nhân viên trước khi gửi báo cáo.',
-  reportConfirm: 'Xác nhận gửi báo cáo quân số Đơn vị cho Admin?',
-  sendReportModalTitle: 'Gửi báo cáo quân số',
+  progressTitle: 'TIẾN ĐỘ Chấm công',
+  missingPunchTitle: 'Thiếu dữ liệu chấm công',
+  missingPunchCheckout: 'Thiếu giờ ra',
+  missingPunchUnmarked: 'Chưa chấm / chưa đủ',
+  missingPunchHint:
+    'Dữ liệu đã hiển thị realtime cho Admin. Gán ngoại lệ (nghỉ/học/công tác…) hoặc nhờ Admin điền giờ trống.',
+  reportBlocked: 'Admin đã khóa chỉnh sửa Chấm công cho ĐƠN VỊ hôm nay.',
+  manualRangeTitle: 'Chọn khoảng ngày',
+  manualRangeFrom: 'Từ ngày',
+  manualRangeTo: 'Đến ngày',
+  manualRangeSubmit: 'Xác nhận',
+  manualRangeSubmitting: 'Đang lưu...',
+  manualRangeInvalidOrder: 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
+  manualRangeTooLong: 'Khoảng ngày tối đa 366 ngày.',
+  manualRangeSkipContinue: 'Tiếp tục',
+  manualRangeSkipCancel: 'Hủy',
   today: 'Hôm nay',
   noStaff: 'Không có dữ liệu!',
   employees: 'nhân viên',
   headRole: 'Trưởng phòng',
   unlockedBadge: 'Đã mở khóa đặc cách',
-  quickActionsColumn: 'Điểm danh NHANH',
+  quickActionsColumn: 'Chấm công NHANH',
   emptyCell: '—',
+  /** SPEC §4.5.1 — presence badge but incomplete without checkout */
+  missingCheckoutHint: 'Thiếu giờ ra',
   breadcrumbSystem: 'Hệ thống',
-  breadcrumbAttendance: 'Điểm danh',
+  breadcrumbAttendance: 'Chấm công',
   breadcrumbStatistics: 'Thống kê',
   breadcrumbCatalog: 'Danh mục hành chính',
   headCatalog: 'Danh mục hành chính',
@@ -177,7 +283,7 @@ export const HEAD_NAV_IDS = {
 
 /** Menu trưởng phòng (desktop sidebar) */
 export const HEAD_NAV = [
-  { id: HEAD_NAV_IDS.HOME, label: 'Điểm danh', icon: 'clipboard' },
+  { id: HEAD_NAV_IDS.HOME, label: 'Chấm công', icon: 'clipboard' },
   { id: HEAD_NAV_IDS.STATISTICS, label: 'Thống kê', icon: 'chart' },
 ];
 
@@ -191,7 +297,6 @@ export const HEAD_CATALOG_NAV = [
 export const HEAD_MOBILE_DRAWER_NAV = [...HEAD_NAV, ...HEAD_CATALOG_NAV];
 
 export const MOBILE_UI = {
-  sendReportFull: 'Gửi báo cáo',
   staffListTitle: 'Danh sách nhân viên',
   statusLabel: 'Trạng thái',
 };
@@ -210,15 +315,15 @@ export const MOBILE_STATISTICS_HISTORY_PAGE_SIZE = MOBILE_PAGE_SIZE;
 /** Mobile trưởng phòng — tải toàn bộ lịch sử trong một lần scroll */
 export const MOBILE_HISTORY_FETCH_SIZE = 500;
 
-/** Màn thống kê lịch sử Điểm danh */
+/** Màn thống kê lịch sử Chấm công */
 export const STATISTICS_UI = {
-  pageTitle: 'THỐNG KÊ LỊCH SỬ Điểm danh',
+  pageTitle: 'THỐNG KÊ LỊCH SỬ Chấm công',
   timeRangeLabel: 'Khoảng thời gian',
   dateFromLabel: 'Từ ngày',
   dateToLabel: 'Đến ngày',
   searchPlaceholder: 'Tìm tên nhân viên',
   applyFilter: 'Tìm kiếm',
-  kpiUnit: 'LƯỢT Điểm danh',
+  kpiUnit: 'LƯỢT CHẤM CÔNG',
   chartTitle: 'Xu hướng trạng thái chuyên cần (Theo thời gian)',
   chartLegendPresent: 'ĐI LÀM',
   chartLegendAbsent: 'NGHỈ PHÉP',
@@ -231,7 +336,7 @@ export const STATISTICS_UI = {
   exportExcel: 'Xuất Excel',
   noHistory: 'Không có dữ liệu!',
   historyExportFilename: 'lich-su-cham-cong.xlsx',
-  historyExportSheet: 'Lịch sử Điểm danh',
+  historyExportSheet: 'Lịch sử Chấm công',
   showingResults: (from, to, total) => `Hiển thị ${from}-${to} trên ${total} kết quả`,
   mobilePageTitle: 'Thống kê',
   mobileKpiUnit: 'LƯỢT',

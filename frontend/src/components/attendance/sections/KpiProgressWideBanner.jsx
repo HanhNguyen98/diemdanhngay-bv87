@@ -76,9 +76,8 @@ const KpiProgressWideBanner = memo(function KpiProgressWideBanner({
 
   return (
     <article
-      className={`relative overflow-hidden rounded-xl bg-gradient-to-br from-[#2563EB] via-[#204FC2] to-[#1D4ED8] shadow-card flex items-center justify-between gap-4 shrink-0 ${
-        compact ? 'px-4 py-3.5' : 'px-5 py-4 min-h-[10rem] w-[19rem] xl:w-[20rem]'
-      }`}
+      className={`relative overflow-hidden rounded-xl bg-gradient-to-br from-[#2563EB] via-[#204FC2] to-[#1D4ED8] shadow-card flex items-center justify-between gap-4 shrink-0 ${compact ? 'px-4 py-3.5' : 'px-5 py-4 min-h-[10rem] w-[19rem] xl:w-[20rem]'
+        }`}
     >
       <div
         className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"
@@ -97,7 +96,7 @@ const KpiProgressWideBanner = memo(function KpiProgressWideBanner({
         {!compact && (
           <p className="mt-1.5 text-2xs text-white/85">{UI.kpiProgressSubtitle}</p>
         )}
-      
+
       </div>
 
       <div className="relative z-[1] flex shrink-0 items-center justify-center pr-1">

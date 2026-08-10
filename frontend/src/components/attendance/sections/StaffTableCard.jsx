@@ -74,6 +74,8 @@ const StaffTableCard = memo(function StaffTableCard({
   mobileStaffList,
   disabled,
   onQuickAction,
+  onOpenScanLogs,
+  onOpenManualSchedule,
   search,
   onSearchChange,
   statusFilter,
@@ -183,6 +185,8 @@ const StaffTableCard = memo(function StaffTableCard({
           staffList={mobileList}
           disabled={disabled}
           onQuickAction={onQuickAction}
+          onOpenScanLogs={onOpenScanLogs}
+          onOpenManualSchedule={onOpenManualSchedule}
         />
         <MobilePagination
           sticky={false}
@@ -200,6 +204,8 @@ const StaffTableCard = memo(function StaffTableCard({
           staffList={staffList}
           disabled={disabled}
           onQuickAction={onQuickAction}
+          onOpenScanLogs={onOpenScanLogs}
+          onOpenManualSchedule={onOpenManualSchedule}
           page={page}
           totalPages={totalPages}
           filteredCount={filteredCount}

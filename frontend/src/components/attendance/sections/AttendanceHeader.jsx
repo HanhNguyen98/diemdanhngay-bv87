@@ -2,7 +2,6 @@ import { memo, useMemo } from 'react';
 import { UI } from '../../../constants/attendance';
 import { buildHeadBreadcrumb } from '../../../constants/headLayout';
 import { formatDeptCode } from '../../../utils/formatters';
-import { IconSend } from '../../icons/Icons';
 import NotificationBell from '../../shared/NotificationBell';
 import DatePillBar from '../../dashboard/DatePillBar';
 import HeadPageHeader from '../../layout/HeadPageHeader';
@@ -16,10 +15,6 @@ const AttendanceHeader = memo(function AttendanceHeader({
   onUnlock,
   locked,
   unlocked,
-  reportSent,
-  reportBlocked,
-  tableDisabled,
-  onSendReport,
   onNotificationDate,
   departments,
   selectedDept,
@@ -60,16 +55,6 @@ const AttendanceHeader = memo(function AttendanceHeader({
         variant="default"
       />
 
-      <button
-        type="button"
-        onClick={onSendReport}
-        disabled={tableDisabled || reportSent || reportBlocked}
-        title={reportBlocked ? UI.reportBlocked : undefined}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-attendance-report hover:bg-attendance-report-hover text-white text-xs font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
-      >
-        <IconSend className="w-3.5 h-3.5" />
-        {reportSent ? UI.reportSent : UI.sendReportButton}
-      </button>
       {isAdmin && locked && !unlocked && onUnlock && (
         <button
           type="button"

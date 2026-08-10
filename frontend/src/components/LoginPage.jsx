@@ -57,7 +57,7 @@ export default function LoginPage({ onLogin }) {
           showHeroImage={false}
           logoUrl={logoUrl}
           portalTitle={portalTitle}
-          subtitle="Chương trình điểm danh"
+          subtitle="Chương trình chấm công"
         />
 
         <form
@@ -144,14 +144,7 @@ export default function LoginPage({ onLogin }) {
             {loading ? 'Đang đăng nhập...' : UI.loginTitle}
           </button>
 
-          {import.meta.env.DEV && (
-            <p className="text-3xs sm:text-xs text-content-muted text-center leading-relaxed px-0.5">
-              Admin: admin / admin123
-              <br className="sm:hidden" />
-              <span className="hidden sm:inline"> · </span>
-              Trưởng phòng: truongphong02 / head123
-            </p>
-          )}
+
         </form>
       </div>
     </div>

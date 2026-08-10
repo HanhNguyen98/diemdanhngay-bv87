@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     id              BIGINT       NOT NULL AUTO_INCREMENT,
     attendance_date DATE         NOT NULL,
     emp_code        INT          NOT NULL,
-    status          VARCHAR(50)  NOT NULL,
+    status          VARCHAR(50)  NULL,
     note            VARCHAR(255) NULL,
     PRIMARY KEY (id),
     UNIQUE KEY unique_daily_attendance (attendance_date, emp_code),

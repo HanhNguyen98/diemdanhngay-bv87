@@ -58,7 +58,7 @@ export function downloadAttendanceStatusExcel(payload) {
 
   downloadExcel({
     filename: excelFilename(payload, 'bao-cao-cham-cong.xlsx'),
-    sheetName: 'Điểm danh',
+    sheetName: 'Chấm công',
     headers,
     rows,
   });

@@ -20,8 +20,11 @@ public class AiNlpParser {
             return defaultDate;
         }
         String q = message.toLowerCase(Locale.ROOT);
-        if (containsAny(q, "hôm nay", "hom nay", "sáng nay", "sang nay", "hôm nay")) {
+        if (containsAny(q, "hôm nay", "hom nay", "sáng nay", "sang nay")) {
             return defaultDate;
+        }
+        if (containsAny(q, "hôm qua", "hom qua")) {
+            return defaultDate.minusDays(1);
         }
 
         Matcher matcher = DMY_SLASH.matcher(message);
@@ -49,7 +52,7 @@ public class AiNlpParser {
             return false;
         }
         String q = message.toLowerCase(Locale.ROOT);
-        if (containsAny(q, "hôm nay", "hom nay", "sáng nay", "sang nay")) {
+        if (containsAny(q, "hôm nay", "hom nay", "sáng nay", "sang nay", "hôm qua", "hom qua")) {
             return true;
         }
         return DMY_SLASH.matcher(message).find();

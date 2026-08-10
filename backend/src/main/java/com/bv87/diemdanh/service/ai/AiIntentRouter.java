@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+/** Routes Admin AI chat / quick actions — SPEC_AI_ASSISTANT. */
 @Component
 @RequiredArgsConstructor
 public class AiIntentRouter {
@@ -18,7 +19,15 @@ public class AiIntentRouter {
     private final VietnamTimeService timeService;
 
     public AiIntent route(String quickAction, String message) {
+        return route(quickAction, message, null);
+    }
+
+    /**
+     * @param preferredDate optional ISO date from FE (e.g. CTA from pending list) — SPEC §2.1
+     */
+    public AiIntent route(String quickAction, String message, LocalDate preferredDate) {
         if (quickAction != null && !quickAction.isBlank()) {
+            LocalDate missingDate = preferredDate != null ? preferredDate : defaultMissingPunchDate();
             return switch (quickAction) {
                 case "work_status_report" -> AiIntent.builder()
                         .type(AiIntent.Type.WORK_STATUS_PICKER)
@@ -30,10 +39,15 @@ public class AiIntentRouter {
                         .args(Map.of())
                         .replyHint(null)
                         .build();
-                case "batch_reminders" -> AiIntent.builder()
+                case "batch_reminders", "remind_missing_punch_depts" -> AiIntent.builder()
                         .type(AiIntent.Type.BATCH_REMINDERS)
-                        .args(Map.of())
-                        .replyHint("Đang quét các ĐƠN VỊ chưa hoàn thành điểm danh...")
+                        .args(Map.of("date", missingDate.toString()))
+                        .replyHint("Đang quét các ĐƠN VỊ còn thiếu dữ liệu chấm công...")
+                        .build();
+                case "list_missing_punches", "list_pending_departments" -> AiIntent.builder()
+                        .type(AiIntent.Type.PENDING_DEPARTMENTS)
+                        .args(Map.of("date", missingDate.toString()))
+                        .replyHint("Đang lấy danh sách ĐƠN VỊ thiếu dữ liệu chấm công...")
                         .build();
                 default -> routeMessage(message);
             };
@@ -49,18 +63,20 @@ public class AiIntentRouter {
         LocalDate today = timeService.today();
 
         if (isPendingDepartmentsQuery(q)) {
+            LocalDate target = resolveMissingPunchDateFromMessage(message, q, today);
             return AiIntent.builder()
                     .type(AiIntent.Type.PENDING_DEPARTMENTS)
-                    .args(Map.of("date", today.toString()))
-                    .replyHint("Đang lấy danh sách ĐƠN VỊ CHƯA XONG...")
+                    .args(Map.of("date", target.toString()))
+                    .replyHint("Đang lấy danh sách ĐƠN VỊ thiếu dữ liệu chấm công...")
                     .build();
         }
 
         if (isBatchReminderQuery(q)) {
+            LocalDate target = resolveMissingPunchDateFromMessage(message, q, today);
             return AiIntent.builder()
                     .type(AiIntent.Type.BATCH_REMINDERS)
-                    .args(Map.of())
-                    .replyHint("Đang quét các ĐƠN VỊ CHƯA XONG...")
+                    .args(Map.of("date", target.toString()))
+                    .replyHint("Đang quét các ĐƠN VỊ còn thiếu dữ liệu chấm công...")
                     .build();
         }
 
@@ -95,7 +111,7 @@ public class AiIntentRouter {
                 return AiIntent.builder()
                         .type(AiIntent.Type.ATTENDANCE_STATUS_EXECUTE)
                         .args(Map.of("date", date.toString()))
-                        .replyHint("Đang xuất báo cáo trạng thái Điểm danh...")
+                        .replyHint("Đang xuất báo cáo trạng thái Chấm công...")
                         .build();
             }
             return AiIntent.builder()
@@ -112,6 +128,21 @@ public class AiIntentRouter {
         return AiIntent.builder().type(AiIntent.Type.UNKNOWN).args(Map.of()).build();
     }
 
+    private LocalDate defaultMissingPunchDate() {
+        return timeService.today().minusDays(1);
+    }
+
+    /** Default D−1; “hôm nay” or explicit date overrides. */
+    private LocalDate resolveMissingPunchDateFromMessage(String message, String q, LocalDate today) {
+        if (containsAny(q, "hôm nay", "sáng nay")) {
+            return today;
+        }
+        if (nlpParser.hasExplicitDate(message) || containsAny(q, "hôm qua")) {
+            return nlpParser.parseDate(message, today);
+        }
+        return today.minusDays(1);
+    }
+
     private boolean isWorkStatusQuery(String q) {
         return containsAny(q,
                 "trạng thái làm việc",
@@ -123,20 +154,26 @@ public class AiIntentRouter {
 
     private boolean isAttendanceStatusQuery(String q) {
         return containsAny(q,
-                "trạng thái Điểm danh",
-                "báo cáo Điểm danh",
-                "file Điểm danh",
-                "xuất Điểm danh",
-                "điểm danh ngày");
+                "trạng thái Chấm công",
+                "báo cáo Chấm công",
+                "file Chấm công",
+                "xuất Chấm công",
+                "Chấm công ngày");
     }
 
     private boolean isPendingDepartmentsQuery(String q) {
         return containsAny(q,
+                "thiếu dữ liệu chấm công",
+                "thiếu dữ liệu",
+                "thiếu punch",
+                "thiếu giờ ra",
+                "thiếu giờ",
+                "chưa chấm",
+                "chưa Chấm công",
+                "thiếu dữ liệu",
                 "chưa báo cáo",
                 "chưa nộp",
                 "chưa xong",
-                "chưa điểm danh",
-                "chưa chấm",
                 "ai chưa",
                 "khoa nào chưa",
                 "phòng nào chưa",
@@ -144,7 +181,14 @@ public class AiIntentRouter {
     }
 
     private boolean isBatchReminderQuery(String q) {
-        return containsAny(q, "gửi nhắc nhở", "nhắc nhở đồng loạt", "nhắc các khoa", "nhắc các phòng");
+        return containsAny(q,
+                "gửi nhắc nhở",
+                "nhắc nhở đồng loạt",
+                "nhắc các khoa",
+                "nhắc các phòng",
+                "nhắc thiếu dữ liệu",
+                "nhắc thiếu punch",
+                "nhắc thiếu dữ liệu chấm công");
     }
 
     private boolean containsAny(String text, String... needles) {

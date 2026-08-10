@@ -3,19 +3,16 @@ import { Users } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { KPI_METRIC_ICON_BOX, KPI_METRIC_ICON_SIZE } from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
-import { mergeBreakdownWithCatalog } from '../../../utils/statusBreakdown';
+import { mergeBreakdownWithCatalog, KPI_STATUS_LABEL_CLASS_PEEK } from '../../../utils/statusBreakdown';
 import AttendanceStatusTile from '../../attendance/sections/AttendanceStatusTile';
 import MobileHorizontalScroll from '../../shared/MobileHorizontalScroll';
 
 const TOTAL_CARD =
-  'bg-surface-white border border-line rounded-xl px-3 py-2 shadow-card flex items-center gap-2.5';
+  'bg-surface-white border border-line rounded-xl px-3 py-2.5 shadow-card flex items-center gap-2.5 min-h-[4.75rem]';
 
 /** ~3.5 card visible; đủ cao cho nhãn 2 dòng (ĐI CÔNG TÁC, CHƯA CHẤM) */
 export const ADMIN_KPI_PEEK_TILE_CLASS =
-  'shrink-0 w-[calc((100%-1rem)/3.5)] min-h-[4.5rem] h-[4.5rem] snap-start';
-
-const UNCHECKED_LABEL_CLASS =
-  'text-[0.625rem] leading-[1.2] font-medium uppercase tracking-tight text-content-body line-clamp-2';
+  'shrink-0 w-[calc((100%-1rem)/3.5)] min-h-[4.75rem] snap-start';
 
 const SCROLL_INNER_CLASS = 'gap-2 snap-x snap-mandatory pb-0.5 pr-1';
 
@@ -32,9 +29,9 @@ const DashboardMobileKpiBar = memo(function DashboardMobileKpiBar({ kpi, scopeLa
   const showScrollPeek = totalCards > 3;
 
   return (
-    <section className="lg:hidden flex flex-col gap-2 min-w-0 max-w-full" aria-label="Tổng hợp quân số">
+    <section className="lg:hidden flex flex-col gap-1.5 min-w-0 max-w-full" aria-label="Tổng hợp quân số">
       {scopeLabel && (
-        <p className="text-2xs text-content-muted truncate px-0.5" title={scopeLabel}>
+        <p className="text-xs text-content-muted truncate px-0.5 -mt-0.5 leading-snug" title={scopeLabel}>
           {scopeLabel}
         </p>
       )}
@@ -46,7 +43,9 @@ const DashboardMobileKpiBar = memo(function DashboardMobileKpiBar({ kpi, scopeLa
         </div>
         <div className="min-w-0">
           <p className="text-xl font-bold text-gray-900 tabular-nums leading-none">{kpi?.total ?? 0}</p>
-          <p className="text-4xs font-semibold text-content-muted uppercase mt-0.5">{d.kpiTotal}</p>
+          <p className="mt-1 text-4xs font-bold uppercase leading-snug tracking-wide text-black line-clamp-2">
+            {d.kpiTotal}
+          </p>
         </div>
       </article>
 
@@ -80,7 +79,7 @@ const DashboardMobileKpiBar = memo(function DashboardMobileKpiBar({ kpi, scopeLa
               {String(unchecked).padStart(2, '0')}
             </span>
           </div>
-          <p className={UNCHECKED_LABEL_CLASS}>{d.chartUnchecked}</p>
+          <p className={KPI_STATUS_LABEL_CLASS_PEEK}>{d.chartUnchecked}</p>
         </article>
       </MobileHorizontalScroll>
     </section>

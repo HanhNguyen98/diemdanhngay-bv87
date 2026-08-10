@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalTime;
 
-/** Giờ mở / khóa điểm danh — đọc từ DB, fallback application.yml lúc khởi động. */
+/** Giờ mở / khóa Chấm công — đọc từ DB, fallback application.yml lúc khởi động. */
 @Component
 public class AttendanceTimeConfig {
 

@@ -40,7 +40,7 @@ export const STATUS_KPI_ICON_MAP = {
   home: IconHome,
 };
 
-/** Icon nút Điểm danh nhanh (stroke mảnh hơn cho check/x) */
+/** Icon nút Chấm công nhanh (stroke mảnh hơn cho check/x) */
 export const STATUS_QUICK_ICON_MAP = {
   check: IconCheck,
   x: IconX,

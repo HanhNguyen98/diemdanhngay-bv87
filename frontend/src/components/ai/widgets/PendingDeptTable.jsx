@@ -1,5 +1,20 @@
 import { AI_ASSISTANT_UI } from '../../../constants/aiAssistant';
 
+function deptMissingLabel(dept) {
+  const total = dept.missingCount ?? (dept.markedCount != null ? null : 0);
+  if (total != null) {
+    const checkout = dept.missingCheckoutCount ?? 0;
+    const unmarked = dept.unmarkedCount ?? 0;
+    const parts = [];
+    if (checkout > 0) parts.push(`${checkout} thiếu giờ ra`);
+    if (unmarked > 0) parts.push(`${unmarked} chưa chấm`);
+    if (parts.length === 0) return `${total} thiếu`;
+    return `${total} · ${parts.join(', ')}`;
+  }
+  // Legacy shape
+  return `${dept.markedCount}/${dept.total} · ${dept.progressPercent}%`;
+}
+
 export default function PendingDeptTable({ payload, onSendReminders, loading }) {
   const departments = payload?.departments || [];
 
@@ -10,28 +25,26 @@ export default function PendingDeptTable({ payload, onSendReminders, loading }) 
   }
 
   return (
-    <div className="mt-2 rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-      <div className="px-3 py-2 border-b border-gray-100 bg-surface-page/60">
-        <p className="text-sm font-semibold text-gray-800">{AI_ASSISTANT_UI.widgets.pendingTitle}</p>
+    <div className="mt-2 rounded-xl border border-line bg-surface-white overflow-hidden shadow-sm">
+      <div className="px-3 py-2 border-b border-line bg-surface-page/60">
+        <p className="text-sm font-semibold text-navy">{AI_ASSISTANT_UI.widgets.pendingTitle}</p>
         <p className="text-xs text-content-muted">{payload?.dateFormatted}</p>
       </div>
-      <ul className="max-h-40 overflow-y-auto divide-y divide-gray-50">
+      <ul className="max-h-40 overflow-y-auto divide-y divide-line">
         {departments.map((dept) => (
           <li key={dept.deptCode} className="px-3 py-2 flex items-center justify-between gap-2 text-xs">
-            <span className="text-gray-800 min-w-0 truncate">
+            <span className="text-navy min-w-0 truncate">
               [{dept.deptCodeFormatted}] {dept.deptName}
             </span>
-            <span className="shrink-0 tabular-nums text-content-muted whitespace-nowrap">
-              {dept.markedCount}/{dept.total} · {dept.progressPercent}%
+            <span className="shrink-0 tabular-nums text-content-muted whitespace-nowrap text-right">
+              {deptMissingLabel(dept)}
             </span>
           </li>
         ))}
       </ul>
       {payload?.showReminderCta && (
-        <div className="px-3 py-2 border-t border-gray-100 bg-blue-50/50">
-          <p className="text-xs text-gray-700 mb-2">
-            Bạn có muốn gửi nhắc nhở đồng loạt đến các ĐƠN VỊ này không?
-          </p>
+        <div className="px-3 py-2 border-t border-line bg-primary-light/50">
+          <p className="text-xs text-navy mb-2">{AI_ASSISTANT_UI.widgets.pendingReminderPrompt}</p>
           <button
             type="button"
             disabled={loading}

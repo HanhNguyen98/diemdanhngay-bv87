@@ -7,6 +7,8 @@ import lombok.Setter;
 @Setter
 public class AiChatRequest {
     private String message;
-    /** quick_action: export_report | batch_reminders | analyze_leaves */
+    /** quick_action id from FE chips */
     private String quickAction;
+    /** Optional attendance date (ISO) — HEAD uses selected day on the page. */
+    private String date;
 }

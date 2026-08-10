@@ -67,3 +67,14 @@ app:
       max-attempts: 5
       window-minutes: 15
       lockout-minutes: 15
+    kiosk:
+      # P4b SPEC §8.1 — require LAN for /api/kiosk/**
+      lan-gate-enabled: true
+      trust-forwarded-headers: false
+      allowed-cidrs:
+        - "127.0.0.1/32"
+        - "::1/128"
+        - "10.0.0.0/8"
+        - "172.16.0.0/12"
+        - "192.168.0.0/16"
+        - "192.170.0.0/16"

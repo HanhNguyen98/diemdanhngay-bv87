@@ -84,9 +84,8 @@ const AvatarUpload = memo(function AvatarUpload({
 
   const selectedPreview = (
     <div
-      className={`flex items-center gap-3 p-3 ${
-        isCompactField ? '' : 'border border-gray-200 rounded-lg bg-surface-page/50'
-      }`}
+      className={`flex items-center gap-3 p-3 ${isCompactField ? '' : 'border border-gray-200 rounded-lg bg-surface-page/50'
+        }`}
     >
       <img src={value} alt={previewAlt} className={previewClassName} />
       <div className="min-w-0 flex-1">
@@ -124,15 +123,13 @@ const AvatarUpload = memo(function AvatarUpload({
       }}
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
-      className={`${
-        isCompactField ? 'border-0' : 'border-2 border-dashed rounded-lg'
-      } px-4 py-5 text-center cursor-pointer transition-colors ${
-        dragOver
+      className={`${isCompactField ? 'border-0' : 'border-2 border-dashed rounded-lg'
+        } px-4 py-5 text-center cursor-pointer transition-colors ${dragOver
           ? 'bg-primary-light/40'
           : isCompactField
             ? 'hover:bg-surface-page/60'
             : 'border-gray-300 hover:border-primary/50 hover:bg-surface-page/60'
-      } ${dragOver && !isCompactField ? 'border-primary' : ''}`}
+        } ${dragOver && !isCompactField ? 'border-primary' : ''}`}
     >
       <ArrowDown className="w-5 h-5 text-content-muted mx-auto mb-2" />
       <p className="text-sm text-content-muted">

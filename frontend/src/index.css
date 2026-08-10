@@ -69,12 +69,12 @@
 
 .recharts-wrapper text,
 .recharts-tooltip-wrapper {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif !important;
+  font-family: 'Montserrat', system-ui, 'Segoe UI', sans-serif !important;
 }
 
 @layer components {
 
-  /* ── Admin portal typography (Segoe UI — matches desktop breadcrumb) ── */
+  /* ── Admin portal typography (Montserrat via font-sans) ── */
   .admin-shell {
     @apply font-sans antialiased;
   }
@@ -209,7 +209,7 @@
     @apply pointer-events-none select-none;
   }
 
-  /* ── Table header — đồng bộ Điểm danh / thống kê / admin ── */
+  /* ── Table header — đồng bộ Chấm công / thống kê / admin ── */
   .table-header-row {
     @apply bg-table-header border-b border-slate-200;
   }

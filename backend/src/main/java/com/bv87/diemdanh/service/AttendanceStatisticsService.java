@@ -7,6 +7,7 @@ import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AttendanceRecordRepository;
 import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.security.AuthUser;
+import com.bv87.diemdanh.util.AttendanceValidity;
 import com.bv87.diemdanh.util.CodeFormatter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -60,6 +61,9 @@ public class AttendanceStatisticsService {
 
         Map<String, Long> counts = new HashMap<>();
         for (AttendanceRecord record : records) {
+            if (!AttendanceValidity.isComplete(record)) {
+                continue;
+            }
             counts.merge(record.getStatus(), 1L, Long::sum);
         }
         List<StatusBreakdownItemDto> breakdown = statusCatalogService.buildBreakdown(counts);
@@ -169,7 +173,9 @@ public class AttendanceStatisticsService {
                 .fullname(employee.getFullname())
                 .avatarUrl(employee.getAvatarUrl())
                 .status(record.getStatus())
-                .statusLabel(statusCatalogService.resolveLabel(record.getStatus()))
+                .statusLabel(record.getStatus() != null
+                        ? statusCatalogService.resolveLabel(record.getStatus())
+                        : "CHƯA CHẤM")
                 .note(record.getNote())
                 .build();
     }
@@ -213,6 +219,9 @@ public class AttendanceStatisticsService {
             for (AttendanceRecord record : records) {
                 LocalDate d = record.getAttendanceDate();
                 if (d.isBefore(bucket.from()) || d.isAfter(bucket.to())) {
+                    continue;
+                }
+                if (!AttendanceValidity.isComplete(record)) {
                     continue;
                 }
                 counts.merge(record.getStatus(), 1L, Long::sum);

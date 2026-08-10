@@ -5,9 +5,12 @@ import TablePagination from '../../sections/TablePagination';
 import DeptAttendanceRow from './DeptAttendanceRow';
 
 const COLUMNS = [
-  { key: 'empCode', labelKey: 'deptDetailColEmpCode', width: '14%' },
-  { key: 'fullname', labelKey: 'deptDetailColStaff', width: '34%' },
-  { key: 'status', labelKey: 'deptDetailColStatus', width: '22%' },
+  { key: 'empCode', labelKey: 'deptDetailColEmpCode', width: '11%' },
+  { key: 'fullname', labelKey: 'deptDetailColStaff', width: '22%' },
+  { key: 'checkIn', labelKey: 'deptDetailColCheckIn', width: '11%' },
+  { key: 'checkOut', labelKey: 'deptDetailColCheckOut', width: '12%' },
+  { key: 'status', labelKey: 'deptDetailColStatus', width: '14%' },
+  { key: 'actions', labelKey: 'deptDetailColActions', width: '20%' },
 ];
 
 const DeptAttendanceTable = memo(function DeptAttendanceTable({
@@ -19,6 +22,11 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
   totalItems,
   pageSize,
   onPageChange,
+  onOpenScanLogs,
+  onOpenManualSchedule,
+  onFillTimes,
+  onQuickAction,
+  onClearAttendance,
 }) {
   const { dashboard: d } = ADMIN_UI;
   const colCount = COLUMNS.length;
@@ -27,7 +35,7 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
     <section className="hidden lg:flex bg-surface-white border border-line rounded-xl shadow-card overflow-hidden flex-col flex-1 min-h-0">
       <div className="relative flex-1 min-h-0 overflow-auto">
         {refreshing && <RefreshOverlay />}
-        <table className="w-full min-w-[720px] table-fixed text-sm">
+        <table className="w-full min-w-[860px] table-fixed text-sm">
           <colgroup>
             {COLUMNS.map((col) => (
               <col key={col.key} style={{ width: col.width }} />
@@ -36,7 +44,11 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
           <thead className="sticky top-0 z-10 bg-surface-white">
             <tr className="table-header-row">
               {COLUMNS.map((col) => (
-                <th key={col.key} scope="col" className="table-th-left">
+                <th
+                  key={col.key}
+                  scope="col"
+                  className={col.key === 'actions' ? 'table-th-right' : 'table-th-left'}
+                >
                   {d[col.labelKey]}
                 </th>
               ))}
@@ -57,7 +69,15 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
               </tr>
             ) : (
               items.map((staff) => (
-                <DeptAttendanceRow key={staff.empCode} staff={staff} />
+                <DeptAttendanceRow
+                  key={staff.empCode}
+                  staff={staff}
+                  onOpenScanLogs={onOpenScanLogs}
+                  onOpenManualSchedule={onOpenManualSchedule}
+                  onFillTimes={onFillTimes}
+                  onQuickAction={onQuickAction}
+                  onClearAttendance={onClearAttendance}
+                />
               ))
             )}
           </tbody>

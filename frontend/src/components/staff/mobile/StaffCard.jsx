@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Award, Building2, Camera, History, Pencil, Trash2 } from 'lucide-react';
+import { Award, Building2, Camera, Fingerprint, History, Pencil, Trash2 } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { getInitials } from '../../../utils/formatters';
 
@@ -40,8 +40,28 @@ function StatusBadge({ active }) {
   const label = active ? s.active : s.inactive;
   return (
     <span
-      className={`inline-block mt-1.5 text-4xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+      className={`inline-flex max-w-full truncate rounded-full px-1.5 py-px text-4xs font-semibold leading-tight ${
         active ? 'badge-success' : 'badge-neutral'
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function FingerprintBadge({ registered, fingerLabel }) {
+  const label = registered
+    ? fingerLabel || s.fingerprintRegistered
+    : s.fingerprintMissing;
+  const title =
+    registered && fingerLabel
+      ? `${s.fingerprintRegistered} — ${fingerLabel}`
+      : undefined;
+  return (
+    <span
+      title={title}
+      className={`inline-flex min-w-0 max-w-full truncate rounded-full px-1.5 py-px text-4xs font-semibold leading-tight ${
+        registered ? 'badge-success' : 'badge-neutral'
       }`}
     >
       {label}
@@ -68,11 +88,20 @@ const StaffCard = memo(function StaffCard({
   onEdit,
   onDelete,
   onHistory,
+  onDeleteFingerprint,
   avatarOnly = false,
   hideDeptColumn = false,
 }) {
   const active = staff.active !== false;
+  const registered = Boolean(staff.fingerprintRegistered);
   const deptDisplay = `[${staff.deptCodeFormatted}] ${staff.deptName}`;
+  const showFpDelete = registered && onDeleteFingerprint;
+  const footerActions = [
+    !avatarOnly,
+    !avatarOnly && onHistory,
+    showFpDelete,
+    !avatarOnly && onDelete,
+  ].filter(Boolean).length;
 
   return (
     <article className="flex flex-col divide-y divide-line border border-line rounded-2xl bg-surface-white shadow-card overflow-hidden">
@@ -95,7 +124,10 @@ const StaffCard = memo(function StaffCard({
             <p className="text-sm text-content-muted mt-0.5 truncate">
               {staff.positionName || '—'}
             </p>
-            <StatusBadge active={active} />
+            <div className="mt-1.5 flex min-w-0 flex-wrap gap-1">
+              <StatusBadge active={active} />
+              <FingerprintBadge registered={registered} fingerLabel={staff.fingerLabel} />
+            </div>
           </div>
         </div>
       </div>
@@ -107,21 +139,23 @@ const StaffCard = memo(function StaffCard({
         <MetaRow icon={Award} label={s.mobile.rankLabel} value={staff.rankName || '—'} />
       </div>
 
-      {!avatarOnly && (
+      {footerActions > 0 && (
         <div
           className={`grid ${
-            onDelete && onHistory ? 'grid-cols-3' : onDelete || onHistory ? 'grid-cols-2' : 'grid-cols-1'
+            footerActions >= 3 ? 'grid-cols-3' : footerActions === 2 ? 'grid-cols-2' : 'grid-cols-1'
           } divide-x divide-line py-3`}
         >
-          <button
-            type="button"
-            onClick={() => onEdit(staff)}
-            className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <Pencil className="w-4 h-4" />
-            {s.mobile.edit}
-          </button>
-          {onHistory && (
+          {!avatarOnly && (
+            <button
+              type="button"
+              onClick={() => onEdit(staff)}
+              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+              {s.mobile.edit}
+            </button>
+          )}
+          {!avatarOnly && onHistory && (
             <button
               type="button"
               onClick={() => onHistory(staff)}
@@ -131,7 +165,17 @@ const StaffCard = memo(function StaffCard({
               {s.transferHistoryView}
             </button>
           )}
-          {onDelete && (
+          {showFpDelete && (
+            <button
+              type="button"
+              onClick={() => onDeleteFingerprint(staff)}
+              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-warning-fg hover:text-navy transition-colors"
+            >
+              <Fingerprint className="w-4 h-4" />
+              {s.fingerprintDeleteLabel}
+            </button>
+          )}
+          {!avatarOnly && onDelete && (
             <button
               type="button"
               onClick={() => onDelete(staff)}

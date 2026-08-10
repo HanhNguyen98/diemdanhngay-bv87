@@ -15,6 +15,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.LocalDate;
+
 @RestController
 @RequestMapping("/api/admin/ai")
 @RequiredArgsConstructor
@@ -26,10 +28,15 @@ public class AiAssistantController {
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChat(@Valid @RequestBody AiChatRequest request) {
+        LocalDate preferredDate = null;
+        if (request.getDate() != null && !request.getDate().isBlank()) {
+            preferredDate = LocalDate.parse(request.getDate());
+        }
         return aiAssistantService.streamChat(
                 authService.getAuthUser(),
                 request.getMessage(),
-                request.getQuickAction());
+                request.getQuickAction(),
+                preferredDate);
     }
 
     @PostMapping("/tools/execute")

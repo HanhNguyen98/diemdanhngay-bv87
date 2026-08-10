@@ -6,6 +6,8 @@ const AttendanceStaffCardList = memo(function AttendanceStaffCardList({
   staffList,
   disabled,
   onQuickAction,
+  onOpenScanLogs,
+  onOpenManualSchedule,
 }) {
   if (!staffList?.length) {
     return (
@@ -16,13 +18,15 @@ const AttendanceStaffCardList = memo(function AttendanceStaffCardList({
   }
 
   return (
-    <div className="flex flex-col gap-3 p-3">
+    <div className="flex flex-col gap-2.5 p-2">
       {staffList.map((staff) => (
         <AttendanceStaffCard
           key={staff.empCode}
           staff={staff}
           disabled={disabled}
           onQuickAction={onQuickAction}
+          onOpenScanLogs={onOpenScanLogs}
+          onOpenManualSchedule={onOpenManualSchedule}
         />
       ))}
     </div>

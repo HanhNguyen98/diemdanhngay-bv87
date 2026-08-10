@@ -1,6 +1,8 @@
 package com.bv87.diemdanh.service.ai;
 
 import com.bv87.diemdanh.dto.AttendanceSummaryDto;
+import com.bv87.diemdanh.dto.MissingPunchItemDto;
+import com.bv87.diemdanh.dto.MissingPunchesResponseDto;
 import com.bv87.diemdanh.dto.SendReminderResultDto;
 import com.bv87.diemdanh.dto.ai.AiReminderPreviewDeptDto;
 import com.bv87.diemdanh.entity.CompletionStatus;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/** Admin AI tools — SPEC_AI_ASSISTANT (missing-punch reminders after P5). */
 @Service
 @RequiredArgsConstructor
 public class AiToolService {
@@ -124,7 +127,7 @@ public class AiToolService {
             row.put("progressPercent", s.getProgressPercent());
             row.put("completionStatus", s.getCompletionStatus().name());
             row.put("completionLabel", s.getCompletionStatus() == CompletionStatus.COMPLETED
-                    ? "HOÀN THÀNH" : "CHƯA XONG");
+                    ? "ĐỦ TRẠNG THÁI" : "THIẾU TRẠNG THÁI");
             return row;
         }).collect(Collectors.toList());
 
@@ -134,7 +137,7 @@ public class AiToolService {
         String filename = String.format("bao-cao-cham-cong-ngay-%s.xlsx", date);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("title", "Báo cáo trạng thái Điểm danh");
+        result.put("title", "Báo cáo trạng thái Chấm công");
         result.put("date", date.toString());
         result.put("dateFormatted", DMY.format(date));
         result.put("rows", rows);
@@ -143,70 +146,81 @@ public class AiToolService {
         return result;
     }
 
+    /**
+     * Departments that still have missing punches on the target date (default yesterday).
+     */
     @Transactional(readOnly = true)
-    public Map<String, Object> listPendingDepartments(AuthUser authUser) {
-        LocalDate today = timeService.today();
-        List<AttendanceSummaryDto> incomplete = attendanceService.getAllSummaries(authUser, today).stream()
-                .filter(s -> s.getCompletionStatus() == CompletionStatus.INCOMPLETE)
+    public Map<String, Object> listMissingPunchDepartments(AuthUser authUser, Map<String, Object> args) {
+        LocalDate targetDate = resolveMissingPunchDate(args);
+        MissingPunchesResponseDto missing =
+                attendanceService.listMissingPunches(authUser, null, targetDate);
+        List<Map<String, Object>> departments = aggregateMissingByDept(missing.getItems());
+
+        List<Integer> deptCodes = departments.stream()
+                .map(d -> (Integer) d.get("deptCode"))
                 .toList();
-
-        List<Integer> deptCodes = incomplete.stream().map(AttendanceSummaryDto::getDeptCode).toList();
-        String actionId = pendingActionStore.saveReminderAction(deptCodes);
-
-        List<Map<String, Object>> departments = incomplete.stream().map(s -> {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("deptCode", s.getDeptCode());
-            item.put("deptCodeFormatted", s.getDeptCodeFormatted());
-            item.put("deptName", s.getDeptName());
-            item.put("markedCount", s.getMarkedCount());
-            item.put("total", s.getTotal());
-            item.put("progressPercent", s.getProgressPercent());
-            return item;
-        }).collect(Collectors.toList());
+        String actionId = pendingActionStore.saveReminderAction(deptCodes, targetDate);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("date", today.toString());
-        result.put("dateFormatted", DMY.format(today));
+        result.put("date", targetDate.toString());
+        result.put("dateFormatted", DMY.format(targetDate));
         result.put("departments", departments);
         result.put("actionId", actionId);
         result.put("showReminderCta", !departments.isEmpty());
         return result;
     }
 
+    /** Preview reminder confirm card for missing-punch departments. */
     @Transactional(readOnly = true)
-    public Map<String, Object> previewBatchReminders(AuthUser authUser) {
-        LocalDate today = timeService.today();
-        List<AttendanceSummaryDto> incomplete = attendanceService.getAllSummaries(authUser, today).stream()
-                .filter(s -> s.getCompletionStatus() == CompletionStatus.INCOMPLETE)
+    public Map<String, Object> previewMissingPunchReminders(AuthUser authUser, Map<String, Object> args) {
+        LocalDate targetDate = resolveMissingPunchDate(args);
+        MissingPunchesResponseDto missing =
+                attendanceService.listMissingPunches(authUser, null, targetDate);
+        List<Map<String, Object>> aggregated = aggregateMissingByDept(missing.getItems());
+
+        List<Integer> deptCodes = aggregated.stream()
+                .map(d -> (Integer) d.get("deptCode"))
                 .toList();
+        String actionId = pendingActionStore.saveReminderAction(deptCodes, targetDate);
 
-        List<Integer> deptCodes = incomplete.stream().map(AttendanceSummaryDto::getDeptCode).toList();
-        String actionId = pendingActionStore.saveReminderAction(deptCodes);
-
-        List<AiReminderPreviewDeptDto> departments = incomplete.stream()
-                .map(s -> AiReminderPreviewDeptDto.builder()
-                        .deptCode(s.getDeptCode())
-                        .deptCodeFormatted(s.getDeptCodeFormatted())
-                        .deptName(s.getDeptName())
-                        .markedCount(s.getMarkedCount())
-                        .total(s.getTotal())
-                        .progressPercent(s.getProgressPercent())
+        List<AiReminderPreviewDeptDto> departments = aggregated.stream()
+                .map(d -> AiReminderPreviewDeptDto.builder()
+                        .deptCode((Integer) d.get("deptCode"))
+                        .deptCodeFormatted((String) d.get("deptCodeFormatted"))
+                        .deptName((String) d.get("deptName"))
+                        .missingCount(((Number) d.get("missingCount")).longValue())
+                        .missingCheckoutCount(((Number) d.get("missingCheckoutCount")).longValue())
+                        .unmarkedCount(((Number) d.get("unmarkedCount")).longValue())
                         .build())
                 .toList();
 
-        return Map.of(
-                "actionId", actionId,
-                "departments", departments,
-                "attendanceDate", today.toString()
-        );
+        Map<String, Object> result = new HashMap<>();
+        result.put("actionId", actionId);
+        result.put("departments", departments);
+        result.put("attendanceDate", targetDate.toString());
+        result.put("dateFormatted", DMY.format(targetDate));
+        return result;
+    }
+
+    /** @deprecated Alias — use {@link #listMissingPunchDepartments}. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> listPendingDepartments(AuthUser authUser) {
+        return listMissingPunchDepartments(authUser, Map.of());
+    }
+
+    /** @deprecated Alias — use {@link #previewMissingPunchReminders}. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> previewBatchReminders(AuthUser authUser) {
+        return previewMissingPunchReminders(authUser, Map.of());
     }
 
     @Transactional
     public SendReminderResultDto confirmBatchReminders(AuthUser authUser, String actionId, List<Integer> deptCodes) {
-        if (!pendingActionStore.consumeReminderAction(actionId, deptCodes).isPresent()) {
-            throw new BusinessException("Phiên xác nhận đã hết hạn hoặc danh sách ĐƠN VỊ không hợp lệ");
-        }
-        return attendanceReminderService.sendManualReminders(authUser, deptCodes);
+        var action = pendingActionStore.consumeReminderAction(actionId, deptCodes)
+                .orElseThrow(() -> new BusinessException(
+                        "Phiên xác nhận đã hết hạn hoặc danh sách ĐƠN VỊ không hợp lệ"));
+        return attendanceReminderService.sendManualReminders(
+                authUser, deptCodes, action.attendanceDate());
     }
 
     public Map<String, Object> executeTool(AuthUser authUser, String tool, Map<String, Object> params) {
@@ -214,10 +228,39 @@ public class AiToolService {
         return switch (tool) {
             case "work_status_report" -> buildWorkStatusReport(authUser, args);
             case "attendance_status_report" -> buildAttendanceStatusReport(authUser, args);
-            case "list_pending_departments" -> listPendingDepartments(authUser);
-            case "batch_reminders" -> previewBatchReminders(authUser);
+            case "list_missing_punches", "list_pending_departments" -> listMissingPunchDepartments(authUser, args);
+            case "remind_missing_punch_depts", "batch_reminders" -> previewMissingPunchReminders(authUser, args);
             default -> throw new BusinessException("Tool không được hỗ trợ: " + tool);
         };
+    }
+
+    private LocalDate resolveMissingPunchDate(Map<String, Object> args) {
+        return dateArg(args, "date", timeService.today().minusDays(1));
+    }
+
+    private List<Map<String, Object>> aggregateMissingByDept(List<MissingPunchItemDto> items) {
+        Map<Integer, List<MissingPunchItemDto>> byDept = items.stream()
+                .collect(Collectors.groupingBy(
+                        MissingPunchItemDto::getDeptCode,
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+
+        List<Map<String, Object>> departments = new ArrayList<>();
+        for (Map.Entry<Integer, List<MissingPunchItemDto>> entry : byDept.entrySet()) {
+            List<MissingPunchItemDto> group = entry.getValue();
+            MissingPunchItemDto first = group.get(0);
+            long checkout = group.stream().filter(i -> "MISSING_CHECK_OUT".equals(i.getReason())).count();
+            long unmarked = group.stream().filter(i -> "UNMARKED".equals(i.getReason())).count();
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("deptCode", first.getDeptCode());
+            item.put("deptCodeFormatted", first.getDeptCodeFormatted());
+            item.put("deptName", first.getDeptName());
+            item.put("missingCount", (long) group.size());
+            item.put("missingCheckoutCount", checkout);
+            item.put("unmarkedCount", unmarked);
+            departments.add(item);
+        }
+        return departments;
     }
 
     private LocalDate dateArg(Map<String, Object> args, String key, LocalDate defaultValue) {
@@ -226,17 +269,6 @@ public class AiToolService {
             return defaultValue;
         }
         return LocalDate.parse(value.toString());
-    }
-
-    private int intArg(Map<String, Object> args, String key, int defaultValue) {
-        Object value = args.get(key);
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value instanceof String s && !s.isBlank()) {
-            return Integer.parseInt(s);
-        }
-        return defaultValue;
     }
 
     private Integer intOrNull(Map<String, Object> args, String key) {

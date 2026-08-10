@@ -1,10 +1,10 @@
 import { memo } from 'react';
-import { UI, isAttendanceUnchecked } from '../../../constants/attendance';
+import { UI, isAttendanceBlank } from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
 import { resolveStatusKpiIcon } from '../../../utils/statusIcons';
 
 function getBadgeMeta(staff, statusBadge) {
-  if (isAttendanceUnchecked(staff)) {
+  if (isAttendanceBlank(staff)) {
     return statusBadge.UNCHECKED;
   }
   return (
@@ -17,7 +17,7 @@ function getBadgeMeta(staff, statusBadge) {
 }
 
 function resolveCardLabel(staff, badgeMeta) {
-  if (isAttendanceUnchecked(staff)) {
+  if (isAttendanceBlank(staff)) {
     return staff.statusLabel || UI.filterUnchecked;
   }
   return staff.statusLabel || badgeMeta.label;
@@ -35,16 +35,16 @@ const StatusBadge = memo(function StatusBadge({ staff, variant }) {
     <span
       className={
         isCard
-          ? `inline-flex max-w-full items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold leading-snug normal-case ${className}`
+          ? `inline-flex max-w-full shrink-0 items-center gap-0.5 rounded-full px-1.5 py-px text-4xs font-semibold leading-tight normal-case ${className}`
           : `inline-flex max-w-full items-center gap-1 px-2 py-0.5 lg:gap-1.5 lg:px-3 lg:py-1 rounded-full text-[0.70rem] leading-tight lg:text-xs font-semibold whitespace-nowrap ${className}`
       }
       title={label}
     >
       <Icon
-        className={isCard ? 'w-3.5 h-3.5 shrink-0' : 'w-3 h-3 lg:w-3.5 lg:h-3.5 shrink-0'}
+        className={isCard ? 'w-3 h-3 shrink-0' : 'w-3 h-3 lg:w-3.5 lg:h-3.5 shrink-0'}
         aria-hidden="true"
       />
-      <span className={isCard ? 'text-right' : 'truncate text-3xs'}>{label}</span>
+      <span className={isCard ? 'whitespace-nowrap' : 'truncate text-3xs'}>{label}</span>
     </span>
   );
 });

@@ -37,6 +37,12 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
   const [error, setError] = useState('');
   const abortRef = useRef(null);
 
+  const isWriteBlocked = useCallback(
+    (quickActionOrTool) =>
+      Boolean(tableDisabled) && HEAD_AI_ASSISTANT_UI.writeActions.includes(quickActionOrTool),
+    [tableDisabled],
+  );
+
   const appendToAssistant = useCallback((assistantId, updater) => {
     setMessages((prev) => prev.map((msg) => (msg.id === assistantId ? updater(msg) : msg)));
   }, []);
@@ -54,7 +60,7 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
 
   const send = useCallback(
     async ({ message = '', quickAction = null } = {}) => {
-      if (tableDisabled) {
+      if (isWriteBlocked(quickAction)) {
         setError(HEAD_AI_ASSISTANT_UI.disabledHint);
         return;
       }
@@ -81,7 +87,7 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
 
       try {
         await streamHeadAiChat(
-          { message: trimmed, quickAction },
+          { message: trimmed, quickAction, date: selectedDate },
           {
             signal: controller.signal,
             onEvent: (event, data) => {
@@ -108,8 +114,8 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
         if (err.name !== 'AbortError') {
           const fallbackParams =
             quickAction === 'batch_attendance'
-              ? { date: selectedDate, scope: 'unchecked_only', status: 'DI_LAM' }
-              : {};
+              ? { date: selectedDate, scope: 'unchecked_only' }
+              : { date: selectedDate };
           const fallback = quickAction
             ? await executeHeadAiToolFallback(quickAction, fallbackParams).catch(() => null)
             : null;
@@ -134,12 +140,12 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
         abortRef.current = null;
       }
     },
-    [appendToAssistant, loading, selectedDate, tableDisabled],
+    [appendToAssistant, isWriteBlocked, loading, selectedDate],
   );
 
   const executeTool = useCallback(
     async (tool, params, { dismissMessageId, dismissWidgetIndex } = {}) => {
-      if (tableDisabled) {
+      if (isWriteBlocked(tool)) {
         setError(HEAD_AI_ASSISTANT_UI.disabledHint);
         return;
       }
@@ -167,7 +173,7 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
         setLoading(false);
       }
     },
-    [loading, pushAssistantResult, selectedDate, tableDisabled],
+    [isWriteBlocked, loading, pushAssistantResult, selectedDate],
   );
 
   const dismissWidget = useCallback((messageId, widgetIndex) => {
@@ -196,7 +202,7 @@ export function useHeadAiAssistant({ selectedDate, tableDisabled, onBatchComplet
         setMessages((prev) => [
           ...prev,
           createMessage('assistant', {
-            content: result.message || `Đã Điểm danh cho ${result.updated} nhân viên.`,
+            content: result.message || `Đã Chấm công cho ${result.updated} nhân viên.`,
             streaming: false,
           }),
         ]);

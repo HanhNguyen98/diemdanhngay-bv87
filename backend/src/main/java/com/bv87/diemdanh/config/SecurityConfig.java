@@ -3,6 +3,8 @@ package com.bv87.diemdanh.config;
 import com.bv87.diemdanh.security.AiRateLimitFilter;
 import com.bv87.diemdanh.security.CustomUserDetailsService;
 import com.bv87.diemdanh.security.JsonSecurityHandlers;
+import com.bv87.diemdanh.security.KioskLanGateFilter;
+import com.bv87.diemdanh.security.KioskTokenFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.CollectionUtils;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +37,8 @@ public class SecurityConfig {
     private final JsonSecurityHandlers jsonSecurityHandlers;
     private final AppSecurityProperties securityProperties;
     private final AiRateLimitFilter aiRateLimitFilter;
+    private final KioskTokenFilter kioskTokenFilter;
+    private final KioskLanGateFilter kioskLanGateFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -51,6 +55,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(kioskLanGateFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(kioskTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(aiRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jsonSecurityHandlers)

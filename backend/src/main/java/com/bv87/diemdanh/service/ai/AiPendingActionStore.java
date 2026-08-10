@@ -2,6 +2,7 @@ package com.bv87.diemdanh.service.ai;
 
 import com.bv87.diemdanh.entity.AiPendingAction;
 import com.bv87.diemdanh.repository.AiPendingActionRepository;
+import com.bv87.diemdanh.util.VietnamTimeService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class AiPendingActionStore {
     private static final String REMINDER_TYPE = "batch_reminders";
     private static final String BATCH_ATTENDANCE_TYPE = "batch_attendance";
 
-    public record ReminderAction(List<Integer> deptCodes, Instant expiresAt) {}
+    public record ReminderAction(List<Integer> deptCodes, LocalDate attendanceDate, Instant expiresAt) {}
 
     public record BatchAttendanceAction(
             Integer deptCode,
@@ -37,15 +38,20 @@ public class AiPendingActionStore {
 
     private final AiPendingActionRepository repository;
     private final ObjectMapper objectMapper;
+    private final VietnamTimeService timeService;
 
     @Transactional
-    public String saveReminderAction(List<Integer> deptCodes) {
+    public String saveReminderAction(List<Integer> deptCodes, LocalDate attendanceDate) {
         purgeExpired();
         String actionId = UUID.randomUUID().toString();
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("deptCodes", deptCodes);
+        payload.put("attendanceDate", attendanceDate.toString());
+
         AiPendingAction row = new AiPendingAction();
         row.setActionId(actionId);
         row.setActionType(REMINDER_TYPE);
-        row.setDeptCodesJson(writeDeptCodes(deptCodes));
+        row.setDeptCodesJson(writeJson(payload));
         row.setExpiresAt(Instant.now().plusSeconds(TTL_SECONDS));
         repository.save(row);
         return actionId;
@@ -97,13 +103,11 @@ public class AiPendingActionStore {
                 .filter(row -> REMINDER_TYPE.equals(row.getActionType()))
                 .filter(row -> row.getExpiresAt().isAfter(Instant.now()))
                 .filter(row -> deptCodes != null && !deptCodes.isEmpty())
-                .filter(row -> {
-                    List<Integer> allowed = readDeptCodes(row.getDeptCodesJson());
-                    return deptCodes.stream().allMatch(allowed::contains);
-                })
-                .map(row -> {
+                .map(row -> readReminderPayload(row.getDeptCodesJson(), row.getExpiresAt()))
+                .filter(action -> deptCodes.stream().allMatch(action.deptCodes()::contains))
+                .map(action -> {
                     repository.deleteById(actionId);
-                    return new ReminderAction(readDeptCodes(row.getDeptCodesJson()), row.getExpiresAt());
+                    return action;
                 });
     }
 
@@ -111,13 +115,17 @@ public class AiPendingActionStore {
         repository.deleteExpired(Instant.now());
     }
 
-    private String writeDeptCodes(List<Integer> deptCodes) {
-        return writeJson(deptCodes);
-    }
-
-    private List<Integer> readDeptCodes(String json) {
+    private ReminderAction readReminderPayload(String json, Instant expiresAt) {
         try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
+            // Legacy: plain JSON array of dept codes
+            if (json != null && json.trim().startsWith("[")) {
+                List<Integer> codes = objectMapper.readValue(json, new TypeReference<>() {});
+                return new ReminderAction(codes, timeService.today().minusDays(1), expiresAt);
+            }
+            Map<String, Object> map = objectMapper.readValue(json, new TypeReference<>() {});
+            List<Integer> codes = objectMapper.convertValue(map.get("deptCodes"), new TypeReference<>() {});
+            LocalDate date = LocalDate.parse(map.get("attendanceDate").toString());
+            return new ReminderAction(codes, date, expiresAt);
         } catch (Exception ex) {
             throw new IllegalStateException("Dữ liệu phiên xác nhận không hợp lệ", ex);
         }
@@ -142,7 +150,7 @@ public class AiPendingActionStore {
                     map.get("empCodes"), new TypeReference<>() {});
             return new BatchAttendanceAction(deptCode, date, status, scope, empCodes, Instant.now());
         } catch (Exception ex) {
-            throw new IllegalStateException("Dữ liệu phiên Điểm danh hàng loạt không hợp lệ", ex);
+            throw new IllegalStateException("Dữ liệu phiên Chấm công hàng loạt không hợp lệ", ex);
         }
     }
 }

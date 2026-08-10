@@ -1,4 +1,4 @@
-# Hệ thống Chương trình điểm danh
+# Hệ thống Bệnh viện Quân y 87 - Chương trình chấm công
 
 ## Cấu trúc dự án
 
@@ -60,7 +60,7 @@ npm run dev
 | Ứng dụng | Profile | DB_NAME | Port |
 |----------|---------|---------|------|
 | Web khảo sát | `mysql` | `fm_db_bv87` | 8080 |
-| Điểm danh | `local` | `diemdanhngay_bv87_db` | **8082** |
+| Chấm công | `local` | `diemdanhngay_bv87_db` | **8082** |
 
 - Giao diện: http://localhost:5173
 - API: http://localhost:8082
@@ -79,7 +79,7 @@ Xem hướng dẫn chi tiết: [`deploy/README.md`](deploy/README.md)
 | Ứng dụng | Port LAN | Database |
 |----------|----------|----------|
 | Web khảo sát | `8080` | `fm_db_bv87` |
-| Điểm danh | `8081` | `diemdanhngay_bv87_db` |
+| Chấm công | `8081` | `diemdanhngay_bv87_db` |
 
 ```powershell
 # Trên server 192.170.182.14

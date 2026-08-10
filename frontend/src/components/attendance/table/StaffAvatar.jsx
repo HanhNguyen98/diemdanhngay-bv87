@@ -7,13 +7,13 @@ const StaffAvatar = memo(function StaffAvatar({ staff }) {
       <img
         src={staff.avatarUrl}
         alt=""
-        className="w-10 h-10 rounded-lg object-cover shrink-0 ring-1 ring-slate-200"
+        className="w-10 h-10 rounded-lg object-cover shrink-0 ring-1 ring-line"
       />
     );
   }
 
   return (
-    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0">
+    <div className="w-10 h-10 rounded-lg bg-primary-light text-primary text-xs font-bold flex items-center justify-center shrink-0">
       {getInitials(staff.fullname)}
     </div>
   );

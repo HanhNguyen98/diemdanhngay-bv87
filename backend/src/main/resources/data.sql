@@ -81,8 +81,8 @@ INNER JOIN (
 WHERE a.role = 'HEAD'
   AND a.id <> keeper.keep_id;
 
--- Loại bỏ trạng thái DI_TRE (đi trễ) — chỉ giữ 4 trạng thái Điểm danh
-UPDATE attendance_records SET status = 'DI_LAM' WHERE status = 'DI_TRE';
+-- Không còn ép DI_TRE → DI_LAM (SPEC: giữ DI_TRE trong catalog + bản ghi ngày)
+-- P3b catalog seed: AttendanceStatusCatalogBootstrap (Java) — tránh data.sql + cột legacy metric_key
 
 -- Đồng bộ tên hệ thống in hoa
 UPDATE system_settings SET portal_title = 'BỆNH VIỆN QUÂN Y 87'

@@ -26,7 +26,7 @@ export default function ChangePasswordPage({ user, onLogout, activeNav, onNavCha
         <MobileHeadBreadcrumb items={breadcrumb} />
       </div>
 
-      <main className="px-[clamp(0.75rem,3vw,1.25rem)] py-[clamp(0.75rem,2vw,1rem)] lg:flex lg:flex-col lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:p-5">
+      <main className="max-lg:pb-24 px-[clamp(0.75rem,3vw,1.25rem)] py-[clamp(0.75rem,2vw,1rem)] lg:flex lg:flex-col lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:p-5">
         <div className="max-w-md mx-auto w-full">
           <ChangePasswordForm />
         </div>

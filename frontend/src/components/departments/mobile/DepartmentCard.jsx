@@ -12,9 +12,8 @@ function DepartmentStatusBadge({ active }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-semibold shrink-0 ${
-        isActive ? 'badge-dept-active' : 'badge-dept-deleted'
-      }`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-semibold shrink-0 ${isActive ? 'badge-dept-active' : 'badge-dept-deleted'
+        }`}
     >
       <span
         className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white/80' : 'bg-white/90'}`}
@@ -40,9 +39,8 @@ const DepartmentCard = memo(function DepartmentCard({
 
   return (
     <article
-      className={`rounded-xl border border-line bg-surface-white shadow-card overflow-hidden ${
-        isActive ? '' : 'opacity-80'
-      }`}
+      className={`rounded-xl border border-line bg-surface-white shadow-card overflow-hidden ${isActive ? '' : 'opacity-80'
+        }`}
     >
       <div className="p-3.5">
         <div className="min-w-0">
@@ -66,11 +64,10 @@ const DepartmentCard = memo(function DepartmentCard({
               onClick={() => hasLocationMap && onViewLocation(dept)}
               disabled={!hasLocationMap}
               title={hasLocationMap ? d.viewLocationMap : d.locationMapEmpty}
-              className={`shrink-0 rounded p-0.5 transition-colors ${
-                hasLocationMap
+              className={`shrink-0 rounded p-0.5 transition-colors ${hasLocationMap
                   ? 'text-primary hover:bg-primary-light cursor-pointer'
                   : 'text-content-muted/40 cursor-default'
-              }`}
+                }`}
               aria-label={hasLocationMap ? d.viewLocationMap : d.locationMapEmpty}
             >
               <MapPin className="w-3.5 h-3.5" />

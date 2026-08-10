@@ -2,6 +2,8 @@ import { memo } from 'react';
 import { KPI_METRIC_ICON_BOX, KPI_METRIC_ICON_SIZE } from '../../constants/attendance';
 import {
   KPI_BG_BY_COLOR,
+  KPI_STATUS_LABEL_CLASS_METRIC,
+  KPI_STATUS_LABEL_CLASS_METRIC_COMPACT,
   normalizeStatusBreakdown,
 } from '../../utils/statusBreakdown';
 import { StatusBreakdownIcon } from './StatusBreakdownIcon';
@@ -19,13 +21,11 @@ export const KpiMetricCard = memo(function KpiMetricCard({
   compact = false,
 }) {
   const shell = compact
-    ? `${CARD_SHELL} items-center justify-start h-full min-h-[3.5rem] px-2 py-2`
-    : `${CARD_SHELL} items-center justify-start h-full min-h-[4.25rem]`;
+    ? `${CARD_SHELL} items-center justify-start h-full min-h-[4.25rem] px-2.5 py-2`
+    : `${CARD_SHELL} items-center justify-start h-full min-h-[4.75rem]`;
   const gap = compact ? 'gap-2' : 'gap-3';
   const valueClass = compact ? 'text-base' : 'text-xl';
-  const labelClass = compact
-    ? 'mt-0.5 text-3xs font-semibold text-content-muted uppercase tracking-wide leading-snug truncate max-w-full'
-    : 'mt-1 text-2xs font-semibold text-content-muted uppercase tracking-wider leading-snug truncate max-w-full';
+  const labelClass = compact ? KPI_STATUS_LABEL_CLASS_METRIC_COMPACT : KPI_STATUS_LABEL_CLASS_METRIC;
 
   return (
     <article className={shell}>
@@ -74,7 +74,7 @@ const StatusBreakdownKpiGrid = memo(function StatusBreakdownKpiGrid({
       {items.map((item) => (
         <KpiMetricCard
           key={item.code}
-          label={item.label}
+          label={item.badgeLabel || item.label}
           value={item.count ?? 0}
           iconBgClass={KPI_BG_BY_COLOR[item.colorKey] || 'bg-neutral'}
           unit={unit}

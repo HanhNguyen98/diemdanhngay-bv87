@@ -154,7 +154,7 @@ public class SettingsService {
         LocalTime openTime = LocalTime.parse(defaultOpenTime, TIME_FMT);
         if (!lockTime.isAfter(openTime)) {
             throw new BusinessException(
-                    "Giờ chốt sổ phải sau giờ mở cửa điểm danh (" + defaultOpenTime + ").");
+                    "Giờ chốt sổ phải sau giờ mở cửa Chấm công (" + defaultOpenTime + ").");
         }
         return lockTime.format(TIME_FMT);
     }

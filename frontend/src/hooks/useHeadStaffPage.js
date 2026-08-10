@@ -8,7 +8,17 @@ import { useResponsivePageSize } from './useResponsivePageSize';
 
 export function useHeadStaffPage() {
   const pageSize = useResponsivePageSize();
-  const { items, stats, loading, initialLoading, refreshing, error, search, setSearch, updateAvatar } = useHeadStaff();
+  const {
+    items,
+    stats,
+    loading,
+    initialLoading,
+    refreshing,
+    error,
+    search,
+    setSearch,
+    updateAvatar,
+  } = useHeadStaff();
   const { flash, showSuccess, showError, clearFlash } = useFlashMessage();
 
   const [avatarStaff, setAvatarStaff] = useState(null);

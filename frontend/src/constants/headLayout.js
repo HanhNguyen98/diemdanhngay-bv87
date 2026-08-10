@@ -8,7 +8,7 @@ export const HEAD_MOBILE_BREADCRUMB_CLASS =
 export const HEAD_MAIN_CLASS =
   'max-lg:space-y-4 max-lg:min-w-0 max-lg:max-w-full px-[clamp(0.75rem,3vw,1.25rem)] py-[clamp(0.75rem,2vw,1rem)] max-lg:pb-24 lg:flex lg:flex-col lg:gap-[clamp(0.75rem,2vw,1rem)] lg:flex-1 lg:min-h-0 lg:px-5 lg:py-5';
 
-/** Điểm danh desktop: main cần overflow hidden cho bảng. */
+/** Chấm công desktop: main cần overflow hidden cho bảng. */
 export const HEAD_ATTENDANCE_MAIN_CLASS = `${HEAD_MAIN_CLASS} lg:overflow-hidden lg:[&>*]:shrink-0`;
 
 /** Thống kê / nhân viên desktop: scroll dọc. */

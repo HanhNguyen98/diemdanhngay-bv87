@@ -1,4 +1,6 @@
 import {
+  ATTENDANCE_STATUS,
+  MANUAL_ATTENDANCE_STATUSES,
   QUICK_ACTIONS as DEFAULT_QUICK_ACTIONS,
   STATUS_BADGE as DEFAULT_STATUS_BADGE,
   STATUS_OPTIONS as DEFAULT_STATUS_OPTIONS,
@@ -14,6 +16,11 @@ const COLOR_BADGE_CLASS = {
   amber: 'badge-status-duty',
 };
 
+const FINGERPRINT_ONLY_STATUSES = new Set([
+  ATTENDANCE_STATUS.DI_LAM,
+  ATTENDANCE_STATUS.DI_TRE,
+]);
+
 export function buildStatusConfig(items) {
   if (!items?.length) {
     return {
@@ -28,11 +35,15 @@ export function buildStatusConfig(items) {
     label: item.label,
   }));
 
-  const quickActions = items.map((item) => ({
-    value: item.code,
-    color: item.colorKey,
-    icon: item.iconKey,
-  }));
+  // SPEC: HEAD quick-actions = manual whitelist only (no DI_LAM / DI_TRE)
+  const manualSet = new Set(MANUAL_ATTENDANCE_STATUSES);
+  const quickActions = items
+    .filter((item) => manualSet.has(item.code) && !FINGERPRINT_ONLY_STATUSES.has(item.code))
+    .map((item) => ({
+      value: item.code,
+      color: item.colorKey,
+      icon: item.iconKey,
+    }));
 
   const statusBadge = items.reduce((acc, item) => {
     acc[item.code] = {
@@ -45,7 +56,7 @@ export function buildStatusConfig(items) {
 
   return {
     statusOptions,
-    quickActions,
+    quickActions: quickActions.length ? quickActions : DEFAULT_QUICK_ACTIONS,
     statusBadge: { ...DEFAULT_STATUS_BADGE, ...statusBadge },
   };
 }

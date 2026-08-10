@@ -45,9 +45,8 @@ const ReminderModal = memo(function ReminderModal({
                   return (
                     <li key={dept.deptCode}>
                       <label
-                        className={`flex items-start gap-2 text-sm py-1 ${
-                          canSend ? 'cursor-pointer' : 'cursor-not-allowed opacity-90'
-                        }`}
+                        className={`flex items-start gap-2 text-sm py-1 ${canSend ? 'cursor-pointer' : 'cursor-not-allowed opacity-90'
+                          }`}
                       >
                         <input
                           type="checkbox"

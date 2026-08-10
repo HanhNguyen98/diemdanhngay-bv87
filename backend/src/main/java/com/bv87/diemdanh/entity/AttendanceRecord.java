@@ -25,11 +25,20 @@ public class AttendanceRecord {
     @JoinColumn(name = "emp_code", nullable = false)
     private Employee employee;
 
-    @Column(name = "status", nullable = false, length = 50)
+    @Column(name = "status", length = 50)
     private String status;
 
     @Column(name = "note", length = 255)
     private String note;
+
+    @Column(name = "check_in_at")
+    private java.time.Instant checkInAt;
+
+    @Column(name = "check_out_at")
+    private java.time.Instant checkOutAt;
+
+    @Column(name = "source", length = 30)
+    private String source;
 
     public Integer getEmpCode() {
         return employee != null ? employee.getEmpCode() : null;

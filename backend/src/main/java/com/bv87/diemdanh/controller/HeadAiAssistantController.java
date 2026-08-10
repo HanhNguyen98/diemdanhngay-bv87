@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -25,10 +26,15 @@ public class HeadAiAssistantController {
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChat(@Valid @RequestBody AiChatRequest request) {
+        LocalDate date = null;
+        if (request.getDate() != null && !request.getDate().isBlank()) {
+            date = LocalDate.parse(request.getDate());
+        }
         return headAiAssistantService.streamChat(
                 authService.getAuthUser(),
                 request.getMessage(),
-                request.getQuickAction());
+                request.getQuickAction(),
+                date);
     }
 
     @PostMapping("/tools/execute")

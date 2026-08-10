@@ -10,6 +10,7 @@ export const ADMIN_TAB_IDS = {
   DASHBOARD_DEPT_DETAIL: 'dashboard-dept-detail',
   SETTINGS_SYSTEM: 'settings-system',
   SETTINGS_USERS: 'settings-users',
+  SETTINGS_FINGERPRINT_TOKENS: 'settings-fingerprint-tokens',
   UTILITIES_REMINDER_HISTORY: 'utilities-reminder-history',
 };
 
@@ -23,7 +24,7 @@ export const ADMIN_CACHEABLE_TAB_IDS = new Set([
 
 export const ADMIN_HASH_PREFIX = '#admin/';
 
-/** Mobile admin — tiến độ điểm danh theo ĐƠN VỊ (card + phân trang) */
+/** Mobile admin — tiến độ Chấm công theo ĐƠN VỊ (card + phân trang) */
 export const MOBILE_DEPT_PROGRESS_PAGE_SIZE = 10;
 export const DESKTOP_DEPT_PROGRESS_PAGE_SIZE = 20;
 
@@ -52,7 +53,11 @@ export const CATALOG_TAB_IDS = [
 
 export const UTILITIES_TAB_IDS = [ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY];
 
-export const SETTINGS_TAB_IDS = [ADMIN_TAB_IDS.SETTINGS_SYSTEM, ADMIN_TAB_IDS.SETTINGS_USERS];
+export const SETTINGS_TAB_IDS = [
+  ADMIN_TAB_IDS.SETTINGS_SYSTEM,
+  ADMIN_TAB_IDS.SETTINGS_USERS,
+  ADMIN_TAB_IDS.SETTINGS_FINGERPRINT_TOKENS,
+];
 
 /** Submenu Bảng điều khiển */
 export const DASHBOARD_NAV = [
@@ -78,6 +83,7 @@ export const UTILITIES_NAV = [
 export const SETTINGS_NAV = [
   { id: ADMIN_TAB_IDS.SETTINGS_SYSTEM, labelKey: 'settingsSystem' },
   { id: ADMIN_TAB_IDS.SETTINGS_USERS, labelKey: 'settingsUsers' },
+  { id: ADMIN_TAB_IDS.SETTINGS_FINGERPRINT_TOKENS, labelKey: 'settingsFingerprintTokens' },
 ];
 
 /** Cấu hình breadcrumb cho các nhóm submenu */

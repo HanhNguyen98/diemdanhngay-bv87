@@ -2,8 +2,9 @@ package com.bv87.diemdanh.service;
 
 import com.bv87.diemdanh.entity.AccountRole;
 import com.bv87.diemdanh.exception.AccessDeniedException;
-import com.bv87.diemdanh.exception.AttendanceLockedException;
+import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AttendanceManualLockRepository;
+import com.bv87.diemdanh.repository.AttendanceReportBlockRepository;
 import com.bv87.diemdanh.repository.AttendanceUnlockRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.util.VietnamTimeService;
@@ -13,8 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 
 /**
- * Enforces the 06:00–16:00 attendance window and post-cutoff lock rules.
- * User-facing error messages are returned in Vietnamese.
+ * Department lock helpers. SPEC_FINGERPRINT §4.7 / §4.9 + SPEC_AI_ASSISTANT §3.2.
  */
 @Service
 @RequiredArgsConstructor
@@ -23,6 +23,7 @@ public class AttendanceLockService {
     private final VietnamTimeService timeService;
     private final AttendanceUnlockRepository unlockRepository;
     private final AttendanceManualLockRepository manualLockRepository;
+    private final AttendanceReportBlockRepository reportBlockRepository;
 
     /** @return true if current Vietnam time is after the 16:00 cutoff */
     public boolean isAfterLockTime() {
@@ -46,8 +47,7 @@ public class AttendanceLockService {
     }
 
     /**
-     * A department is locked when the date is not today, admin locked early,
-     * or the date is today past 16:00 without an unlock record.
+     * Legacy lock flag for Admin dashboard. Does not gate HEAD write (§4.9).
      */
     public boolean isDepartmentLocked(Integer deptCode, LocalDate date) {
         if (!date.equals(timeService.today())) {
@@ -63,8 +63,9 @@ public class AttendanceLockService {
     }
 
     /**
-     * Determines whether the given role may edit attendance for a department on a date.
-     * Admin is always editable; HEAD follows the time window and unlock rules.
+     * Whether the role may edit attendance for a department on a date.
+     * HEAD: today only, before soft-lock (unless Admin unlock), and not reportBlocked — SPEC §4.7 / §3.2 AI.
+     * Admin: always for today.
      */
     public boolean isEditable(Integer deptCode, AccountRole role, LocalDate date) {
         if (!date.equals(timeService.today())) {
@@ -76,38 +77,69 @@ public class AttendanceLockService {
         if (role != AccountRole.HEAD) {
             return false;
         }
-        if (timeService.isBeforeOpenWindow()) {
+        if (isReportBlocked(deptCode, date)) {
             return false;
         }
-        return !isDepartmentLocked(deptCode, date);
+        if (isManualLocked(deptCode, date)) {
+            return false;
+        }
+        if (!timeService.isAfterLockTime()) {
+            return true;
+        }
+        return isUnlocked(deptCode, date);
+    }
+
+    /** Admin dashboard “khóa chỉnh sửa” for a dept/day — also gates HEAD writes. */
+    public boolean isReportBlocked(Integer deptCode, LocalDate date) {
+        return reportBlockRepository.findByAttendanceDateAndDeptCode(date, deptCode).isPresent();
     }
 
     /**
-     * Validates write permission before persisting an attendance record.
-     *
-     * @throws AccessDeniedException      when role or department scope is invalid
-     * @throws AttendanceLockedException  when past 16:00 without unlock
+     * Validates role/dept for manual range assign — dates may be past/future (SPEC §3.2.1).
      */
-    public void assertCanWrite(AuthUser authUser, Integer targetDeptCode, LocalDate date) {
-        if (!date.equals(timeService.today())) {
-            throw new AccessDeniedException("Chỉ được cập nhật điểm danh trong ngày hiện tại");
-        }
+    public void assertCanAssignManual(AuthUser authUser, Integer targetDeptCode) {
         if (authUser.isAdmin()) {
             return;
         }
         if (!authUser.isHead()) {
-            throw new AccessDeniedException("Bạn không có quyền cập nhật điểm danh");
+            throw new AccessDeniedException("Bạn không có quyền cập nhật Chấm công");
         }
         if (!targetDeptCode.equals(authUser.getDeptCode())) {
             throw new AccessDeniedException(
                     "Trưởng ban chỉ được thao tác Đơn vị "
                             + String.format("%02d", authUser.getDeptCode()));
         }
-        if (timeService.isBeforeOpenWindow()) {
-            throw new AccessDeniedException("Hệ thống mở cửa từ 06:00 sáng");
+    }
+
+    /**
+     * Validates write permission before persisting an attendance record.
+     * SPEC §4.7 P5 + SPEC_AI_ASSISTANT §3.2 — soft-lock and reportBlocked for HEAD.
+     *
+     * @throws AccessDeniedException when role or department scope is invalid
+     * @throws BusinessException when soft-locked or report-blocked for HEAD
+     */
+    public void assertCanWrite(AuthUser authUser, Integer targetDeptCode, LocalDate date) {
+        if (!date.equals(timeService.today())) {
+            throw new AccessDeniedException("Chỉ được cập nhật Chấm công trong ngày hiện tại");
         }
-        if (isDepartmentLocked(targetDeptCode, date)) {
-            throw new AttendanceLockedException(resolveLockMessage(targetDeptCode, date));
+        if (authUser.isAdmin()) {
+            return;
+        }
+        if (!authUser.isHead()) {
+            throw new AccessDeniedException("Bạn không có quyền cập nhật Chấm công");
+        }
+        if (!targetDeptCode.equals(authUser.getDeptCode())) {
+            throw new AccessDeniedException(
+                    "Trưởng ban chỉ được thao tác Đơn vị "
+                            + String.format("%02d", authUser.getDeptCode()));
+        }
+        if (isReportBlocked(targetDeptCode, date)) {
+            throw new BusinessException(
+                    "Admin đã khóa chỉnh sửa Chấm công cho Đơn vị hôm nay.");
+        }
+        if (!isEditable(targetDeptCode, AccountRole.HEAD, date)) {
+            throw new BusinessException(
+                    "Đã qua giờ khóa mềm ngày công. Liên hệ Admin nếu cần chỉnh sửa.");
         }
     }
 
@@ -124,18 +156,15 @@ public class AttendanceLockService {
             return;
         }
         throw new AccessDeniedException(
-                "Bạn không có quyền xem dữ liệu Đơn vị " + String.format("%02d", targetDeptCode));
+                "Bạn không có quyền xem dữ liệu Đơn vị " + String.format("%02d", authUser.getDeptCode()));
     }
 
     /**
-     * Returns a Vietnamese status message for the UI, or null when no lock applies.
+     * Legacy UI message for Admin lock flags. HEAD Chấm công does not use time-lock banners (§4.9).
      */
     public String getLockMessage(Integer deptCode, AccountRole role, LocalDate date) {
-        if (role == AccountRole.ADMIN) {
+        if (role == AccountRole.ADMIN || role == AccountRole.HEAD) {
             return null;
-        }
-        if (timeService.isBeforeOpenWindow() && date.equals(timeService.today())) {
-            return "Hệ thống mở cửa từ 06:00 sáng";
         }
         if (isDepartmentLocked(deptCode, date)) {
             return resolveLockMessage(deptCode, date);
@@ -150,7 +179,7 @@ public class AttendanceLockService {
 
     private String resolveLockMessage(Integer deptCode, LocalDate date) {
         if (isManualLocked(deptCode, date)) {
-            return "Admin đã khóa sổ điểm danh cho Đơn vị hôm nay.";
+            return "Admin đã khóa sổ Chấm công cho Đơn vị hôm nay.";
         }
         return buildLockMessage();
     }

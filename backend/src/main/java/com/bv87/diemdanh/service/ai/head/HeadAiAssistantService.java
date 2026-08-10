@@ -4,7 +4,10 @@ import com.bv87.diemdanh.dto.ai.AiBatchAttendanceConfirmRequest;
 import com.bv87.diemdanh.dto.ai.AiToolExecuteRequest;
 import com.bv87.diemdanh.dto.ai.AiToolResultDto;
 import com.bv87.diemdanh.exception.AccessDeniedException;
+import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.security.AuthUser;
+import com.bv87.diemdanh.service.AttendanceLockService;
+import com.bv87.diemdanh.util.VietnamTimeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -12,35 +15,45 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+/** HEAD AI chat / tool orchestration — SPEC_AI_ASSISTANT. */
 @Service
 @Slf4j
 public class HeadAiAssistantService {
 
     private static final String GREETING =
-            "Chào Trưởng đơn vị, tôi có thể giúp bạn Điểm danh hàng loạt cho nhân viên CHƯA CHẤM.";
+            "Chào Trưởng đơn vị, tôi có thể liệt kê nhân viên thiếu giờ ra / chưa chấm, "
+                    + "và Chấm công hàng loạt (nghỉ phép / đi học / công tác / thai sản). "
+                    + "Đi làm / Đi trễ chỉ ghi nhận qua vân tay.";
 
     private final HeadAiIntentRouter intentRouter;
     private final HeadAiToolService toolService;
+    private final AttendanceLockService lockService;
+    private final VietnamTimeService timeService;
     private final ObjectMapper objectMapper;
     private final Executor executor;
 
     public HeadAiAssistantService(
             HeadAiIntentRouter intentRouter,
             HeadAiToolService toolService,
+            AttendanceLockService lockService,
+            VietnamTimeService timeService,
             ObjectMapper objectMapper,
             @Qualifier("aiAssistantExecutor") Executor executor) {
         this.intentRouter = intentRouter;
         this.toolService = toolService;
+        this.lockService = lockService;
+        this.timeService = timeService;
         this.objectMapper = objectMapper;
         this.executor = executor;
     }
 
-    public SseEmitter streamChat(AuthUser authUser, String message, String quickAction) {
+    public SseEmitter streamChat(AuthUser authUser, String message, String quickAction, LocalDate date) {
         assertHead(authUser);
         SseEmitter emitter = new SseEmitter(120_000L);
         emitter.onTimeout(emitter::complete);
@@ -48,7 +61,7 @@ public class HeadAiAssistantService {
 
         executor.execute(() -> {
             try {
-                HeadAiIntent intent = intentRouter.route(quickAction, message);
+                HeadAiIntent intent = intentRouter.route(quickAction, message, date);
                 handleIntentStream(authUser, emitter, intent);
                 sendEvent(emitter, "done", Map.of());
                 emitter.complete();
@@ -85,15 +98,69 @@ public class HeadAiAssistantService {
         switch (intent.getType()) {
             case GREETING -> streamText(emitter, GREETING);
             case STATUS_PICKER -> {
+                if (!assertWritableOrExplain(authUser, emitter, intent.getArgs())) {
+                    return;
+                }
                 streamText(emitter, intent.getReplyHint());
                 sendEvent(emitter, "widget", Map.of(
                         "type", "status_picker",
                         "payload", intent.getArgs()));
             }
-            case BATCH_ATTENDANCE_EXECUTE -> emitBatchAttendancePreview(authUser, emitter, intent);
+            case BATCH_ATTENDANCE_EXECUTE -> {
+                if (!assertWritableOrExplain(authUser, emitter, intent.getArgs())) {
+                    return;
+                }
+                emitBatchAttendancePreview(authUser, emitter, intent);
+            }
+            case LIST_MISSING_PUNCHES -> emitMissingPunches(authUser, emitter, intent);
             case UNKNOWN -> streamText(emitter,
-                    "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng nút \"Điểm danh hàng loạt\" "
-                            + "hoặc nhập: \"Điểm danh đi làm cho tất cả\".");
+                    intent.getReplyHint() != null && !intent.getReplyHint().isBlank()
+                            ? intent.getReplyHint()
+                            : "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng nút \"Thiếu dữ liệu\" / "
+                                    + "\"Chấm công hàng loạt\", hoặc hỏi: \"Ai thiếu giờ ra?\"");
+        }
+    }
+
+    /**
+     * SPEC §3.2 — refuse write intents before emitting widgets when HEAD cannot write.
+     *
+     * @return false when write is blocked (message already streamed)
+     */
+    private boolean assertWritableOrExplain(
+            AuthUser authUser, SseEmitter emitter, Map<String, Object> args)
+            throws IOException, InterruptedException {
+        LocalDate date = dateFromArgs(args);
+        try {
+            lockService.assertCanWrite(authUser, authUser.getDeptCode(), date);
+            return true;
+        } catch (BusinessException | AccessDeniedException ex) {
+            streamText(emitter, ex.getMessage() != null
+                    ? ex.getMessage()
+                    : "Không thể Chấm công hàng loạt lúc này.");
+            return false;
+        }
+    }
+
+    private LocalDate dateFromArgs(Map<String, Object> args) {
+        if (args != null && args.get("date") != null) {
+            return LocalDate.parse(args.get("date").toString());
+        }
+        return timeService.today();
+    }
+
+    private void emitMissingPunches(AuthUser authUser, SseEmitter emitter, HeadAiIntent intent)
+            throws IOException, InterruptedException {
+        streamText(emitter, intent.getReplyHint());
+        sendPing(emitter);
+        Map<String, Object> result = toolService.listMissingPunches(authUser, intent.getArgs());
+        sendEvent(emitter, "widget", Map.of("type", "missing_punch_list", "payload", result));
+        int total = ((Number) result.getOrDefault("total", 0)).intValue();
+        String dateLabel = String.valueOf(result.get("dateFormatted"));
+        if (total == 0) {
+            streamText(emitter, "Không có trường hợp thiếu dữ liệu chấm công ngày " + dateLabel + ".");
+        } else {
+            streamText(emitter, String.format(
+                    "Có %d trường hợp thiếu giờ ra / chưa chấm ngày %s.", total, dateLabel));
         }
     }
 
@@ -105,7 +172,7 @@ public class HeadAiAssistantService {
         sendEvent(emitter, "widget", Map.of("type", "batch_attendance_confirm", "payload", preview));
         int count = ((Number) preview.getOrDefault("targetCount", 0)).intValue();
         if (count == 0) {
-            streamText(emitter, "Không có nhân viên nào phù hợp để Điểm danh.");
+            streamText(emitter, "Không có nhân viên nào phù hợp để Chấm công.");
         } else {
             streamText(emitter, String.format(
                     "Có %d nhân viên sẽ được cập nhật. Vui lòng xác nhận trước khi thực hiện.", count));
@@ -118,9 +185,16 @@ public class HeadAiAssistantService {
         if ("batch_attendance".equals(tool)) {
             int count = ((Number) result.getOrDefault("targetCount", 0)).intValue();
             message = count == 0
-                    ? "Không có nhân viên nào phù hợp để Điểm danh."
+                    ? "Không có nhân viên nào phù hợp để Chấm công."
                     : String.format("Có %d nhân viên sẽ được cập nhật. Vui lòng xác nhận.", count);
             widgets.add(Map.of("type", "batch_attendance_confirm", "payload", result));
+        } else if ("list_missing_punches".equals(tool)) {
+            int total = ((Number) result.getOrDefault("total", 0)).intValue();
+            String dateLabel = String.valueOf(result.get("dateFormatted"));
+            message = total == 0
+                    ? "Không có trường hợp thiếu dữ liệu chấm công ngày " + dateLabel + "."
+                    : String.format("Có %d trường hợp thiếu dữ liệu chấm công ngày %s.", total, dateLabel);
+            widgets.add(Map.of("type", "missing_punch_list", "payload", result));
         } else {
             message = "Đã xử lý yêu cầu.";
         }

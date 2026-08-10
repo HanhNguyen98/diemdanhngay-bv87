@@ -16,9 +16,8 @@ const DepartmentGroupFilter = memo(function DepartmentGroupFilter({
       <select
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value ? parseInt(e.target.value, 10) : '')}
-        className={`appearance-none h-9 pl-9 pr-9 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-neutral outline-none focus-visible:ring-2 focus-visible:ring-primary/25 transition-colors w-full ${
-          value === '' ? 'text-content-muted' : ''
-        }`}
+        className={`appearance-none h-9 pl-9 pr-9 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-neutral outline-none focus-visible:ring-2 focus-visible:ring-primary/25 transition-colors w-full ${value === '' ? 'text-content-muted' : ''
+          }`}
         aria-label={d.groupFilterLabel}
       >
         <option value="">{d.groupFilterPlaceholder}</option>

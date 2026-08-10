@@ -136,11 +136,10 @@ const SearchableSelect = memo(function SearchableSelect({
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSelect(option)}
-                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                      selected
-                        ? 'bg-primary-light text-primary font-medium'
-                        : 'text-gray-800 hover:bg-surface-page'
-                    }`}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${selected
+                      ? 'bg-primary-light text-primary font-medium'
+                      : 'text-gray-800 hover:bg-surface-page'
+                      }`}
                   >
                     {option}
                   </button>

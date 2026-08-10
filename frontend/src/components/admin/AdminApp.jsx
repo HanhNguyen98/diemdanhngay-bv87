@@ -7,6 +7,7 @@ import {
 } from '../../constants/adminTabs';
 import { AdminDashboardProvider } from '../../context/AdminDashboardContext';
 import { AiAssistantProvider } from '../../context/AiAssistantContext';
+import { AttendanceStatusProvider } from '../../context/AttendanceStatusContext';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 import { useAdminTabRouting } from '../../hooks/useAdminTabRouting';
 
@@ -19,6 +20,7 @@ const AdminDashboardPage = lazy(() => import('./dashboard/AdminDashboardPage'));
 const DeptAttendanceDetailPage = lazy(() => import('./dashboard/dept-detail/DeptAttendanceDetailPage'));
 const SystemSettingsPage = lazy(() => import('../settings/SystemSettingsPage'));
 const UserPermissionsPage = lazy(() => import('../settings/UserPermissionsPage'));
+const FingerprintKioskTokensPage = lazy(() => import('../settings/FingerprintKioskTokensPage'));
 const ReminderHistoryPage = lazy(() => import('./utilities/ReminderHistoryPage'));
 const ChangePasswordForm = lazy(() => import('../account/ChangePasswordForm'));
 const ClinicalFlowPanel = lazy(() => import('../ai/ClinicalFlowPanel'));
@@ -33,6 +35,7 @@ const TAB_COMPONENTS = {
   [ADMIN_TAB_IDS.DASHBOARD_DEPT_DETAIL]: DeptAttendanceDetailPage,
   [ADMIN_TAB_IDS.SETTINGS_SYSTEM]: SystemSettingsPage,
   [ADMIN_TAB_IDS.SETTINGS_USERS]: UserPermissionsPage,
+  [ADMIN_TAB_IDS.SETTINGS_FINGERPRINT_TOKENS]: FingerprintKioskTokensPage,
   [ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY]: ReminderHistoryPage,
 };
 
@@ -84,6 +87,7 @@ export default function AdminApp({ user, onLogout }) {
     activeTab !== ADMIN_TAB_IDS.PASSWORD && !ADMIN_CACHEABLE_TAB_IDS.has(activeTab);
 
   return (
+    <AttendanceStatusProvider>
     <AdminDashboardProvider value={isDashboard ? dashboardState : null}>
       <AiAssistantProvider>
         <AdminShell
@@ -120,5 +124,6 @@ export default function AdminApp({ user, onLogout }) {
         </Suspense>
       </AiAssistantProvider>
     </AdminDashboardProvider>
+    </AttendanceStatusProvider>
   );
 }

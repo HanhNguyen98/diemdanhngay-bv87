@@ -30,7 +30,7 @@ export function formatShortDate(dateStr) {
   return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
-/** dd/mm/yyyy — hiển thị trên date navigator Điểm danh */
+/** dd/mm/yyyy — hiển thị trên date navigator Chấm công */
 export function formatDateDMY(dateStr) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -98,6 +98,20 @@ export function formatTimeVN(date = new Date()) {
   const h = String(date.getHours()).padStart(2, '0');
   const m = String(date.getMinutes()).padStart(2, '0');
   return `${h}:${m}`;
+}
+
+/** HH:mm from Instant/ISO for attendance check-in/out. */
+export function formatInstantHm(iso) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  } catch {
+    return null;
+  }
 }
 
 export function todayISO() {

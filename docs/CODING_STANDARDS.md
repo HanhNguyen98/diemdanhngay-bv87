@@ -1,5 +1,20 @@
 # Coding Standards — Diem Danh BV87
 
+## Binding specs (read before coding)
+
+| Role / feature | Spec file |
+|----------------|-----------|
+| ADMIN | `docs/SPEC_ADMIN.md` |
+| HEAD | `docs/SPEC_HEAD.md` |
+| Vân tay ZK9500 / Agent / IN-OUT | `docs/SPEC_FINGERPRINT.md` |
+
+### Do not invent code outside requirements
+
+- **Không tự ý sinh code** (API, UI, cột DB, status, Agent endpoint…) **ngoài yêu cầu** và **ngoài SPEC đã review**.
+- Không suy diễn “làm thêm cho tiện”. Mơ hồ → cập nhật SPEC trước, rồi mới implement.
+- Mỗi lần giao việc chỉ làm **phase/phạm vi** được nêu; không nhảy cóc phase trong `SPEC_FINGERPRINT.md` nếu chưa được yêu cầu.
+- Khi xung đột mô tả: **`SPEC_FINGERPRINT.md` thắng** trên biometric / IN-OUT / COMPLETED / bỏ khóa sổ giờ HEAD.
+
 ## Language split
 
 ```

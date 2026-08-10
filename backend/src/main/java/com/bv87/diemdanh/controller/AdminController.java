@@ -32,6 +32,7 @@ public class AdminController {
     private final StaffRankCatalogService staffRankCatalogService;
     private final StaffPositionCatalogService staffPositionCatalogService;
     private final AttendanceService attendanceService;
+    private final FingerprintService fingerprintService;
 
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
@@ -73,6 +74,18 @@ public class AdminController {
     public ResponseEntity<ToggleDeptLockResultDto> toggleDepartmentLock(@PathVariable Integer deptCode) {
         return ResponseEntity.ok(
                 attendanceService.toggleDepartmentLock(authService.getAuthUser(), deptCode));
+    }
+
+    @PutMapping("/attendance/times")
+    public ResponseEntity<StaffAttendanceDto> fillAttendanceTimes(
+            @Valid @RequestBody FillAttendanceTimesRequest request) {
+        return ResponseEntity.ok(attendanceService.fillAttendanceTimes(authService.getAuthUser(), request));
+    }
+
+    @PostMapping("/attendance/clear")
+    public ResponseEntity<StaffAttendanceDto> clearAttendance(
+            @Valid @RequestBody ClearAttendanceRequest request) {
+        return ResponseEntity.ok(attendanceService.clearAttendanceDay(authService.getAuthUser(), request));
     }
 
     @GetMapping("/department-groups/next-code")
@@ -328,5 +341,43 @@ public class AdminController {
             @Valid @RequestBody ResetPasswordRequest request) {
         adminAccountService.resetPassword(authService.getAuthUser(), accountId, request);
         return ResponseEntity.ok(Map.of("message", "Đã đặt lại mật khẩu thành công"));
+    }
+
+    @GetMapping("/fingerprints")
+    public ResponseEntity<List<FingerprintStatusDto>> listFingerprints(
+            @RequestParam(required = false) Integer deptCode) {
+        return ResponseEntity.ok(fingerprintService.listStatusForAdmin(authService.getAuthUser(), deptCode));
+    }
+
+    @GetMapping("/fingerprint/kiosk-tokens")
+    public ResponseEntity<List<KioskTokenDto>> listKioskTokens() {
+        return ResponseEntity.ok(fingerprintService.listKioskTokensForAdmin(authService.getAuthUser()));
+    }
+
+    @PostMapping("/fingerprint/kiosk-tokens")
+    public ResponseEntity<KioskTokenIssuedDto> createKioskToken(
+            @Valid @RequestBody KioskTokenCreateRequest request) {
+        return ResponseEntity.ok(
+                fingerprintService.createKioskTokenForAdmin(authService.getAuthUser(), request));
+    }
+
+    @PostMapping("/fingerprint/kiosk-tokens/{id}/enroll-pin")
+    public ResponseEntity<KioskTokenDto> setKioskEnrollPin(
+            @PathVariable Long id,
+            @Valid @RequestBody KioskTokenSetEnrollPinRequest request) {
+        return ResponseEntity.ok(
+                fingerprintService.setEnrollPinForAdmin(authService.getAuthUser(), id, request));
+    }
+
+    @PostMapping("/fingerprint/kiosk-tokens/{id}/revoke")
+    public ResponseEntity<Map<String, String>> revokeKioskToken(@PathVariable Long id) {
+        fingerprintService.revokeKioskTokenForAdmin(authService.getAuthUser(), id);
+        return ResponseEntity.ok(Map.of("message", "Đã thu hồi token kiosk"));
+    }
+
+    @PostMapping("/fingerprint/kiosk-tokens/{id}/rotate")
+    public ResponseEntity<KioskTokenIssuedDto> rotateKioskToken(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                fingerprintService.rotateKioskTokenForAdmin(authService.getAuthUser(), id));
     }
 }

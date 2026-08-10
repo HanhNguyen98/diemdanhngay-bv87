@@ -76,9 +76,8 @@ const StaffDeptFilter = memo(function StaffDeptFilter({
               onChange(parseInt(e.target.value, 10));
             }}
             disabled={disabled}
-            className={`appearance-none h-9 pl-9 pr-9 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-neutral outline-none focus-visible:ring-2 focus-visible:ring-primary/25 transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed ${
-              value == null ? 'text-content-muted' : ''
-            }`}
+            className={`appearance-none h-9 pl-9 pr-9 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white hover:bg-neutral outline-none focus-visible:ring-2 focus-visible:ring-primary/25 transition-colors w-full disabled:opacity-60 disabled:cursor-not-allowed ${value == null ? 'text-content-muted' : ''
+              }`}
             aria-label={s.deptFilterLabel}
           >
             {allowEmpty && <option value="">{s.deptFilterPlaceholder}</option>}

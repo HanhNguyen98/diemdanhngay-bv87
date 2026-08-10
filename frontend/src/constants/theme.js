@@ -6,8 +6,8 @@
  * Do NOT use raw hex in components — extend this file + tailwind.config instead.
  */
 
-/** App UI font — synced with tailwind.config.js `fontFamily.sans` */
-export const FONT_FAMILY_SANS = "'Segoe UI', system-ui, -apple-system, sans-serif";
+/** App UI font — synced with tailwind.config.js `fontFamily.sans` (SPEC: Montserrat) */
+export const FONT_FAMILY_SANS = "'Montserrat', system-ui, 'Segoe UI', sans-serif";
 
 export const COLORS = {
   primary: '#2563EB',

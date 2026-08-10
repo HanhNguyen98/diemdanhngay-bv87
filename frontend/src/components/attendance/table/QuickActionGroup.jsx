@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { isAttendanceUnchecked } from '../../../constants/attendance';
+import { ATTENDANCE_STATUS, isAttendanceBlank } from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
 import { resolveStatusQuickIcon } from '../../../utils/statusIcons';
 
@@ -26,12 +26,23 @@ const QUICK_BTN_OUTLINE = {
 const BTN_BASE =
   'w-9 h-9 rounded-lg border flex items-center justify-center transition-colors shrink-0';
 
-const QuickActionGroup = memo(function QuickActionGroup({ staff, disabled, onQuickAction }) {
+const QuickActionGroup = memo(function QuickActionGroup({
+  staff,
+  disabled,
+  onQuickAction,
+  /** SPEC §3.2.1 — HEAD locks; Admin may open range to overwrite presence */
+  lockFingerprintPresence = true,
+}) {
   const { quickActions, statusBadge } = useAttendanceStatusConfig();
-  const isUnchecked = isAttendanceUnchecked(staff);
+  const isUnchecked = isAttendanceBlank(staff);
+  // SPEC §4.8 — cannot overwrite fingerprint presence via HEAD quick-action
+  const fingerprintLocked =
+    lockFingerprintPresence &&
+    (staff?.status === ATTENDANCE_STATUS.DI_LAM || staff?.status === ATTENDANCE_STATUS.DI_TRE);
+  const actionsDisabled = disabled || fingerprintLocked;
 
   const getButtonClass = (colorKey, isActive) => {
-    if (disabled) {
+    if (actionsDisabled) {
       return `${BTN_BASE} border-line bg-neutral text-content-muted cursor-not-allowed`;
     }
     if (isActive) {
@@ -47,20 +58,24 @@ const QuickActionGroup = memo(function QuickActionGroup({ staff, disabled, onQui
     <div
       className="inline-flex items-center justify-end gap-2 ml-auto"
       role="group"
-      aria-label="Thao tác Điểm danh nhanh"
+      aria-label="Thao tác Chấm công nhanh"
     >
       {quickActions.map(({ value, color, icon }) => {
         const Icon = resolveStatusQuickIcon(icon);
-        const isActive = Boolean(!isAttendanceUnchecked(staff) && staff.status === value);
+        const isActive = Boolean(!isAttendanceBlank(staff) && staff.status === value);
 
         return (
           <button
             key={value}
             type="button"
-            disabled={disabled}
+            disabled={actionsDisabled}
             onClick={() => onQuickAction(staff.empCode, value)}
             className={getButtonClass(color, isActive)}
-            title={statusBadge[value]?.label || value}
+            title={
+              fingerprintLocked
+                ? 'Nhân viên đã Chấm công bằng vân tay. Không được gán trạng thái khác.'
+                : statusBadge[value]?.label || value
+            }
             aria-pressed={isActive}
           >
             <Icon className="w-4 h-4" />

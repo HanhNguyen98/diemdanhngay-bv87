@@ -1,6 +1,7 @@
 import { Bot, User } from 'lucide-react';
 import StatusPickerCard from './widgets/StatusPickerCard';
 import BatchAttendanceConfirmCard from './widgets/BatchAttendanceConfirmCard';
+import MissingPunchListCard from './widgets/MissingPunchListCard';
 
 function WidgetRenderer({
   widget,
@@ -34,6 +35,8 @@ function WidgetRenderer({
           onConfirm={(actionId) => onConfirmBatch(messageId, widgetIndex, actionId)}
         />
       );
+    case 'missing_punch_list':
+      return <MissingPunchListCard payload={widget.payload} />;
     default:
       return null;
   }
