@@ -5,12 +5,13 @@ import TablePagination from '../../sections/TablePagination';
 import DeptAttendanceRow from './DeptAttendanceRow';
 
 const COLUMNS = [
-  { key: 'empCode', labelKey: 'deptDetailColEmpCode', width: '11%' },
-  { key: 'fullname', labelKey: 'deptDetailColStaff', width: '22%' },
-  { key: 'checkIn', labelKey: 'deptDetailColCheckIn', width: '11%' },
-  { key: 'checkOut', labelKey: 'deptDetailColCheckOut', width: '12%' },
-  { key: 'status', labelKey: 'deptDetailColStatus', width: '14%' },
-  { key: 'actions', labelKey: 'deptDetailColActions', width: '20%' },
+  { key: 'empCode', labelKey: 'deptDetailColEmpCode', width: '8%' },
+  { key: 'fullname', labelKey: 'deptDetailColStaff', width: '16%' },
+  { key: 'times', labelKey: 'deptDetailColTimes', width: '16%' },
+  { key: 'machine', labelKey: 'deptDetailColMachine', width: '12%' },
+  { key: 'status', labelKey: 'deptDetailColStatus', width: '12%' },
+  { key: 'note', labelKey: 'deptDetailColNote', width: '12%' },
+  { key: 'actions', labelKey: 'deptDetailColActions', width: '24%' },
 ];
 
 const DeptAttendanceTable = memo(function DeptAttendanceTable({
@@ -27,6 +28,7 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
   onFillTimes,
   onQuickAction,
   onClearAttendance,
+  onSaveVeSomNote,
 }) {
   const { dashboard: d } = ADMIN_UI;
   const colCount = COLUMNS.length;
@@ -77,6 +79,7 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
                   onFillTimes={onFillTimes}
                   onQuickAction={onQuickAction}
                   onClearAttendance={onClearAttendance}
+                  onSaveVeSomNote={onSaveVeSomNote}
                 />
               ))
             )}

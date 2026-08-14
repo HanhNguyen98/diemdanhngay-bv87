@@ -37,6 +37,33 @@ public class AttendanceRecord {
     @Column(name = "check_out_at")
     private java.time.Instant checkOutAt;
 
+    @Column(name = "morning_in_at")
+    private java.time.Instant morningInAt;
+
+    @Column(name = "noon_out_at")
+    private java.time.Instant noonOutAt;
+
+    @Column(name = "afternoon_in_at")
+    private java.time.Instant afternoonInAt;
+
+    @Column(name = "afternoon_out_at")
+    private java.time.Instant afternoonOutAt;
+
+    @Column(name = "late_flag", nullable = false, columnDefinition = "TINYINT(1) NOT NULL DEFAULT 0")
+    private boolean lateFlag;
+
+    @Column(name = "last_kiosk_hostname", length = 120)
+    private String lastKioskHostname;
+
+    @Column(name = "last_kiosk_ip", length = 64)
+    private String lastKioskIp;
+
+    @Column(name = "last_kiosk_dept_code")
+    private Integer lastKioskDeptCode;
+
+    @Column(name = "last_kiosk_label", length = 120)
+    private String lastKioskLabel;
+
     @Column(name = "source", length = 30)
     private String source;
 

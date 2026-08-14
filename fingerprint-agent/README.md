@@ -35,6 +35,26 @@ Tạo `dist\fingerprint-agent.jar`. `start-agent.bat` **ưu tiên JAR** trước
 
 Copy lên PC khoa: `dist\`, `lib\`, `scripts\`, `agent.properties` (+ driver ZK).
 
+### Phát hành ZIP cho PC khoa (IT)
+
+`dist/` và `agent.properties` **không** nằm trong git. Quy trình:
+
+1. Dev: `git commit` / `push` source (không JAR / secrets).  
+2. IT: `git pull` → `scripts\build-agent-jar.ps1` → copy folder gồm `dist\`, `lib\`, `scripts\`, `README.md`, `agent.properties.example` (hoặc `agent.properties` đã điền token khoa).  
+3. Nén ZIP gửi user. **Không** chỉ `git pull` trên PC khoa nếu chưa build JAR.  
+4. User giải nén path cố định (vd. `C:\BV87\fingerprint-agent`) → JDK 17 + driver ZK → PowerShell **Run as administrator**:
+
+```powershell
+cd C:\BV87\fingerprint-agent\scripts
+Set-ExecutionPolicy -Scope Process Bypass
+.\install-autostart.ps1
+.\install-watchdog.ps1
+```
+
+5. Thử: `.\start-agent-silent.ps1`. Kiểm tra Startup shortcut + Task `BV87-Fingerprint-Agent-Watchdog`. Đổi thư mục cài → chạy lại cả hai install.
+
+Chi tiết thêm: `deploy/README.md` (mục Fingerprint Agent).
+
 ## Chạy bằng `start-agent.bat` (debug — có cửa sổ CMD)
 
 ```powershell

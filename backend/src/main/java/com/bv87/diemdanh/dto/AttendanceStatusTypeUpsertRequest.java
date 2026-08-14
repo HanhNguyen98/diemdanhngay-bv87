@@ -35,4 +35,14 @@ public class AttendanceStatusTypeUpsertRequest {
 
     @NotNull(message = "Trạng thái hoạt động không được để trống")
     private Boolean active;
+
+    @NotNull(message = "Cờ cho phép chấm thủ công không được để trống")
+    private Boolean manualAllowed;
+
+    @NotNull(message = "Cờ nhóm trạng thái không được để trống")
+    private Boolean groupParent;
+
+    @Size(max = 50, message = "Mã trạng thái cha tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Z0-9_]*$", message = "Mã trạng thái cha chỉ gồm chữ in hoa, số và dấu gạch dưới")
+    private String parentCode;
 }

@@ -39,6 +39,15 @@ public class FingerprintScanLog {
     @Column(name = "message", length = 255)
     private String message;
 
+    @Column(name = "client_hostname", length = 120)
+    private String clientHostname;
+
+    @Column(name = "client_ip", length = 64)
+    private String clientIp;
+
+    @Column(name = "kiosk_label", length = 120)
+    private String kioskLabel;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 }

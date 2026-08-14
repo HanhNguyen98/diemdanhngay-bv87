@@ -94,6 +94,7 @@ export function useStatusCatalogPage() {
   }, [deleteItem, remove, showSuccess, showError]);
 
   return {
+    items,
     search,
     setSearch,
     resetFilters,

@@ -89,9 +89,10 @@ Labels: `UI`, `MOBILE_UI`, `STATISTICS_UI` trong `constants/attendance.js` — c
 | `dept_code` / `emp_code` | INT; hiển thị `%02d` / `%05d` |
 | Resolve đơn vị | HEAD: luôn `authUser.deptCode` |
 | Nhân viên Chấm công | Chỉ `Employee.active` thuộc đơn vị |
-| Status hợp lệ ngày | `DI_LAM`, `DI_TRE`, `NGHI_PHEP`, `DI_HOC`, `DI_CONG_TAC`, `THAI_SAN` |
-| Nguồn có mặt | `DI_LAM` / `DI_TRE` **chỉ** từ vân tay (Agent) — xem `SPEC_FINGERPRINT.md` |
-| Thủ công HEAD | Chỉ `NGHI_PHEP` \| `DI_HOC` \| `DI_CONG_TAC` \| `THAI_SAN` + **khoảng từ ngày → đến ngày** |
+| Status hợp lệ ngày | Theo `attendance_status_types` active; **đúng 1** `status` chính / ngày — **cấm** ghép chuỗi; đi trễ kèm về sớm = `VE_SOM` + `late_flag` (`SPEC_FINGERPRINT` §4.13) |
+| Nguồn có mặt | `DI_LAM` / `DI_TRE` **chỉ** từ vân tay (Agent); `VE_SOM` suy từ ra chiều + grace |
+| Thủ công HEAD | Chỉ status active có `manualAllowed = true`; **cấm** gán tay `DI_LAM` / `DI_TRE`; status cha `groupParent = true` chỉ dùng làm nút nhóm UI, không lưu DB |
+| Ngoại lệ sau quét | HEAD **được** gán `NGHI_TRUC_HALF` / `NGHI_TRUC_FULL` và nhập lý do `VE_SOM` dù đã có presence — §4.13 |
 | Chưa chấm | `status == null` |
 | Nguồn DB | **Một nguồn** dùng chung Chấm công / thống kê / dashboard / báo cáo (`SPEC_FINGERPRINT` mục Data model) |
 
@@ -105,10 +106,12 @@ Labels: `UI`, `MOBILE_UI`, `STATISTICS_UI` trong `constants/attendance.js` — c
 | Quy tắc | Chi tiết |
 |---------|----------|
 | Ngày Chấm công | Quét vân tay = Chấm công **ngày hiện tại** (Asia/Ho_Chi_Minh) |
-| HEAD sửa dữ liệu đã quét | **Không** sửa giờ/status từ máy. **Admin** được điền **ô giờ trống** (`SPEC_FINGERPRINT` §4.6) |
-| NV đã có `DI_LAM` hoặc `DI_TRE` | HEAD **không** gán thủ công khác cho ngày đó |
-| NV đã có thủ công vắng | Agent **không** cập nhật IN/OUT summary (log REJECTED) |
-| HEAD ngoại lệ | Chỉ `NGHI_PHEP` \| `DI_HOC` \| `DI_CONG_TAC` \| `THAI_SAN` + khoảng ngày; **không** đè `DI_LAM`/`DI_TRE` |
+| Cross-kiosk (P6) | NV có thể quét tại **mọi kiosk**; dữ liệu hiển thị trên roster **khoa hồ sơ** NV (không phụ thuộc kiosk quét) |
+| HEAD sửa dữ liệu đã quét | **Không** sửa giờ từ máy. **Admin** được điền **ô giờ trống** 4 mốc (`SPEC_FINGERPRINT` §4.6 / §4.13) |
+| NV đã có `DI_LAM` hoặc `DI_TRE` | HEAD **không** gán PHEP/HSQ/…; **được** `NGHI_TRUC_*` + lý do `VE_SOM` (§4.13) |
+| NV đã có thủ công vắng (không hybrid) | Agent **không** cập nhật giờ (log REJECTED) |
+| Hybrid `VE_SOM` / `NGHI_TRUC_HALF` + quét thêm | Vẫn ghi giờ; `source=MIXED` nếu đã MANUAL/ADMIN; rời `VE_SOM` (ra chiều MAX không còn sớm) → xóa `note` (`SPEC_FINGERPRINT` §4.13 P7b) |
+| HEAD ngoại lệ | Status `manualAllowed` + khoảng ngày; nửa ngày / 1 ngày nghỉ trực theo §4.13.4 |
 | Giám sát | Xem realtime + hàng đợi thiếu dữ liệu chấm công (§4.5.2) — **không** nút Gửi báo cáo |
 | Cửa sổ IN/OUT trên Agent | Chỉ phân loại quét vào/ra — **không** khóa quyền HEAD theo nộp báo cáo |
 
@@ -122,11 +125,11 @@ Xem ngày khác hôm nay: **chỉ xem** (HistoryViewBanner). Không dùng LockBa
 
 | Method | Path | HEAD |
 |--------|------|------|
-| GET | `/api/attendance/page` | Đơn vị mình — đọc từ **nguồn DB chung** (status, check_in_at, check_out_at) |
+| GET | `/api/attendance/page` | Đơn vị mình — status, 4 mốc giờ, `lateFlag`, `note`, máy kiosk cuối (`SPEC_FINGERPRINT` §4.13) |
 | GET | `/api/attendance/summary` / `staff` | Đơn vị mình |
-| GET | `/api/attendance/status-types` | Active types (đủ 6 status) |
-| PUT/POST | `/api/attendance` | **Whitelist:** chỉ `NGHI_PHEP`\|`DI_HOC`\|`DI_CONG_TAC`\|`THAI_SAN`; 1 ngày (`?date=`); **từ chối** `DI_LAM`/`DI_TRE`/clear; từ chối nếu ngày đã có DI_LAM/DI_TRE từ vân tay |
-| PUT | `/api/attendance/manual-range` | Body `empCode`, `status`, `fromDate`, `toDate` — khoảng ngày (§3.2.1 `SPEC_FINGERPRINT`); max 366; **skip** ngày `DI_LAM`/`DI_TRE` + ngày đã submit; **ghi đè** ngày đã thủ công khác |
+| GET | `/api/attendance/status-types` | Active types + metadata `manualAllowed`, `groupParent`, `parentCode` |
+| PUT/POST | `/api/attendance` | 1 ngày (`?date=`); presence `DI_LAM` / `DI_TRE` vẫn bị từ chối với HEAD; status cha `groupParent = true` bị từ chối; status con/đơn chỉ hợp lệ khi `manualAllowed = true` |
+| PUT | `/api/attendance/manual-range` | Body `empCode`, `status`, `fromDate`, `toDate`, `note?` — khoảng ngày; max 366; **skip** ngày `DI_LAM`/`DI_TRE` trừ khi `status` ∈ `NGHI_TRUC_*`; **cấm** `VE_SOM` trên range |
 | POST | `/api/attendance/report-submit` | **Deprecated (P5)** — không dùng |
 | GET | `/api/attendance/missing-punches?date=` | Hàng đợi thiếu dữ liệu chấm công khoa mình |
 | GET | `/api/attendance/summaries` | **Cấm** — chỉ Admin |
@@ -137,9 +140,10 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 ### 6.2 UI bắt buộc
 
 - Header: ngày, KPI, chuông, **hàng đợi thiếu dữ liệu chấm công** — **không** nút **Gửi báo cáo**; **không** UI khóa sổ theo nghĩa nộp báo cáo
-- Cột: nhân viên, cấp bậc, chức vụ, **giờ vào**, **giờ ra**, badge **ĐI LÀM** / **ĐI TRỄ** (read-only), thao tác thủ công 4 status + chọn khoảng ngày + **Chi tiết quét**
+- Cột: nhân viên, cấp bậc, chức vụ, **4 mốc giờ** (2×2), **Máy** (luôn hiện hostname+IP), badge status (+ text đỏ `+ Đi trễ` nếu `lateFlag`), thao tác thủ công theo `manualAllowed` + chọn khoảng ngày + **Chi tiết quét** + ô lý do `VE_SOM` bắt buộc
 - Roster: full NV active + null
 - **Ẩn** quick-action gán tay ĐI LÀM / ĐI TRỄ
+- Status cha (`groupParent = true`) vẫn hiện quick-action nếu `manualAllowed = true`; khi bấm phải hiện lựa chọn status con trước khi lưu khoảng ngày
 - Search + filter status; Agent Online/Offline khi có kiosk
 - Theme/responsive theo mục 3
 
@@ -147,10 +151,14 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 
 Đồng bộ **`SPEC_FINGERPRINT` §4.5**:
 
-- Có mặt (`DI_LAM`/`DI_TRE`): hợp lệ chỉ khi đủ **giờ vào + giờ ra**.
-- Thủ công vắng: chỉ cần status.
+- Có mặt (`DI_LAM`/`DI_TRE`): đủ **4 mốc** hoặc grandfather 2 mốc pre-P7 (`SPEC_FINGERPRINT` §4.13.3).
+- `VE_SOM`: đủ 4 mốc + **note** — ô lý do trên dòng roster (không modal khoảng ngày).
+- `NGHI_TRUC_HALF`: vào sáng + ra trưa, chiều trống.
+- Thủ công vắng khác / `NGHI_TRUC_FULL`: chỉ cần status.
+- `punchCount` 1–3 (không grandfather / không HALF đã chốt) → cờ thiếu dữ liệu.
+- Quick-action sau quét: **mở** `NGHI_TRUC`; **khóa** PHEP/HSQ/….
 - `COMPLETED` = KPI đủ dữ liệu — **không** cổng nộp.
-- Hàng đợi thiếu dữ liệu chấm công (§4.5.2); khóa mềm `lockTime` (§4.7).
+- Hàng đợi thiếu dữ liệu chấm công (§4.5.2 / §4.13); khóa mềm `lockTime` (§4.7).
 - Nút **Gửi báo cáo**: **đã bỏ**.
 
 ### 6.4 Mobile roster card (`AttendanceStaffCard` + `MobileQuickActionGrid`)
@@ -160,10 +168,10 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 | Rule | Chi tiết |
 |------|----------|
 | Padding | List `p-2` + card `p-2.5` — **không** chồng nhiều lớp `p-3` khiến grid sát mép |
-| Quick actions | Chỉ whitelist thủ công (không DI_LAM/DI_TRE). Grid **`grid-cols-2`** (2×2), `gap-1.5`; nút `min-h` ≤ `3.75rem` |
+| Quick actions | Chỉ status `manualAllowed = true` (không `DI_LAM`/`DI_TRE`); status con có `parentCode` **không** hiện nút riêng, nút cha mở chọn status con; grid **`grid-cols-2`** (2×2), `gap-1.5`; nút `min-h` ≤ `3.75rem` |
 | Label nút | `text-4xs` + `leading-tight` + `line-clamp-2`; không phình ô |
 | Rank / chức vụ | Chip rank compact; chức vụ `truncate`; token `primary-light` / `content-muted` |
-| Hàng giờ + trạng thái | **Một hàng** `flex flex-wrap items-center`: Vào / Ra + `StatusBadge` (mobile); hint thiếu giờ ra vẫn dòng riêng nếu có |
+| Hàng giờ + trạng thái | **Một hàng** `flex flex-wrap items-center`: 4 mốc rút gọn + `StatusBadge` (+ `+ Đi trễ` nếu `lateFlag`); máy 1 dòng phụ |
 | Border / surface | `border-line`, `bg-surface-white` — không `slate-*` / `blue-*` cứng trên card |
 | Footer | Link “Lịch thủ công” / “Chi tiết quét”; main đã `pb-24` tránh FAB che |
 
@@ -190,7 +198,7 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 - Desktop: header + KPI + chart + bảng lịch sử phân trang
 - Mobile: `StatisticsMobileKpiCards` + history cards; scroll pattern hiện có
 - Empty: `Không có dữ liệu!`
-- KPI / chart / Excel: **đủ status** `DI_LAM`, `DI_TRE`, `NGHI_PHEP`, `DI_HOC`, `DI_CONG_TAC`, `THAI_SAN` — **cùng nguồn DB** với màn Chấm công (`SPEC_FINGERPRINT`)
+- KPI / chart / Excel: **mọi status catalog active** (gồm `VE_SOM`, `NGHI_TRUC_*`) — **cùng nguồn DB** với màn Chấm công (`SPEC_FINGERPRINT`)
 
 ---
 
@@ -319,9 +327,9 @@ Chi tiết: `docs/SPEC_FINGERPRINT.md`.
 
 1. Hai cổng: **Agent** (token kiosk) ghi scan; **Web HEAD** xem / thủ công / báo cáo — không gắn khung 6h–16h.  
 2. Rule **C** đi làm/đi trễ; badge read-only.  
-3. Đã quét DI_LAM/DI_TRE → HEAD không gán status khác.  
-4. Thủ công nhiều ngày: from–to cho NGHI_PHEP / DI_HOC / DI_CONG_TAC / THAI_SAN — skip ngày đã vân tay / đã submit; **ghi đè** ngày thủ công khác.  
-5. COMPLETED → gửi báo cáo.  
+3. Đã quét DI_LAM/DI_TRE → HEAD không gán PHEP/HSQ; **được** nghỉ trực (quick-action) + ô lý do về sớm 1 ngày (§4.13).  
+4. Thủ công nhiều ngày: from–to + `note?` cho status `manualAllowed` (trừ `VE_SOM` range); status cha chọn con; skip ngày presence (trừ `NGHI_TRUC_*`); **ghi đè** ngày thủ công khác.  
+5. 4 pha giờ + `late_flag` + cột máy — `SPEC_FINGERPRINT` §4.13.  
 6. Một nguồn DB với thống kê/dashboard.  
 7. Tắt AI batch DI_LAM.
 

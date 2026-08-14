@@ -21,11 +21,21 @@ public class StaffAttendanceDto {
     private final String status;
     private final String statusLabel;
     private final String note;
-    /** Effective check-in (rule C); null if not set. */
+    /** Effective check-in (rule C); null if not set. Alias of morningInAt. */
     private final Instant checkInAt;
-    /** Effective check-out (MAX OUT); null if not set. */
+    /** Effective check-out (MAX OUT); null if not set. Alias of afternoonOutAt or noonOutAt. */
     private final Instant checkOutAt;
-    /** FINGERPRINT | MANUAL | ADMIN — null when no day record. */
+    private final Instant morningInAt;
+    private final Instant noonOutAt;
+    private final Instant afternoonInAt;
+    private final Instant afternoonOutAt;
+    /** Audit flag: morning IN after lateCutoff when status is VE_SOM (SPEC §4.13). */
+    private final boolean lateFlag;
+    private final String lastKioskHostname;
+    private final String lastKioskIp;
+    private final Integer lastKioskDeptCode;
+    private final String lastKioskLabel;
+    /** FINGERPRINT | MANUAL | ADMIN | MIXED — null when no day record. */
     private final String source;
 
     public static String formatEmp(Integer empCode) {

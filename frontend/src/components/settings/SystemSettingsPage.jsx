@@ -8,11 +8,40 @@ import { useAppBranding } from '../../context/AppBrandingContext';
 import { useSystemSettings } from '../../hooks/useSystemSettings';
 
 const labelClass = 'block text-xs font-bold text-content-muted uppercase tracking-wide mb-1.5';
+const section4LabelClass = `${labelClass} sm:whitespace-nowrap`;
 const subLabelClass = 'block text-xs font-semibold text-gray-700 mb-1';
 const inputClass =
   'w-full h-9 border border-gray-200 rounded-lg px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 bg-white';
 const timeInputClass =
-  'h-9 border border-gray-200 rounded-lg px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 bg-white';
+  'w-full min-w-0 max-w-full h-9 border border-line rounded-lg px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 bg-surface-white';
+const compactTimeInputClass =
+  'w-44 max-w-full h-9 border border-line rounded-lg px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 bg-surface-white';
+
+function WorkHoursCard({ title, children }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-line bg-surface-page/40 p-4 flex flex-col gap-3">
+      <h3 className="text-xs font-bold uppercase tracking-wide text-navy">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function TimeField({ label, value, onChange, id }) {
+  return (
+    <div className="min-w-0">
+      <label className={labelClass} htmlFor={id}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type="time"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={timeInputClass}
+      />
+    </div>
+  );
+}
 
 function SettingsSection({ title,  children, className = '' }) {
   return (
@@ -52,6 +81,29 @@ export default function SystemSettingsPage() {
     attendanceReminderTime,
     setAttendanceReminderTime,
     attendanceOpenTime,
+    morningInOfficial,
+    setMorningInOfficial,
+    noonOutOfficial,
+    setNoonOutOfficial,
+    afternoonInOfficial,
+    setAfternoonInOfficial,
+    afternoonOutOfficial,
+    setAfternoonOutOfficial,
+    morningOpen,
+    setMorningOpen,
+    midpoint1,
+    setMidpoint1,
+    midpointNoon,
+    setMidpointNoon,
+    midpoint2,
+    setMidpoint2,
+    dayClose,
+    setDayClose,
+    lateGraceMinutes,
+    setLateGraceMinutes,
+    earlyGraceMinutes,
+    setEarlyGraceMinutes,
+    resetWorkHours,
     setLogoError,
     logoError,
     setLoginAvatarError,
@@ -132,13 +184,88 @@ export default function SystemSettingsPage() {
     
           </SettingsSection>
 
+          <SettingsSection title={`3. ${system.groupWorkHours}`}>
+            <p className="text-xs text-content-muted -mt-2">{system.workHoursHint}</p>
+
+            <WorkHoursCard title={system.workHoursMilestoneTitle}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 min-w-0">
+                <TimeField id="wh-morning-in" label={system.morningInOfficial} value={morningInOfficial} onChange={setMorningInOfficial} />
+                <TimeField id="wh-noon-out" label={system.noonOutOfficial} value={noonOutOfficial} onChange={setNoonOutOfficial} />
+                <TimeField id="wh-afternoon-in" label={system.afternoonInOfficial} value={afternoonInOfficial} onChange={setAfternoonInOfficial} />
+                <TimeField id="wh-afternoon-out" label={system.afternoonOutOfficial} value={afternoonOutOfficial} onChange={setAfternoonOutOfficial} />
+              </div>
+            </WorkHoursCard>
+
+            <WorkHoursCard title={system.workHoursMidpointTitle}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-3 min-w-0">
+                <TimeField id="wh-open" label={system.morningOpen} value={morningOpen} onChange={setMorningOpen} />
+                <TimeField id="wh-mp1" label={system.midpoint1} value={midpoint1} onChange={setMidpoint1} />
+                <TimeField id="wh-mp-noon" label={system.midpointNoon} value={midpointNoon} onChange={setMidpointNoon} />
+                <TimeField id="wh-mp2" label={system.midpoint2} value={midpoint2} onChange={setMidpoint2} />
+                <TimeField id="wh-close" label={system.dayClose} value={dayClose} onChange={setDayClose} />
+              </div>
+            </WorkHoursCard>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-w-0">
+              <WorkHoursCard title={system.windowPreview}>
+                <ul className="text-sm text-content-muted space-y-1.5">
+                  <li>{system.windowMorningIn}: <span className="tabular-nums font-semibold text-navy">{morningOpen} – {midpoint1}</span></li>
+                  <li>{system.windowNoonOut}: <span className="tabular-nums font-semibold text-navy">{midpoint1} – {midpointNoon}</span></li>
+                  <li>{system.windowAfternoonIn}: <span className="tabular-nums font-semibold text-navy">{midpointNoon} – {midpoint2}</span></li>
+                  <li>{system.windowAfternoonOut}: <span className="tabular-nums font-semibold text-navy">{midpoint2} – {dayClose}</span></li>
+                </ul>
+              </WorkHoursCard>
+
+              <WorkHoursCard title={system.workHoursGraceTitle}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+                  <div className="min-w-0">
+                    <label className={labelClass} htmlFor="wh-late-grace">{system.lateGraceMinutes}</label>
+                    <input
+                      id="wh-late-grace"
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={lateGraceMinutes}
+                      onChange={(e) => setLateGraceMinutes(e.target.value)}
+                      className={timeInputClass}
+                    />
+                    <p className="text-xs text-content-muted mt-1.5">{system.lateGraceHint}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <label className={labelClass} htmlFor="wh-early-grace">{system.earlyGraceMinutes}</label>
+                    <input
+                      id="wh-early-grace"
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={earlyGraceMinutes}
+                      onChange={(e) => setEarlyGraceMinutes(e.target.value)}
+                      className={timeInputClass}
+                    />
+                    <p className="text-xs text-content-muted mt-1.5">{system.earlyGraceHint}</p>
+                  </div>
+                </div>
+              </WorkHoursCard>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={resetWorkHours}
+                className="h-9 px-4 rounded-lg border border-line text-sm font-semibold text-navy bg-surface-white hover:bg-surface-page"
+              >
+                {system.resetWorkHours}
+              </button>
+            </div>
+          </SettingsSection>
+
           <SettingsSection
-            title={`3. ${system.groupAttendanceLock}`}
+            title={`4. ${system.groupAttendanceLock}`}
             description={system.lockTimeHint}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
-              <div>
-                <label className={labelClass} htmlFor="attendance-lock-time">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="min-w-0">
+                <label className={section4LabelClass} htmlFor="attendance-lock-time">
                   {system.lockTime}
                 </label>
                 <input
@@ -146,12 +273,12 @@ export default function SystemSettingsPage() {
                   type="time"
                   value={attendanceLockTime}
                   onChange={(e) => setAttendanceLockTime(e.target.value)}
-                  className={timeInputClass}
+                  className={compactTimeInputClass}
                 />
                 <p className="text-xs text-content-muted mt-1.5">{system.lockTimeHint}</p>
               </div>
-              <div>
-                <label className={labelClass} htmlFor="attendance-reminder-time">
+              <div className="min-w-0">
+                <label className={section4LabelClass} htmlFor="attendance-reminder-time">
                   {system.reminderTime}
                 </label>
                 <input
@@ -159,7 +286,7 @@ export default function SystemSettingsPage() {
                   type="time"
                   value={attendanceReminderTime}
                   onChange={(e) => setAttendanceReminderTime(e.target.value)}
-                  className={timeInputClass}
+                  className={compactTimeInputClass}
                 />
                 <p className="text-xs text-content-muted mt-1.5">{system.reminderTimeHint}</p>
               </div>

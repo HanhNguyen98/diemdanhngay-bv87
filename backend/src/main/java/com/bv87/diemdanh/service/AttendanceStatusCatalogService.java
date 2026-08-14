@@ -26,10 +26,12 @@ import java.util.stream.Collectors;
 public class AttendanceStatusCatalogService {
 
     private static final Set<String> ALLOWED_COLOR_KEYS = Set.of(
-            "green", "red", "yellow", "blue", "teal", "purple", "amber");
+            "green", "red", "yellow", "blue", "teal", "purple", "amber",
+            "pink", "brown", "gray", "black", "lime", "cyan", "indigo");
     private static final Set<String> ALLOWED_ICON_KEYS = Set.of(
             "check", "x", "graduation", "briefcase", "clock", "plane", "pending",
-            "baby", "sick", "late", "moon", "home");
+            "baby", "sick", "late", "moon", "home", "coffee", "car", "hospital",
+            "train", "sun", "star", "shield", "tools");
 
     private final AttendanceStatusTypeRepository repository;
 
@@ -122,6 +124,24 @@ public class AttendanceStatusCatalogService {
     }
 
     @Transactional(readOnly = true)
+    public void assertManualAssignableStatus(String statusCode) {
+        if (statusCode == null || statusCode.isBlank()) {
+            throw new BusinessException("Trạng thái Chấm công không được để trống");
+        }
+        AttendanceStatusType type = repository.findByCode(statusCode)
+                .orElseThrow(() -> new BusinessException("Trạng thái không hợp lệ: " + statusCode));
+        if (!type.isActive()) {
+            throw new BusinessException("Trạng thái \"" + type.getLabel() + "\" đã ngưng sử dụng");
+        }
+        if (type.isGroupParent()) {
+            throw new BusinessException("Trạng thái nhóm phải chọn trạng thái con trước khi Chấm công.");
+        }
+        if (!type.isManualAllowed()) {
+            throw new BusinessException("Trạng thái không hợp lệ cho Chấm công thủ công.");
+        }
+    }
+
+    @Transactional(readOnly = true)
     public String resolveLabel(String statusCode) {
         if (statusCode == null) {
             return null;
@@ -157,12 +177,33 @@ public class AttendanceStatusCatalogService {
     public List<StatusBreakdownItemDto> buildBreakdown(Map<String, Long> countsByCode) {
         Map<String, Long> counts = countsByCode != null ? countsByCode : Map.of();
         List<AttendanceStatusType> activeTypes = repository.findAllActiveOrdered();
+        Map<String, AttendanceStatusType> activeByCode = activeTypes.stream()
+                .collect(Collectors.toMap(AttendanceStatusType::getCode, type -> type, (a, b) -> a));
         List<StatusBreakdownItemDto> result = new ArrayList<>();
-        Set<String> covered = activeTypes.stream()
-                .map(AttendanceStatusType::getCode)
-                .collect(Collectors.toSet());
+        Set<String> covered = new java.util.HashSet<>();
 
         for (AttendanceStatusType type : activeTypes) {
+            if (covered.contains(type.getCode())) {
+                continue;
+            }
+            if (type.getParentCode() != null && activeByCode.containsKey(type.getParentCode())) {
+                covered.add(type.getCode());
+                continue;
+            }
+            if (type.isGroupParent()) {
+                List<AttendanceStatusType> children = activeTypes.stream()
+                        .filter(child -> type.getCode().equals(child.getParentCode()))
+                        .toList();
+                List<StatusBreakdownItemDto> childItems = children.stream()
+                        .map(child -> toBreakdownItem(child, counts.getOrDefault(child.getCode(), 0L)))
+                        .toList();
+                long totalCount = childItems.stream().mapToLong(StatusBreakdownItemDto::getCount).sum();
+                covered.add(type.getCode());
+                children.forEach(child -> covered.add(child.getCode()));
+                result.add(toBreakdownItem(type, totalCount, childItems));
+                continue;
+            }
+            covered.add(type.getCode());
             result.add(toBreakdownItem(type, counts.getOrDefault(type.getCode(), 0L)));
         }
 
@@ -177,6 +218,7 @@ public class AttendanceStatusCatalogService {
                         .iconKey("pending")
                         .sortOrder(999)
                         .count(e.getValue())
+                        .children(List.of())
                         .build()));
 
         return result;
@@ -190,7 +232,13 @@ public class AttendanceStatusCatalogService {
                 continue;
             }
             for (StatusBreakdownItemDto item : part) {
-                merged.merge(item.getCode(), item.getCount(), Long::sum);
+                if (item.getChildren() != null && !item.getChildren().isEmpty()) {
+                    for (StatusBreakdownItemDto child : item.getChildren()) {
+                        merged.merge(child.getCode(), child.getCount(), Long::sum);
+                    }
+                } else {
+                    merged.merge(item.getCode(), item.getCount(), Long::sum);
+                }
             }
         }
         return buildBreakdown(merged);
@@ -217,6 +265,23 @@ public class AttendanceStatusCatalogService {
         if (request.getSortOrder() == null || request.getSortOrder() < 0) {
             throw new BusinessException("Thứ tự sắp xếp phải >= 0");
         }
+        boolean groupParent = Boolean.TRUE.equals(request.getGroupParent());
+        String parentCode = normalizeCode(request.getParentCode());
+        if (groupParent && parentCode != null) {
+            throw new BusinessException("Trạng thái nhóm không được gắn trạng thái cha.");
+        }
+        if (!groupParent && parentCode != null) {
+            AttendanceStatusType parent = repository.findByCode(parentCode)
+                    .orElseThrow(() -> new BusinessException("Trạng thái cha không tồn tại: " + parentCode));
+            if (!parent.isGroupParent()) {
+                throw new BusinessException("Chỉ được gắn vào trạng thái cha dạng nhóm.");
+            }
+            if (existingCode == null || !parentCode.equals(existingCode)) {
+                if (parentCode.equals(code)) {
+                    throw new BusinessException("Trạng thái không thể tự làm cha của chính nó.");
+                }
+            }
+        }
     }
 
     private void applyRequest(AttendanceStatusType type, AttendanceStatusTypeUpsertRequest request, String code) {
@@ -227,6 +292,9 @@ public class AttendanceStatusCatalogService {
         type.setIconKey(request.getIconKey());
         type.setSortOrder(request.getSortOrder());
         type.setActive(Boolean.TRUE.equals(request.getActive()));
+        type.setManualAllowed(Boolean.TRUE.equals(request.getManualAllowed()));
+        type.setGroupParent(Boolean.TRUE.equals(request.getGroupParent()));
+        type.setParentCode(normalizeCode(request.getParentCode()));
     }
 
     private String normalizeCode(String code) {
@@ -234,6 +302,11 @@ public class AttendanceStatusCatalogService {
     }
 
     private StatusBreakdownItemDto toBreakdownItem(AttendanceStatusType type, long count) {
+        return toBreakdownItem(type, count, List.of());
+    }
+
+    private StatusBreakdownItemDto toBreakdownItem(
+            AttendanceStatusType type, long count, List<StatusBreakdownItemDto> children) {
         return StatusBreakdownItemDto.builder()
                 .code(type.getCode())
                 .label(type.getLabel())
@@ -242,6 +315,7 @@ public class AttendanceStatusCatalogService {
                 .iconKey(type.getIconKey())
                 .sortOrder(type.getSortOrder())
                 .count(count)
+                .children(children)
                 .build();
     }
 
@@ -259,6 +333,9 @@ public class AttendanceStatusCatalogService {
                 .iconKey(type.getIconKey())
                 .sortOrder(type.getSortOrder())
                 .active(type.isActive())
+                .manualAllowed(type.isManualAllowed())
+                .groupParent(type.isGroupParent())
+                .parentCode(type.getParentCode())
                 .usageCount(usageCount)
                 .build();
     }

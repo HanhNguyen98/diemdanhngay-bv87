@@ -8,9 +8,20 @@ export function normalizeSearchText(text) {
     .replace(/Đ/g, 'd');
 }
 
+/** Chuỗi dùng để tìm: string option, hoặc `{ label, value }` (SPEC_ADMIN P6-Adminb). */
+export function optionSearchText(option) {
+  if (option == null) {
+    return '';
+  }
+  if (typeof option === 'object') {
+    return [option.label, option.value].filter((part) => part != null && part !== '').join(' ');
+  }
+  return String(option);
+}
+
 /** Kiểm tra option có khớp từ khóa tìm kiếm không. */
 export function matchesSearchText(option, query) {
-  const q = normalizeSearchText(query.trim());
+  const q = normalizeSearchText(String(query ?? '').trim());
   if (!q) return true;
-  return normalizeSearchText(option).includes(q);
+  return normalizeSearchText(optionSearchText(option)).includes(q);
 }

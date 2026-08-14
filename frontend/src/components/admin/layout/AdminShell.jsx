@@ -35,7 +35,7 @@ const AdminShell = memo(function AdminShell({
       <div className="flex-1 min-w-0 max-w-full flex flex-col min-h-0 overflow-x-hidden">
         <AdminMobileTopBar onMenuOpen={() => setMenuOpen(true)} />
         <AdminTopBar activeTab={activeTab} />
-        <main className={`mobile-page-y flex-1 min-h-0 flex flex-col overscroll-y-contain lg:overflow-hidden px-[clamp(0.75rem,3vw,1.25rem)] py-3 ${MOBILE_SHELL_BOTTOM_PADDING_CLASS} lg:p-6`}>
+        <main className={`mobile-page-y flex-1 min-h-0 flex flex-col overscroll-y-contain lg:overflow-y-auto px-[clamp(0.75rem,3vw,1.25rem)] py-3 ${MOBILE_SHELL_BOTTOM_PADDING_CLASS} lg:p-6`}>
           {children}
         </main>
         <AdminFooter />

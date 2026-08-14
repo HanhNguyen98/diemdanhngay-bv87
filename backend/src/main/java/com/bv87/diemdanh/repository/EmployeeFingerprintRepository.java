@@ -38,6 +38,16 @@ public interface EmployeeFingerprintRepository extends JpaRepository<EmployeeFin
             where f.active = true
             and f.empCode in (
               select e.empCode from Employee e
+              where e.active = true
+            )
+            """)
+    List<EmployeeFingerprint> findActiveForActiveEmployees();
+
+    @Query("""
+            select f from EmployeeFingerprint f
+            where f.active = true
+            and f.empCode in (
+              select e.empCode from Employee e
               where e.department.deptCode = :deptCode and e.active = true
             )
             """)

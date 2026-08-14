@@ -1,14 +1,17 @@
 import { memo } from 'react';
 import {
-  MANUAL_ATTENDANCE_STATUSES,
+  ATTENDANCE_STATUS,
   MANUAL_SCHEDULE_UI,
   UI,
+  hasEmptyFourPunchSlot,
   isMissingCheckout,
 } from '../../../../constants/attendance';
-import { formatInstantHm } from '../../../../utils/formatters';
+import { formatKioskMachine } from '../../../../utils/kioskMachine';
+import PunchTimesCell from '../../../attendance/table/PunchTimesCell';
 import QuickActionGroup from '../../../attendance/table/QuickActionGroup';
 import StaffAvatar from '../../../attendance/table/StaffAvatar';
 import StatusBadge from '../../../attendance/table/StatusBadge';
+import VeSomNoteField from '../../../attendance/table/VeSomNoteField';
 import DeptFingerprintActionsMenu from './DeptFingerprintActionsMenu';
 
 const DeptAttendanceRow = memo(function DeptAttendanceRow({
@@ -18,9 +21,13 @@ const DeptAttendanceRow = memo(function DeptAttendanceRow({
   onFillTimes,
   onQuickAction,
   onClearAttendance,
+  onSaveVeSomNote,
 }) {
-  const isManualLeave = MANUAL_ATTENDANCE_STATUSES.includes(staff.status);
-  const canFillTimes = !isManualLeave && (!staff.checkInAt || !staff.checkOutAt);
+  const isManualLeave =
+    staff.status != null &&
+    staff.status !== ATTENDANCE_STATUS.DI_LAM &&
+    staff.status !== ATTENDANCE_STATUS.DI_TRE;
+  const canFillTimes = !isManualLeave && hasEmptyFourPunchSlot(staff);
   const canClear =
     staff.status != null || staff.checkInAt != null || staff.checkOutAt != null;
   const missingOut = isMissingCheckout(staff);
@@ -41,19 +48,26 @@ const DeptAttendanceRow = memo(function DeptAttendanceRow({
           </div>
         </div>
       </td>
-      <td className="py-3 px-4 align-middle text-sm tabular-nums text-navy font-medium">
-        {formatInstantHm(staff.checkInAt) || UI.emptyCell}
+      <td className="py-3 px-4 align-middle">
+        <PunchTimesCell staff={staff} />
+        {missingOut ? (
+          <p className="text-3xs font-medium text-warning-fg mt-0.5">{UI.missingCheckoutHint}</p>
+        ) : null}
       </td>
-      <td className="py-3 px-4 align-middle text-sm tabular-nums text-navy font-medium">
-        <div>
-          {formatInstantHm(staff.checkOutAt) || UI.emptyCell}
-          {missingOut ? (
-            <p className="text-3xs font-medium text-warning-fg mt-0.5">{UI.missingCheckoutHint}</p>
-          ) : null}
-        </div>
+      <td className="py-3 px-4 align-middle text-3xs text-content-muted max-w-[9rem]">
+        <span className="block truncate" title={formatKioskMachine(staff)}>{formatKioskMachine(staff)}</span>
       </td>
       <td className="py-3 px-4 align-middle">
         <StatusBadge staff={staff} />
+      </td>
+      <td className="py-3 px-4 align-middle text-sm text-content-muted max-w-[12rem]">
+        {staff.status === ATTENDANCE_STATUS.VE_SOM ? (
+          <VeSomNoteField staff={staff} onSave={onSaveVeSomNote} />
+        ) : staff.note ? (
+          <span className="block truncate" title={staff.note}>{staff.note}</span>
+        ) : (
+          <span className="text-line">—</span>
+        )}
       </td>
       <td className="py-3 px-4 align-middle text-right">
         <div className="inline-flex flex-col items-end gap-1.5">

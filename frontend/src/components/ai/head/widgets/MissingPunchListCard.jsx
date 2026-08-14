@@ -25,13 +25,19 @@ export default function MissingPunchListCard({ payload }) {
             </span>
             <span
               className={`shrink-0 rounded-md px-2 py-0.5 ${
-                row.reason === 'MISSING_CHECK_OUT'
+                row.reason === 'MISSING_CHECK_OUT' || row.reason === 'INCOMPLETE_PUNCHES'
                   ? 'bg-warning text-warning-fg'
-                  : 'bg-neutral text-neutral-fg'
+                  : row.reason === 'MISSING_EARLY_LEAVE_REASON'
+                    ? 'bg-warning text-warning-fg'
+                    : 'bg-neutral text-neutral-fg'
               }`}
             >
               {row.reasonLabel
-                || (row.reason === 'MISSING_CHECK_OUT' ? w.missingPunchCheckout : w.missingPunchUnmarked)}
+                || (row.reason === 'MISSING_EARLY_LEAVE_REASON'
+                  ? w.missingPunchEarlyLeave || 'Về sớm chưa có lý do'
+                  : row.reason === 'INCOMPLETE_PUNCHES' || row.reason === 'MISSING_CHECK_OUT'
+                    ? w.missingPunchCheckout
+                    : w.missingPunchUnmarked)}
             </span>
           </li>
         ))}

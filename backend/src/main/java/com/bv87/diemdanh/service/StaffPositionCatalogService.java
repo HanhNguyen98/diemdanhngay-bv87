@@ -117,6 +117,23 @@ public class StaffPositionCatalogService {
         }
     }
 
+    /**
+     * Validates position against active catalog, or allows keeping the stored legacy name.
+     *
+     * @param positionName requested name (nullable)
+     * @param currentStored name already on the employee row (nullable)
+     */
+    @Transactional(readOnly = true)
+    public void validateActivePositionNameOrUnchanged(String positionName, String currentStored) {
+        if (positionName == null || positionName.isBlank()) {
+            return;
+        }
+        if (currentStored != null && positionName.equals(currentStored.trim())) {
+            return;
+        }
+        validateActivePositionName(positionName);
+    }
+
     private StaffPosition requirePosition(Integer positionCode) {
         return staffPositionRepository.findById(positionCode)
                 .orElseThrow(() -> new BusinessException("Chức vụ không tồn tại"));

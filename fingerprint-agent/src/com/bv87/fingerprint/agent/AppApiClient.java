@@ -78,10 +78,36 @@ public class AppApiClient {
         return parseTemplateList(get("/api/kiosk/fingerprints/templates"));
     }
 
-    /** Post Identify match result; server applies IN/OUT + rule C (P2.1). */
+    /** Post Identify match result; server applies IN/OUT + rule C (P2.1 / P7). */
     public ScanResult scan(int empCode, int score) throws IOException {
-        String body = "{\"empCode\":" + empCode + ",\"score\":" + score + "}";
+        String hostname = jsonEscape(localHostname());
+        String ip = jsonEscape(localIpv4());
+        String body = "{\"empCode\":" + empCode + ",\"score\":" + score
+                + ",\"clientHostname\":\"" + hostname + "\",\"clientIp\":\"" + ip + "\"}";
         return parseScanResult(post("/api/kiosk/fingerprints/scan", body));
+    }
+
+    private static String localHostname() {
+        try {
+            return java.net.InetAddress.getLocalHost().getHostName();
+        } catch (Exception ex) {
+            return "";
+        }
+    }
+
+    private static String localIpv4() {
+        try {
+            return java.net.InetAddress.getLocalHost().getHostAddress();
+        } catch (Exception ex) {
+            return "";
+        }
+    }
+
+    private static String jsonEscape(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     /** P4 §9.5.2 — Agent Online heartbeat. */

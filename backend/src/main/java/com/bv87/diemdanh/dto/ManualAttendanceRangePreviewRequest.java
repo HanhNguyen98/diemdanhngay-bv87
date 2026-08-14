@@ -19,4 +19,7 @@ public class ManualAttendanceRangePreviewRequest {
 
     @NotNull(message = "Ngày kết thúc không được để trống")
     private LocalDate toDate;
+
+    /** Target status — fingerprint skip is waived for NGHI_TRUC_* (§4.8 / §4.13.4). */
+    private String status;
 }

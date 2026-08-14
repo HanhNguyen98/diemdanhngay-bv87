@@ -4,7 +4,6 @@ import com.bv87.diemdanh.dto.FingerprintScanRequest;
 import com.bv87.diemdanh.dto.FingerprintScanResultDto;
 import com.bv87.diemdanh.dto.KioskTemplateDto;
 import com.bv87.diemdanh.entity.*;
-import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AttendanceRecordRepository;
 import com.bv87.diemdanh.repository.EmployeeFingerprintRepository;
@@ -13,6 +12,7 @@ import com.bv87.diemdanh.repository.FingerprintScanLogRepository;
 import com.bv87.diemdanh.security.KioskAuthentication;
 import com.bv87.diemdanh.util.AttendanceValidity;
 import com.bv87.diemdanh.util.CodeFormatter;
+import com.bv87.diemdanh.util.WorkSchedule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -22,43 +22,32 @@ import org.springframework.util.StringUtils;
 import java.time.*;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * P2.1 kiosk Identify: serve templates + apply scan logs / rule C day-records.
- * P4b: server clock, debounce, unique-key upsert.
+ * P2.1 / P7 kiosk Identify: 4-phase windows from settings + rule C + late_flag.
  */
 @Service
 @RequiredArgsConstructor
 public class FingerprintScanService {
 
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    private static final LocalTime IN_START = LocalTime.of(5, 30);
-    private static final LocalTime IN_END = LocalTime.of(11, 0);
-    private static final LocalTime OUT_START = LocalTime.of(13, 30);
-    private static final LocalTime OUT_END = LocalTime.of(18, 0);
-
-    private static final Set<String> MANUAL_LOCK = Set.of(
-            AttendanceStatus.NGHI_PHEP.name(),
-            AttendanceStatus.DI_HOC.name(),
-            AttendanceStatus.DI_CONG_TAC.name(),
-            AttendanceStatus.THAI_SAN.name());
 
     private final EmployeeFingerprintRepository fingerprintRepository;
     private final EmployeeRepository employeeRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final FingerprintScanLogRepository scanLogRepository;
     private final KioskScanDebouncer scanDebouncer;
+    private final WorkScheduleService workScheduleService;
 
     @Transactional(readOnly = true)
     public List<KioskTemplateDto> listTemplatesForKiosk(KioskAuthentication kiosk) {
-        Integer deptCode = kiosk.getDeptCode();
-        List<EmployeeFingerprint> fps = fingerprintRepository.findActiveByDeptCode(deptCode);
+        List<EmployeeFingerprint> fps = fingerprintRepository.findActiveForActiveEmployees();
         if (fps.isEmpty()) {
             return List.of();
         }
-        Map<Integer, Employee> empMap = employeeRepository.findByDeptCode(deptCode).stream()
+        List<Integer> empCodes = fps.stream().map(EmployeeFingerprint::getEmpCode).distinct().toList();
+        Map<Integer, Employee> empMap = employeeRepository.findByEmpCodeIn(empCodes).stream()
                 .collect(Collectors.toMap(Employee::getEmpCode, e -> e, (a, b) -> a));
         return fps.stream()
                 .map(fp -> {
@@ -78,77 +67,92 @@ public class FingerprintScanService {
 
     @Transactional
     public FingerprintScanResultDto processScan(KioskAuthentication kiosk, FingerprintScanRequest request) {
-        Integer deptCode = kiosk.getDeptCode();
+        Integer kioskDeptCode = kiosk.getDeptCode();
+        String kioskLabel = kiosk.getLabel();
         Employee emp = employeeRepository.findByEmpCodeWithDept(request.getEmpCode())
                 .orElseThrow(() -> new BusinessException("Nhân viên không tồn tại"));
         if (!emp.isActive()) {
             throw new BusinessException("Nhân viên đã ngưng hoạt động");
         }
-        if (!deptCode.equals(emp.getDepartment().getDeptCode())) {
-            throw new AccessDeniedException("Nhân viên không thuộc đơn vị của kiosk");
-        }
         if (!fingerprintRepository.existsByEmpCodeAndActiveTrue(emp.getEmpCode())) {
             throw new BusinessException("Nhân viên chưa đăng ký vân tay");
         }
 
-        // SPEC §8.2 P4b — always server clock (ignore client scannedAt)
         Instant scannedAt = Instant.now();
         LocalDate day = scannedAt.atZone(ZONE).toLocalDate();
+        ScanContext ctx = new ScanContext(
+                request.getClientHostname(), request.getClientIp(), kioskLabel, kioskDeptCode);
 
-        if (scanDebouncer.isTooSoon(deptCode, emp.getEmpCode())) {
-            return reject(emp, deptCode, scannedAt, request.getScore(), "Vừa ghi nhận — chờ giây lát.");
+        if (scanDebouncer.isTooSoon(emp.getEmpCode())) {
+            return reject(emp, ctx, scannedAt, request.getScore(), "Vừa ghi nhận — chờ giây lát.");
         }
 
-        // SPEC §4.5 P5 — no reject for legacy report submissions
+        WorkSchedule schedule = workScheduleService.current();
         LocalTime time = scannedAt.atZone(ZONE).toLocalTime();
-        String direction = classifyDirection(time);
+        WorkSchedule.PunchPhase phase = schedule.classify(time);
+        String direction = phase.name();
 
         AttendanceRecord existing = attendanceRecordRepository
                 .findByDateAndEmpCode(day, emp.getEmpCode())
                 .orElse(null);
 
-        if (existing != null && existing.getStatus() != null && MANUAL_LOCK.contains(existing.getStatus())) {
-            return reject(emp, deptCode, scannedAt, request.getScore(),
+        if (existing != null
+                && AttendanceValidity.isManualStatus(existing.getStatus())
+                && !AttendanceValidity.isHybridKeepTimes(existing.getStatus())) {
+            return reject(emp, ctx, scannedAt, request.getScore(),
                     "Nhân viên đang được ghi " + labelOf(existing.getStatus()) + ". Không ghi nhận giờ từ vân tay.");
         }
 
-        if ("REJECTED".equals(direction)) {
-            return reject(emp, deptCode, scannedAt, request.getScore(), "Ngoài khung giờ vào/ra. Không ghi nhận.");
+        if (phase == WorkSchedule.PunchPhase.REJECTED) {
+            return reject(emp, ctx, scannedAt, request.getScore(), "Ngoài khung giờ vào/ra. Không ghi nhận.");
         }
 
-        if ("IN".equals(direction)) {
-            return applyIn(emp, deptCode, scannedAt, request.getScore(), existing, day);
-        }
-        return applyOut(emp, deptCode, scannedAt, request.getScore(), existing, day);
+        return applyPhase(emp, ctx, scannedAt, request.getScore(), existing, day, phase, schedule);
     }
 
-    private FingerprintScanResultDto applyIn(
-            Employee emp, Integer deptCode, Instant scannedAt, Integer score,
-            AttendanceRecord existing, LocalDate day) {
+    private FingerprintScanResultDto applyPhase(
+            Employee emp, ScanContext ctx, Instant scannedAt, Integer score,
+            AttendanceRecord existing, LocalDate day,
+            WorkSchedule.PunchPhase phase, WorkSchedule schedule) {
+        AttendanceRecord record = existing != null ? existing : newBlankAttendance(emp, day);
         LocalTime time = scannedAt.atZone(ZONE).toLocalTime();
-        AttendanceRecord record = existing != null ? existing : newAttendance(emp, day);
-        Instant prevIn = record.getCheckInAt();
-        String prevStatus = record.getStatus();
 
-        applyRuleC(record, scannedAt, time, prevStatus, prevIn);
-        record.setSource("FINGERPRINT");
+        switch (phase) {
+            case MORNING_IN -> applyMorningIn(record, scannedAt, time, schedule);
+            case NOON_OUT -> record.setNoonOutAt(maxInstant(record.getNoonOutAt(), scannedAt));
+            case AFTERNOON_IN -> {
+                if (record.getAfternoonInAt() == null) {
+                    record.setAfternoonInAt(scannedAt);
+                }
+            }
+            case AFTERNOON_OUT -> record.setAfternoonOutAt(maxInstant(record.getAfternoonOutAt(), scannedAt));
+            default -> {
+            }
+        }
+
+        refreshPresenceStatus(record, schedule);
+        stampKiosk(record, ctx);
+        record.setSource(AttendanceValidity.sourceAfterFingerprintScan(record.getSource()));
+        AttendanceValidity.syncLegacyTimes(record);
         saveAttendanceSafe(record, day, emp.getEmpCode());
-        saveLog(emp.getEmpCode(), deptCode, scannedAt, "IN", score, "Vào — " + record.getStatus());
+        saveLog(emp.getEmpCode(), ctx, scannedAt, phase.name(), score, messageFor(phase, record));
 
-        return result(emp, "IN", record.getStatus(), record.getCheckInAt(), record.getCheckOutAt(),
-                score, "Đã ghi nhận vào (" + labelOf(record.getStatus()) + ").");
+        return result(emp, phase.name(), record, score, apiMessageFor(phase, record));
     }
 
-    private void applyRuleC(
-            AttendanceRecord record, Instant scannedAt, LocalTime time, String prevStatus, Instant prevIn) {
-        LocalTime cutoff = AttendanceValidity.LATE_CUTOFF;
+    private void applyMorningIn(AttendanceRecord record, Instant scannedAt, LocalTime time, WorkSchedule schedule) {
+        LocalTime cutoff = schedule.lateCutoff();
+        Instant prevIn = record.getMorningInAt();
+        String prevStatus = record.getStatus();
         if (!time.isAfter(cutoff)) {
             Instant onTimeMax = scannedAt;
             if (prevIn != null && !prevIn.atZone(ZONE).toLocalTime().isAfter(cutoff)) {
                 onTimeMax = scannedAt.isAfter(prevIn) ? scannedAt : prevIn;
             }
-            record.setCheckInAt(onTimeMax);
-            record.setStatus(AttendanceStatus.DI_LAM.name());
+            record.setMorningInAt(onTimeMax);
+            if (!AttendanceValidity.isManualStatus(prevStatus)) {
+                record.setStatus(AttendanceStatus.DI_LAM.name());
+            }
             return;
         }
         boolean alreadyOnTimeDiLam = prevIn != null
@@ -161,39 +165,50 @@ public class FingerprintScanService {
             return;
         }
         if (prevIn == null) {
-            record.setCheckInAt(scannedAt);
-            record.setStatus(AttendanceStatus.DI_TRE.name());
+            record.setMorningInAt(scannedAt);
+            if (!AttendanceValidity.isManualStatus(prevStatus)) {
+                record.setStatus(AttendanceStatus.DI_TRE.name());
+            }
         }
     }
 
-    private FingerprintScanResultDto applyOut(
-            Employee emp, Integer deptCode, Instant scannedAt, Integer score,
-            AttendanceRecord existing, LocalDate day) {
-        // SPEC §4.4 A — OUT without day-record: create row with check_out only, status null
-        AttendanceRecord record = existing != null ? existing : newOutOnlyAttendance(emp, day);
-        boolean outOnly = record.getStatus() == null && record.getCheckInAt() == null;
-
-        Instant prevOut = record.getCheckOutAt();
-        if (prevOut == null || scannedAt.isAfter(prevOut)) {
-            record.setCheckOutAt(scannedAt);
+    private void refreshPresenceStatus(AttendanceRecord record, WorkSchedule schedule) {
+        if (AttendanceValidity.NGHI_TRUC_HALF.equals(record.getStatus())) {
+            return;
         }
-        if (!StringUtils.hasText(record.getSource())) {
-            record.setSource("FINGERPRINT");
+        if (AttendanceValidity.isManualStatus(record.getStatus())
+                && !AttendanceValidity.VE_SOM.equals(record.getStatus())
+                && !AttendanceValidity.isPresenceStatus(record.getStatus())) {
+            return;
         }
-        saveAttendanceSafe(record, day, emp.getEmpCode());
-
-        String logMsg = outOnly ? "Ra về (chưa có giờ vào)" : "Ra về";
-        String apiMsg = outOnly
-                ? "Đã ghi nhận ra (chưa có giờ vào trong ngày)."
-                : "Đã ghi nhận ra.";
-        saveLog(emp.getEmpCode(), deptCode, scannedAt, "OUT", score, logMsg);
-        return result(emp, "OUT", record.getStatus(), record.getCheckInAt(), record.getCheckOutAt(),
-                score, apiMsg);
+        if (AttendanceValidity.punchCount(record) < 4) {
+            if (record.getMorningInAt() != null && !AttendanceValidity.isManualStatus(record.getStatus())) {
+                LocalTime inTime = record.getMorningInAt().atZone(ZONE).toLocalTime();
+                record.setStatus(AttendanceValidity.statusFromCheckInTime(inTime, schedule.lateCutoff()));
+                record.setLateFlag(schedule.isLate(inTime));
+            }
+            return;
+        }
+        LocalTime morning = record.getMorningInAt().atZone(ZONE).toLocalTime();
+        LocalTime afternoonOut = record.getAfternoonOutAt().atZone(ZONE).toLocalTime();
+        boolean late = schedule.isLate(morning);
+        record.setLateFlag(late);
+        if (schedule.isEarlyLeave(afternoonOut)) {
+            AttendanceValidity.applyClockStatus(record, AttendanceValidity.VE_SOM);
+            return;
+        }
+        AttendanceValidity.applyClockStatus(record, late
+                ? AttendanceStatus.DI_TRE.name()
+                : AttendanceStatus.DI_LAM.name());
     }
 
-    /**
-     * SPEC §8.2 — on unique (date, emp) race, reload and merge fields then save again.
-     */
+    private void stampKiosk(AttendanceRecord record, ScanContext ctx) {
+        record.setLastKioskHostname(trimToNull(ctx.hostname()));
+        record.setLastKioskIp(trimToNull(ctx.ip()));
+        record.setLastKioskDeptCode(ctx.deptCode());
+        record.setLastKioskLabel(trimToNull(ctx.label()));
+    }
+
     private void saveAttendanceSafe(AttendanceRecord record, LocalDate day, Integer empCode) {
         try {
             attendanceRecordRepository.saveAndFlush(record);
@@ -201,40 +216,47 @@ public class FingerprintScanService {
             AttendanceRecord existing = attendanceRecordRepository
                     .findByDateAndEmpCode(day, empCode)
                     .orElseThrow(() -> ex);
-            if (record.getCheckInAt() != null) {
-                Instant prevIn = existing.getCheckInAt();
-                if (prevIn == null || record.getCheckInAt().isBefore(prevIn)
-                        || (existing.getStatus() == null && record.getStatus() != null)) {
-                    existing.setCheckInAt(record.getCheckInAt());
-                }
-                if (StringUtils.hasText(record.getStatus())) {
-                    // Prefer DI_LAM over DI_TRE if both raced
-                    if (AttendanceStatus.DI_LAM.name().equals(record.getStatus())
-                            || existing.getStatus() == null) {
-                        existing.setStatus(record.getStatus());
-                    }
-                }
-            }
-            if (record.getCheckOutAt() != null) {
-                Instant prevOut = existing.getCheckOutAt();
-                if (prevOut == null || record.getCheckOutAt().isAfter(prevOut)) {
-                    existing.setCheckOutAt(record.getCheckOutAt());
-                }
+            mergeFourPunches(existing, record);
+            if (StringUtils.hasText(record.getStatus()) && existing.getStatus() == null) {
+                existing.setStatus(record.getStatus());
             }
             if (StringUtils.hasText(record.getSource())) {
                 existing.setSource(record.getSource());
             }
+            existing.setLateFlag(existing.isLateFlag() || record.isLateFlag());
+            stampKiosk(existing, new ScanContext(
+                    record.getLastKioskHostname(), record.getLastKioskIp(),
+                    record.getLastKioskLabel(), record.getLastKioskDeptCode()));
+            AttendanceValidity.syncLegacyTimes(existing);
             attendanceRecordRepository.save(existing);
             record.setId(existing.getId());
-            record.setCheckInAt(existing.getCheckInAt());
-            record.setCheckOutAt(existing.getCheckOutAt());
+            record.setMorningInAt(existing.getMorningInAt());
+            record.setNoonOutAt(existing.getNoonOutAt());
+            record.setAfternoonInAt(existing.getAfternoonInAt());
+            record.setAfternoonOutAt(existing.getAfternoonOutAt());
             record.setStatus(existing.getStatus());
             record.setSource(existing.getSource());
+            record.setLateFlag(existing.isLateFlag());
+            AttendanceValidity.syncLegacyTimes(record);
         }
     }
 
-    /** Day-record for OUT-first scan — status stays null (CHƯA CHẤM) until IN or HEAD assigns. */
-    private AttendanceRecord newOutOnlyAttendance(Employee emp, LocalDate day) {
+    private static void mergeFourPunches(AttendanceRecord existing, AttendanceRecord incoming) {
+        if (incoming.getMorningInAt() != null && existing.getMorningInAt() == null) {
+            existing.setMorningInAt(incoming.getMorningInAt());
+        }
+        if (incoming.getNoonOutAt() != null) {
+            existing.setNoonOutAt(maxInstant(existing.getNoonOutAt(), incoming.getNoonOutAt()));
+        }
+        if (incoming.getAfternoonInAt() != null && existing.getAfternoonInAt() == null) {
+            existing.setAfternoonInAt(incoming.getAfternoonInAt());
+        }
+        if (incoming.getAfternoonOutAt() != null) {
+            existing.setAfternoonOutAt(maxInstant(existing.getAfternoonOutAt(), incoming.getAfternoonOutAt()));
+        }
+    }
+
+    private AttendanceRecord newBlankAttendance(Employee emp, LocalDate day) {
         AttendanceRecord r = new AttendanceRecord();
         r.setEmployee(emp);
         r.setAttendanceDate(day);
@@ -242,44 +264,66 @@ public class FingerprintScanService {
         return r;
     }
 
-    private AttendanceRecord newAttendance(Employee emp, LocalDate day) {
-        AttendanceRecord r = new AttendanceRecord();
-        r.setEmployee(emp);
-        r.setAttendanceDate(day);
-        r.setStatus(AttendanceStatus.DI_LAM.name());
-        return r;
-    }
-
     private FingerprintScanResultDto reject(
-            Employee emp, Integer deptCode, Instant scannedAt, Integer score, String message) {
-        saveLog(emp.getEmpCode(), deptCode, scannedAt, "REJECTED", score, message);
-        return result(emp, "REJECTED", null, null, null, score, message);
+            Employee emp, ScanContext ctx, Instant scannedAt, Integer score, String message) {
+        saveLog(emp.getEmpCode(), ctx, scannedAt, "REJECTED", score, message);
+        return result(emp, "REJECTED", null, score, message);
     }
 
-    private void saveLog(Integer empCode, Integer deptCode, Instant scannedAt,
+    private void saveLog(Integer empCode, ScanContext ctx, Instant scannedAt,
                          String direction, Integer score, String message) {
         FingerprintScanLog log = new FingerprintScanLog();
         log.setEmpCode(empCode);
-        log.setDeptCode(deptCode);
+        log.setDeptCode(ctx.deptCode());
         log.setScannedAt(scannedAt);
         log.setDirection(direction);
         log.setScore(score);
         log.setMessage(message);
+        log.setClientHostname(trimToNull(ctx.hostname()));
+        log.setClientIp(trimToNull(ctx.ip()));
+        log.setKioskLabel(trimToNull(ctx.label()));
         log.setCreatedAt(Instant.now());
         scanLogRepository.save(log);
     }
 
-    private static String classifyDirection(LocalTime time) {
-        if (!time.isBefore(IN_START) && !time.isAfter(IN_END)) {
-            return "IN";
+    private static Instant maxInstant(Instant current, Instant candidate) {
+        if (candidate == null) {
+            return current;
         }
-        if (!time.isBefore(OUT_START) && !time.isAfter(OUT_END)) {
-            return "OUT";
+        if (current == null || candidate.isAfter(current)) {
+            return candidate;
         }
-        return "REJECTED";
+        return current;
+    }
+
+    private static String messageFor(WorkSchedule.PunchPhase phase, AttendanceRecord record) {
+        return switch (phase) {
+            case MORNING_IN -> "Vào sáng — " + labelOf(record.getStatus());
+            case NOON_OUT -> "Ra trưa";
+            case AFTERNOON_IN -> "Vào chiều";
+            case AFTERNOON_OUT -> AttendanceValidity.VE_SOM.equals(record.getStatus())
+                    ? "Ra chiều — Về sớm"
+                    : "Ra chiều";
+            default -> phase.name();
+        };
+    }
+
+    private static String apiMessageFor(WorkSchedule.PunchPhase phase, AttendanceRecord record) {
+        return switch (phase) {
+            case MORNING_IN -> "Đã ghi nhận vào sáng (" + labelOf(record.getStatus()) + ").";
+            case NOON_OUT -> "Đã ghi nhận ra trưa.";
+            case AFTERNOON_IN -> "Đã ghi nhận vào chiều.";
+            case AFTERNOON_OUT -> AttendanceValidity.VE_SOM.equals(record.getStatus())
+                    ? "Đã ghi nhận ra chiều (về sớm). Trưởng đơn vị cần nhập lý do."
+                    : "Đã ghi nhận ra chiều.";
+            default -> "Đã ghi nhận.";
+        };
     }
 
     private static String labelOf(String status) {
+        if (status == null) {
+            return "Chưa chấm";
+        }
         try {
             return AttendanceStatus.valueOf(status).getLabel();
         } catch (Exception e) {
@@ -287,19 +331,28 @@ public class FingerprintScanService {
         }
     }
 
+    private static String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
     private static FingerprintScanResultDto result(
-            Employee emp, String direction, String status,
-            Instant checkIn, Instant checkOut, Integer score, String message) {
+            Employee emp, String direction, AttendanceRecord record, Integer score, String message) {
         return FingerprintScanResultDto.builder()
                 .empCode(emp.getEmpCode())
                 .empCodeFormatted(CodeFormatter.formatEmpCode(emp.getEmpCode()))
                 .fullname(emp.getFullname())
                 .direction(direction)
-                .status(status)
-                .checkInAt(checkIn)
-                .checkOutAt(checkOut)
+                .status(record != null ? record.getStatus() : null)
+                .checkInAt(record != null ? record.getCheckInAt() : null)
+                .checkOutAt(record != null ? record.getCheckOutAt() : null)
                 .score(score)
                 .message(message)
                 .build();
+    }
+
+    private record ScanContext(String hostname, String ip, String label, Integer deptCode) {
     }
 }

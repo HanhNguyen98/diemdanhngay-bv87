@@ -30,7 +30,7 @@ function formatDateTime(iso) {
 }
 
 /**
- * Admin Settings — manage kiosk tokens + enroll PIN (SPEC_FINGERPRINT §10.1 / P2.1e).
+ * Admin Settings — manage kiosk tokens + enroll PIN + rename label (SPEC_FINGERPRINT §10.1).
  */
 export default function FingerprintKioskTokensPage() {
   const [rows, setRows] = useState([]);
@@ -59,6 +59,11 @@ export default function FingerprintKioskTokensPage() {
   const [pinValue, setPinValue] = useState('');
   const [pinError, setPinError] = useState('');
   const [savingPin, setSavingPin] = useState(false);
+
+  const [labelRow, setLabelRow] = useState(null);
+  const [labelValue, setLabelValue] = useState('');
+  const [labelError, setLabelError] = useState('');
+  const [savingLabel, setSavingLabel] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -121,6 +126,12 @@ export default function FingerprintKioskTokensPage() {
     setPinError('');
   };
 
+  const openRenameLabel = (row) => {
+    setLabelRow(row);
+    setLabelValue(row.label || '');
+    setLabelError('');
+  };
+
   const submitIssue = async (e) => {
     e.preventDefault();
     if (!issueDept) {
@@ -143,6 +154,28 @@ export default function FingerprintKioskTokensPage() {
       setIssueError(err?.message || t.loadError);
     } finally {
       setIssuing(false);
+    }
+  };
+
+  const submitLabel = async (e) => {
+    e.preventDefault();
+    if (!labelRow) return;
+    const next = labelValue.trim();
+    if (!next || next.length > 100) {
+      setLabelError(t.renameLabelRequired);
+      return;
+    }
+    setSavingLabel(true);
+    setLabelError('');
+    try {
+      await adminApi.updateKioskTokenLabel(labelRow.id, { label: next });
+      setLabelRow(null);
+      setFlash(t.renameLabelSuccess);
+      await load();
+    } catch (err) {
+      setLabelError(err?.message || t.loadError);
+    } finally {
+      setSavingLabel(false);
     }
   };
 
@@ -370,6 +403,14 @@ export default function FingerprintKioskTokensPage() {
                             type="button"
                             className="text-primary font-semibold text-xs mr-3 disabled:opacity-50"
                             disabled={busyId === row.id}
+                            onClick={() => openRenameLabel(row)}
+                          >
+                            {t.renameLabel}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-primary font-semibold text-xs mr-3 disabled:opacity-50"
+                            disabled={busyId === row.id}
                             onClick={() => openSetPin(row)}
                           >
                             {t.setPin}
@@ -439,6 +480,34 @@ export default function FingerprintKioskTokensPage() {
               onChange={(e) => setIssueLabel(e.target.value)}
               placeholder={t.labelPlaceholder}
               maxLength={100}
+            />
+          </div>
+        </FormModal>
+      )}
+
+      {labelRow && (
+        <FormModal
+          title={t.renameLabelTitle}
+          subtitle={t.renameLabelSubtitle}
+          onClose={() => !savingLabel && setLabelRow(null)}
+          onSubmit={submitLabel}
+          loading={savingLabel}
+          submitLabel={t.renameLabelSubmit}
+        >
+          <InlineErrorBanner message={labelError} />
+          <p className="text-sm text-content-muted mb-2">
+            {labelRow.deptCodeFormatted}
+            {labelRow.deptName ? ` — ${labelRow.deptName}` : ''}
+          </p>
+          <div>
+            <label className={labelClass}>{t.renameLabelField}</label>
+            <input
+              className={inputClass}
+              value={labelValue}
+              onChange={(e) => setLabelValue(e.target.value.slice(0, 100))}
+              placeholder={t.labelPlaceholder}
+              maxLength={100}
+              required
             />
           </div>
         </FormModal>

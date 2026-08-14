@@ -1,0 +1,11 @@
+---
+description: Require writing/updating binding SPEC .md before any product code change
+alwaysApply: true
+---
+
+# Spec-first workflow
+
+1. Before implementing any product, UI, or API change: update the binding `docs/SPEC_*.md` (fingerprint → `SPEC_FINGERPRINT.md`).
+2. Implement only what that SPEC states; do not invent outside it.
+3. If behaviour must change, edit the SPEC first, then the code.
+4. Keep SPEC checklist / phase rows in sync with the ticket.

@@ -8,6 +8,7 @@ const AttendanceTable = memo(function AttendanceTable({
   staffList,
   disabled,
   onQuickAction,
+  onSaveVeSomNote,
   onOpenScanLogs,
   onOpenManualSchedule,
   page,
@@ -54,6 +55,7 @@ const AttendanceTable = memo(function AttendanceTable({
                   staff={staff}
                   disabled={disabled}
                   onQuickAction={onQuickAction}
+                  onSaveVeSomNote={onSaveVeSomNote}
                   onOpenScanLogs={onOpenScanLogs}
                   onOpenManualSchedule={onOpenManualSchedule}
                 />

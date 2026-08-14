@@ -11,11 +11,9 @@ import {
 } from 'lucide-react';
 import { ADMIN_UI } from '../../../../constants/admin';
 import { ATTENDANCE_STATUS } from '../../../../constants/attendance';
+import { useAppBranding } from '../../../../context/AppBrandingContext';
 import { formatInstantHm } from '../../../../utils/formatters';
 import biometricsImg from '../../../../assets/branding/biometrics.png';
-
-const LATE_CUTOFF_HM = '07:00';
-const LATE_CUTOFF_MINS = 7 * 60;
 
 function hmToMinutes(hm) {
   if (!hm || !/^\d{2}:\d{2}/.test(hm)) return null;
@@ -23,10 +21,20 @@ function hmToMinutes(hm) {
   return h * 60 + m;
 }
 
-function statusFromCheckInHm(hm) {
+function addMinutesHm(hm, extra) {
   const mins = hmToMinutes(hm);
+  if (mins == null) return '07:05';
+  const total = Math.max(0, Math.min(23 * 60 + 59, mins + (Number(extra) || 0)));
+  const h = String(Math.floor(total / 60)).padStart(2, '0');
+  const m = String(total % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function statusFromCheckInHm(hm, cutoffHm) {
+  const mins = hmToMinutes(hm);
+  const cut = hmToMinutes(cutoffHm) ?? 7 * 60 + 5;
   if (mins == null) return null;
-  return mins <= LATE_CUTOFF_MINS ? ATTENDANCE_STATUS.DI_LAM : ATTENDANCE_STATUS.DI_TRE;
+  return mins <= cut ? ATTENDANCE_STATUS.DI_LAM : ATTENDANCE_STATUS.DI_TRE;
 }
 
 function statusLabelVi(code) {
@@ -36,11 +44,12 @@ function statusLabelVi(code) {
 }
 
 /** Progress 0–100 for rule-C bar (how late vs cutoff; capped). */
-function lateProgressPercent(hm) {
+function lateProgressPercent(hm, cutoffHm) {
   const mins = hmToMinutes(hm);
+  const cut = hmToMinutes(cutoffHm) ?? 7 * 60 + 5;
   if (mins == null) return 0;
-  if (mins <= LATE_CUTOFF_MINS) return 28;
-  const late = mins - LATE_CUTOFF_MINS;
+  if (mins <= cut) return 28;
+  const late = mins - cut;
   return Math.min(95, 40 + Math.round((late / 120) * 55));
 }
 
@@ -54,17 +63,33 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
   onSaved,
 }) {
   const { dashboard: d } = ADMIN_UI;
-  const needIn = !staff?.checkInAt;
-  const needOut = !staff?.checkOutAt;
-  const existingInHm = formatInstantHm(staff?.checkInAt);
-  const existingOutHm = formatInstantHm(staff?.checkOutAt);
+  const { branding } = useAppBranding();
+  const lateCutoffHm = addMinutesHm(
+    branding?.morningInOfficial || '07:00',
+    branding?.lateGraceMinutes ?? 5,
+  );
 
-  const [checkInTime, setCheckInTime] = useState('');
-  const [checkOutTime, setCheckOutTime] = useState('');
+  const morningLocked = Boolean(staff?.morningInAt || staff?.checkInAt);
+  const noonLocked = Boolean(staff?.noonOutAt);
+  const afternoonInLocked = Boolean(staff?.afternoonInAt);
+  const afternoonOutLocked = Boolean(staff?.afternoonOutAt || (!staff?.noonOutAt && staff?.checkOutAt));
+
+  const existingMorningHm = formatInstantHm(staff?.morningInAt || staff?.checkInAt);
+  const existingNoonHm = formatInstantHm(staff?.noonOutAt);
+  const existingAfternoonInHm = formatInstantHm(staff?.afternoonInAt);
+  const existingAfternoonOutHm = formatInstantHm(
+    staff?.afternoonOutAt || (!staff?.noonOutAt ? staff?.checkOutAt : null),
+  );
+
+  const [morningInTime, setMorningInTime] = useState('');
+  const [noonOutTime, setNoonOutTime] = useState('');
+  const [afternoonInTime, setAfternoonInTime] = useState('');
+  const [afternoonOutTime, setAfternoonOutTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const effectiveInHm = needIn ? checkInTime || null : existingInHm;
+  const effectiveInHm = morningLocked ? existingMorningHm : morningInTime || null;
+  const needAny = !morningLocked || !noonLocked || !afternoonInLocked || !afternoonOutLocked;
 
   const preview = useMemo(() => {
     const existing = staff?.status;
@@ -77,17 +102,17 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
         detail: d.fillTimesPreviewKeep(statusLabelVi(existing)),
         tone: existing === ATTENDANCE_STATUS.DI_TRE ? 'late' : 'ok',
         bar: existing === ATTENDANCE_STATUS.DI_TRE
-          ? lateProgressPercent(effectiveInHm || LATE_CUTOFF_HM)
+          ? lateProgressPercent(effectiveInHm || lateCutoffHm, lateCutoffHm)
           : 28,
       };
     }
     if (effectiveInHm) {
-      const code = statusFromCheckInHm(effectiveInHm);
+      const code = statusFromCheckInHm(effectiveInHm, lateCutoffHm);
       return {
         statusText: statusLabelVi(code),
-        detail: d.fillTimesPreviewRuleC(effectiveInHm.slice(0, 5)),
+        detail: d.fillTimesPreviewRuleC(effectiveInHm.slice(0, 5), lateCutoffHm),
         tone: code === ATTENDANCE_STATUS.DI_TRE ? 'late' : 'ok',
-        bar: lateProgressPercent(effectiveInHm),
+        bar: lateProgressPercent(effectiveInHm, lateCutoffHm),
       };
     }
     return {
@@ -96,9 +121,9 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
       tone: 'muted',
       bar: 8,
     };
-  }, [staff?.status, effectiveInHm, d]);
+  }, [staff?.status, effectiveInHm, d, lateCutoffHm]);
 
-  if (!staff || (!needIn && !needOut)) {
+  if (!staff || !needAny) {
     return null;
   }
 
@@ -109,13 +134,11 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
       empCode: staff.empCode,
       date,
     };
-    if (needIn && checkInTime) {
-      body.checkInTime = checkInTime;
-    }
-    if (needOut && checkOutTime) {
-      body.checkOutTime = checkOutTime;
-    }
-    if (!body.checkInTime && !body.checkOutTime) {
+    if (!morningLocked && morningInTime) body.morningInTime = morningInTime;
+    if (!noonLocked && noonOutTime) body.noonOutTime = noonOutTime;
+    if (!afternoonInLocked && afternoonInTime) body.afternoonInTime = afternoonInTime;
+    if (!afternoonOutLocked && afternoonOutTime) body.afternoonOutTime = afternoonOutTime;
+    if (!body.morningInTime && !body.noonOutTime && !body.afternoonInTime && !body.afternoonOutTime) {
       setError(d.fillTimesNeedOne);
       return;
     }
@@ -175,21 +198,39 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TimeField
-                label={d.fillTimesLabelIn}
+                label={d.fillTimesLabelMorningIn}
                 LabelIcon={ArrowLeftToLine}
-                locked={!needIn}
-                lockedValue={existingInHm}
-                value={checkInTime}
-                onChange={setCheckInTime}
+                locked={morningLocked}
+                lockedValue={existingMorningHm}
+                value={morningInTime}
+                onChange={setMorningInTime}
                 alreadyLabel={d.fillTimesAlreadySet}
               />
               <TimeField
-                label={d.fillTimesLabelOut}
+                label={d.fillTimesLabelNoonOut}
                 LabelIcon={ArrowRightFromLine}
-                locked={!needOut}
-                lockedValue={existingOutHm}
-                value={checkOutTime}
-                onChange={setCheckOutTime}
+                locked={noonLocked}
+                lockedValue={existingNoonHm}
+                value={noonOutTime}
+                onChange={setNoonOutTime}
+                alreadyLabel={d.fillTimesAlreadySet}
+              />
+              <TimeField
+                label={d.fillTimesLabelAfternoonIn}
+                LabelIcon={ArrowLeftToLine}
+                locked={afternoonInLocked}
+                lockedValue={existingAfternoonInHm}
+                value={afternoonInTime}
+                onChange={setAfternoonInTime}
+                alreadyLabel={d.fillTimesAlreadySet}
+              />
+              <TimeField
+                label={d.fillTimesLabelAfternoonOut}
+                LabelIcon={ArrowRightFromLine}
+                locked={afternoonOutLocked}
+                lockedValue={existingAfternoonOutHm}
+                value={afternoonOutTime}
+                onChange={setAfternoonOutTime}
                 alreadyLabel={d.fillTimesAlreadySet}
               />
             </div>

@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Server-side scan debounce per department employee (SPEC §8.2 P4b).
+ * Server-side scan debounce per employee (SPEC §4.12 P6 / §8.2 P4b).
  */
 @Component
 public class KioskScanDebouncer {
@@ -19,8 +19,8 @@ public class KioskScanDebouncer {
     /**
      * @return true if this attempt should be rejected as too soon
      */
-    public boolean isTooSoon(Integer deptCode, Integer empCode) {
-        String key = key(deptCode, empCode);
+    public boolean isTooSoon(Integer empCode) {
+        String key = String.valueOf(empCode);
         long now = System.currentTimeMillis();
         pruneIfNeeded(now);
         Long prev = lastAttemptMs.get(key);
@@ -29,10 +29,6 @@ public class KioskScanDebouncer {
         }
         lastAttemptMs.put(key, now);
         return false;
-    }
-
-    private static String key(Integer deptCode, Integer empCode) {
-        return deptCode + ":" + empCode;
     }
 
     private void pruneIfNeeded(long now) {

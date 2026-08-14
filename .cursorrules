@@ -58,7 +58,7 @@ Use enums instead of magic strings for domain states. Every enum must:
 4. Be used in `switch` / `if` checks — never compare raw string literals in business logic
 
 Current enums:
-- `AttendanceStatus` — DI_LAM, NGHI_PHEP, DI_TRE, DI_HOC, DI_CONG_TAC
+- `AttendanceStatus` — DI_LAM, DI_TRE, NGHI_PHEP, DI_HOC, DI_CONG_TAC, THAI_SAN, VE_SOM, NGHI_TRUC, NGHI_TRUC_FULL, NGHI_TRUC_HALF
 - `AccountRole` — ADMIN, HEAD
 
 ---
@@ -84,9 +84,9 @@ Current enums:
 01 Ban Giám đốc · 02 Kế hoạch-Tổng hợp · 03 Chính trị · 04 Hậu cần-Kỹ thuật · 05 Tham mưu-Hành chính · 06 Điều dưỡng · 07 Ban Tài chính
 
 ### Daily attendance window
-- **06:00–16:00** (Asia/Ho_Chi_Minh): HEAD can edit own department
-- **After 16:00:** locked for HEAD → read-only UI; API returns HTTP 403 (Vietnamese message)
-- **Admin unlock:** `POST /api/attendance/unlock` with mandatory `reason` → `attendance_unlocks`
+- Soft lock = Admin settings `lockTime` (`SPEC_FINGERPRINT` §4.7) — after that time, HEAD cannot write **today** (unless Admin unlock)
+- **Do not** hardcode 06:00–16:00 as the HEAD write window (removed §4.9)
+- Admin unlock (legacy): `POST /api/attendance/unlock` with mandatory `reason` → `attendance_unlocks`
 
 ### Roles
 - **ADMIN:** all departments, unlock, full dashboard

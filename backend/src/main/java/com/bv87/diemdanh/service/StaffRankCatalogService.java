@@ -117,6 +117,23 @@ public class StaffRankCatalogService {
         }
     }
 
+    /**
+     * Validates rank against active catalog, or allows keeping the stored legacy name.
+     *
+     * @param rankName requested name (nullable)
+     * @param currentStored name already on the employee row (nullable)
+     */
+    @Transactional(readOnly = true)
+    public void validateActiveRankNameOrUnchanged(String rankName, String currentStored) {
+        if (rankName == null || rankName.isBlank()) {
+            return;
+        }
+        if (currentStored != null && rankName.equals(currentStored.trim())) {
+            return;
+        }
+        validateActiveRankName(rankName);
+    }
+
     private StaffRank requireRank(Integer rankCode) {
         return staffRankRepository.findById(rankCode)
                 .orElseThrow(() -> new BusinessException("Cấp bậc không tồn tại"));

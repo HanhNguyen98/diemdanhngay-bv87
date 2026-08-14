@@ -24,7 +24,7 @@ function slugifyCode(label) {
     .slice(0, 50);
 }
 
-export default function StatusCatalogFormModal({ initial, onSave, onClose }) {
+export default function StatusCatalogFormModal({ initial, items = [], onSave, onClose }) {
   const isEdit = Boolean(initial?.id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,7 +36,12 @@ export default function StatusCatalogFormModal({ initial, onSave, onClose }) {
     iconKey: initial?.iconKey || 'check',
     sortOrder: initial?.sortOrder ?? 0,
     active: initial?.active !== false,
+    manualAllowed: initial?.manualAllowed === true,
+    groupParent: initial?.groupParent === true,
+    parentCode: initial?.parentCode || '',
   });
+
+  const parentOptions = items.filter((item) => item.groupParent && item.code !== initial?.code);
 
   const handleLabelChange = (label) => {
     setForm((prev) => {
@@ -78,6 +83,9 @@ export default function StatusCatalogFormModal({ initial, onSave, onClose }) {
         iconKey: form.iconKey,
         sortOrder: Number(form.sortOrder) || 0,
         active: form.active,
+        manualAllowed: form.manualAllowed,
+        groupParent: form.groupParent,
+        parentCode: form.groupParent ? '' : form.parentCode || '',
       };
       await onSave(payload, isEdit ? initial.id : null);
       onClose();
@@ -176,6 +184,57 @@ export default function StatusCatalogFormModal({ initial, onSave, onClose }) {
           className={inputClass}
         />
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className={`${labelClass} mb-2`}>{ADMIN_UI.statusCatalog.form.manualAllowed}</label>
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.manualAllowed}
+              onChange={(e) => setForm((f) => ({ ...f, manualAllowed: e.target.checked }))}
+              className="rounded border-gray-300 text-primary focus:ring-primary/30"
+            />
+            Cho phép HEAD/Admin chấm thủ công
+          </label>
+        </div>
+        <div>
+          <label className={`${labelClass} mb-2`}>{ADMIN_UI.statusCatalog.form.groupParent}</label>
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.groupParent}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  groupParent: e.target.checked,
+                  parentCode: e.target.checked ? '' : f.parentCode,
+                }))
+              }
+              className="rounded border-gray-300 text-primary focus:ring-primary/30"
+            />
+            Chỉ làm nút nhóm / KPI cha
+          </label>
+        </div>
+      </div>
+
+      {!form.groupParent && (
+        <div>
+          <label className={labelClass}>{ADMIN_UI.statusCatalog.form.parentCode}</label>
+          <select
+            value={form.parentCode}
+            onChange={(e) => setForm((f) => ({ ...f, parentCode: e.target.value }))}
+            className={inputClass}
+          >
+            <option value="">{ADMIN_UI.statusCatalog.form.parentCodePlaceholder}</option>
+            {parentOptions.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.code} - {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className={`${labelClass} mb-2`}>{ADMIN_UI.statusCatalog.form.active}</label>

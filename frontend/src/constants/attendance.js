@@ -11,6 +11,10 @@ export const ATTENDANCE_STATUS = {
   DI_HOC: 'DI_HOC',
   DI_CONG_TAC: 'DI_CONG_TAC',
   THAI_SAN: 'THAI_SAN',
+  VE_SOM: 'VE_SOM',
+  NGHI_TRUC: 'NGHI_TRUC',
+  NGHI_TRUC_FULL: 'NGHI_TRUC_FULL',
+  NGHI_TRUC_HALF: 'NGHI_TRUC_HALF',
 };
 
 /** Status HEAD được gán thủ công (không gồm DI_LAM / DI_TRE từ vân tay) */
@@ -33,20 +37,67 @@ export function isAttendanceBlank(staff) {
 }
 
 /**
- * Hợp lệ “đã chấm” — SPEC §4.5:
- * - Thủ công vắng: chỉ cần status
- * - DI_LAM / DI_TRE: đủ giờ vào + giờ ra
+ * Hợp lệ “đã chấm” — SPEC §4.5 / §4.13.
  */
+function punchCount(staff) {
+  if (staff == null) return 0;
+  return [staff.morningInAt, staff.noonOutAt, staff.afternoonInAt, staff.afternoonOutAt]
+    .filter(Boolean).length;
+}
+
+/** Pre-P7: morning IN + afternoon OUT only. */
+export function isLegacyTwoPunchComplete(staff) {
+  if (staff == null) return false;
+  return Boolean(
+    staff.morningInAt &&
+      staff.afternoonOutAt &&
+      !staff.noonOutAt &&
+      !staff.afternoonInAt,
+  );
+}
+
+export function hasEmptyFourPunchSlot(staff) {
+  if (staff == null) return true;
+  const morning = staff.morningInAt || staff.checkInAt;
+  const afternoonOut = staff.afternoonOutAt || (!staff.noonOutAt ? staff.checkOutAt : null);
+  return !morning || !staff.noonOutAt || !staff.afternoonInAt || !afternoonOut;
+}
+
+export function isPostScanOverrideAction(action) {
+  if (!action) return false;
+  if (
+    action.value === ATTENDANCE_STATUS.NGHI_TRUC ||
+    action.value === ATTENDANCE_STATUS.NGHI_TRUC_FULL ||
+    action.value === ATTENDANCE_STATUS.NGHI_TRUC_HALF
+  ) {
+    return true;
+  }
+  return (action.statusOptions || []).some(
+    (opt) =>
+      opt.value === ATTENDANCE_STATUS.NGHI_TRUC_FULL ||
+      opt.value === ATTENDANCE_STATUS.NGHI_TRUC_HALF,
+  );
+}
+
 export function isAttendanceComplete(staff) {
   if (staff == null || staff.status == null) return false;
-  if (MANUAL_ATTENDANCE_STATUSES.includes(staff.status)) return true;
+  if (staff.status === ATTENDANCE_STATUS.NGHI_TRUC_HALF) {
+    return Boolean(staff.morningInAt && staff.noonOutAt && !staff.afternoonInAt && !staff.afternoonOutAt);
+  }
+  if (staff.status === ATTENDANCE_STATUS.VE_SOM) {
+    return punchCount(staff) === 4 && Boolean(staff.note && String(staff.note).trim());
+  }
   if (
     staff.status === ATTENDANCE_STATUS.DI_LAM ||
     staff.status === ATTENDANCE_STATUS.DI_TRE
   ) {
-    return Boolean(staff.checkInAt && staff.checkOutAt);
+    const n = punchCount(staff);
+    if (n === 4) return true;
+    if (isLegacyTwoPunchComplete(staff)) return true;
+    if (n === 0) return Boolean(staff.checkInAt && staff.checkOutAt);
+    return false;
   }
-  return false;
+  return true;
 }
 
 /** Chưa hợp lệ (tiến độ / filter Chưa chấm / KPI). */
@@ -55,8 +106,7 @@ export function isAttendanceUnchecked(staff) {
 }
 
 /**
- * Có mặt từ vân tay nhưng thiếu giờ ra — SPEC §4.5.1.
- * Badge vẫn hiện DI_LAM/DI_TRE; KPI chưa tính đã chấm.
+ * Presence but not yet complete — SPEC §4.5.1.
  */
 export function isMissingCheckout(staff) {
   if (staff == null) return false;
@@ -66,7 +116,8 @@ export function isMissingCheckout(staff) {
   ) {
     return false;
   }
-  return Boolean(staff.checkInAt) && !staff.checkOutAt;
+  if (isAttendanceComplete(staff)) return false;
+  return punchCount(staff) >= 1 || Boolean(staff.checkInAt);
 }
 
 export const STATUS_OPTIONS = [
@@ -88,17 +139,21 @@ export const QUICK_ACTIONS = [
 
 /** Cột bảng — giờ vào/ra (lớp A) + thao tác gồm Chi tiết quét (lớp B) */
 export const ATTENDANCE_TABLE_COLUMNS = [
-  { key: 'employee', label: 'NHÂN VIÊN', align: 'left', width: '22%' },
-  { key: 'rank', label: 'CẤP BẬC', align: 'left', width: '11%' },
-  { key: 'position', label: 'CHỨC VỤ', align: 'left', width: '12%' },
-  { key: 'checkIn', label: 'GIỜ VÀO', align: 'left', width: '10%' },
-  { key: 'checkOut', label: 'GIỜ RA', align: 'left', width: '10%' },
-  { key: 'status', label: 'TRẠNG THÁI', align: 'left', width: '16%' },
-  { key: 'actions', label: 'THAO TÁC', align: 'right', width: '19%' },
+  { key: 'employee', label: 'NHÂN VIÊN', align: 'left', width: '18%' },
+  { key: 'rank', label: 'CẤP BẬC', align: 'left', width: '8%' },
+  { key: 'position', label: 'CHỨC VỤ', align: 'left', width: '10%' },
+  { key: 'times', label: 'GIỜ', align: 'left', width: '16%' },
+  { key: 'machine', label: 'MÁY', align: 'left', width: '12%' },
+  { key: 'status', label: 'TRẠNG THÁI', align: 'left', width: '14%' },
+  { key: 'actions', label: 'THAO TÁC', align: 'right', width: '22%' },
 ];
 
 export const SCAN_DIRECTION_LABEL = {
   IN: 'Vào',
+  MORNING_IN: 'Vào sáng',
+  NOON_OUT: 'Ra trưa',
+  AFTERNOON_IN: 'Vào chiều',
+  AFTERNOON_OUT: 'Ra chiều',
   OUT: 'Ra',
   REJECTED: 'Từ chối',
 };
@@ -108,6 +163,7 @@ export const SCAN_LOG_UI = {
   colTime: 'Thời điểm',
   colDirection: 'Hướng',
   colScore: 'Độ khớp vân tay',
+  colMachine: 'Máy',
   colMessage: 'Ghi chú',
   empty: 'Chưa có lần quét trong ngày này.',
   loading: 'Đang tải...',
@@ -186,7 +242,7 @@ export const UI = {
   appSubtitleAdmin: 'Admin Center',
   appSubtitleHead: 'Chương trình chấm công',
   footerCopyright:
-    '© 2026 BỆNH VIỆN QUÂN Y 87 — Bệnh viện Quân y 87 | Chương trình chấm công phát triển bởi Tham mưu - Hành chính',
+    '© 2026 BỆNH VIỆN QUÂN Y 87 VER 1.0.0  — Chương trình chấm công phát triển bởi Tham mưu - Hành chính',
   footerCopyrightMobile:
     '© 2026 Bệnh viện Quân y 87 | Chương trình chấm công phát triển bởi Tham mưu - Hành chính',
   pageTitle: 'Chấm công HẰNG NGÀY',
@@ -221,14 +277,19 @@ export const UI = {
   filterUnchecked: 'Chưa chấm',
   progressTitle: 'TIẾN ĐỘ Chấm công',
   missingPunchTitle: 'Thiếu dữ liệu chấm công',
-  missingPunchCheckout: 'Thiếu giờ ra',
+  missingPunchCheckout: 'Thiếu dữ liệu chấm công',
+  missingPunchIncomplete: 'Thiếu mốc giờ',
+  missingPunchEarlyLeave: 'Về sớm chưa có lý do',
   missingPunchUnmarked: 'Chưa chấm / chưa đủ',
   missingPunchHint:
-    'Dữ liệu đã hiển thị realtime cho Admin. Gán ngoại lệ (nghỉ/học/công tác…) hoặc nhờ Admin điền giờ trống.',
+    'Dữ liệu đã hiển thị realtime cho Admin. Gán ngoại lệ, nhập lý do về sớm, hoặc nhờ Admin điền giờ trống.',
   reportBlocked: 'Admin đã khóa chỉnh sửa Chấm công cho ĐƠN VỊ hôm nay.',
   manualRangeTitle: 'Chọn khoảng ngày',
+  manualRangeChildStatus: 'Trạng thái con',
   manualRangeFrom: 'Từ ngày',
   manualRangeTo: 'Đến ngày',
+  manualRangeNote: 'Ghi chú',
+  manualRangeNotePlaceholder: 'Nhập lý do (không bắt buộc)...',
   manualRangeSubmit: 'Xác nhận',
   manualRangeSubmitting: 'Đang lưu...',
   manualRangeInvalidOrder: 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
@@ -242,8 +303,17 @@ export const UI = {
   unlockedBadge: 'Đã mở khóa đặc cách',
   quickActionsColumn: 'Chấm công NHANH',
   emptyCell: '—',
-  /** SPEC §4.5.1 — presence badge but incomplete without checkout */
-  missingCheckoutHint: 'Thiếu giờ ra',
+  /** SPEC §4.5.1 — presence badge but incomplete 4-phase */
+  missingCheckoutHint: 'Thiếu dữ liệu chấm công',
+  veSomNotePlaceholder: 'Nhập lý do về sớm',
+  veSomNoteSave: 'Lưu lý do',
+  veSomNoteRequired: 'Về sớm bắt buộc nhập lý do.',
+  noteLabel: 'Ghi chú',
+  plusLate: '+ Đi trễ',
+  timeMorningIn: 'S',
+  timeNoonOut: 'T',
+  timeAfternoonIn: 'C',
+  timeAfternoonOut: 'V',
   breadcrumbSystem: 'Hệ thống',
   breadcrumbAttendance: 'Chấm công',
   breadcrumbStatistics: 'Thống kê',

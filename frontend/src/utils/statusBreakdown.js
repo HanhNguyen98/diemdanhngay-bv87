@@ -9,6 +9,8 @@ export const KPI_TILE_ICON_BG = {
   teal: 'bg-teal-500',
   purple: 'bg-violet-500',
   amber: 'bg-orange-500',
+  indigo: 'bg-indigo-500',
+  cyan: 'bg-cyan-500',
 };
 
 export const KPI_BG_BY_COLOR = {
@@ -19,6 +21,8 @@ export const KPI_BG_BY_COLOR = {
   teal: 'bg-info',
   purple: 'bg-violet-50',
   amber: 'bg-kpi-duty',
+  indigo: 'bg-info',
+  cyan: 'bg-info',
 };
 
 export const KPI_LABEL_CLASS_BY_COLOR = {
@@ -29,6 +33,8 @@ export const KPI_LABEL_CLASS_BY_COLOR = {
   teal: 'text-primary',
   purple: 'text-violet-700',
   amber: 'text-warning-dark',
+  indigo: 'text-primary',
+  cyan: 'text-primary',
 };
 
 /** Status KPI card label — bold black uppercase, safe for Vietnamese diacritics. */
@@ -75,7 +81,63 @@ export function countFromBreakdown(breakdown, code) {
 
 export function normalizeStatusBreakdown(breakdown) {
   if (!Array.isArray(breakdown)) return [];
-  return [...breakdown].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  return [...breakdown]
+    .map((item) => ({
+      ...item,
+      children: Array.isArray(item.children)
+        ? [...item.children].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        : [],
+    }))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+}
+
+function buildGroupedItems(catalogItems, counts) {
+  const activeItems = [...(catalogItems || [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const itemByCode = new Map(activeItems.map((item) => [item.code, item]));
+  const output = [];
+
+  for (const item of activeItems) {
+    if (item.parentCode && itemByCode.has(item.parentCode)) {
+      continue;
+    }
+    if (item.groupParent) {
+      const children = activeItems
+        .filter((child) => child.parentCode === item.code)
+        .map((child) => ({
+          code: child.code,
+          label: child.label,
+          badgeLabel: child.badgeLabel,
+          colorKey: child.colorKey,
+          iconKey: child.iconKey,
+          sortOrder: child.sortOrder ?? 0,
+          count: counts[child.code] ?? 0,
+          children: [],
+        }));
+      output.push({
+        code: item.code,
+        label: item.label,
+        badgeLabel: item.badgeLabel,
+        colorKey: item.colorKey,
+        iconKey: item.iconKey,
+        sortOrder: item.sortOrder ?? 0,
+        count: children.reduce((sum, child) => sum + (child.count ?? 0), 0),
+        children,
+      });
+      continue;
+    }
+    output.push({
+      code: item.code,
+      label: item.label,
+      badgeLabel: item.badgeLabel,
+      colorKey: item.colorKey,
+      iconKey: item.iconKey,
+      sortOrder: item.sortOrder ?? 0,
+      count: counts[item.code] ?? 0,
+      children: [],
+    });
+  }
+
+  return output.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 
 /**
@@ -93,17 +155,7 @@ export function buildBreakdownFromStaff(staffList, catalogItems) {
     }
   }
 
-  return catalogItems
-    .map((item) => ({
-      code: item.code,
-      label: item.label,
-      badgeLabel: item.badgeLabel,
-      colorKey: item.colorKey,
-      iconKey: item.iconKey,
-      sortOrder: item.sortOrder ?? 0,
-      count: counts[item.code] ?? 0,
-    }))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+  return buildGroupedItems(catalogItems, counts);
 }
 
 export function mergeBreakdownWithCatalog(breakdown, catalogItems) {
@@ -118,17 +170,7 @@ export function mergeBreakdownWithCatalog(breakdown, catalogItems) {
     }
   }
 
-  return catalogItems
-    .map((item) => ({
-      code: item.code,
-      label: item.label,
-      badgeLabel: item.badgeLabel,
-      colorKey: item.colorKey,
-      iconKey: item.iconKey,
-      sortOrder: item.sortOrder ?? 0,
-      count: counts[item.code] ?? 0,
-    }))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+  return buildGroupedItems(catalogItems, counts);
 }
 
 export function breakdownToChartSeries(breakdown) {

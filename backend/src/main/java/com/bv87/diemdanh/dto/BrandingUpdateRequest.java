@@ -17,4 +17,15 @@ public class BrandingUpdateRequest {
     private String attendanceLockTime;
     /** HH:mm — giờ tự động gửi nhắc nhở */
     private String attendanceReminderTime;
+    private String morningInOfficial;
+    private String noonOutOfficial;
+    private String afternoonInOfficial;
+    private String afternoonOutOfficial;
+    private String morningOpen;
+    private String midpoint1;
+    private String midpointNoon;
+    private String midpoint2;
+    private String dayClose;
+    private Integer lateGraceMinutes;
+    private Integer earlyGraceMinutes;
 }

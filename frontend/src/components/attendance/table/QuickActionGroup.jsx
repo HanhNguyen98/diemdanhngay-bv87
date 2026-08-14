@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ATTENDANCE_STATUS, isAttendanceBlank } from '../../../constants/attendance';
+import { ATTENDANCE_STATUS, isAttendanceBlank, isPostScanOverrideAction } from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
 import { resolveStatusQuickIcon } from '../../../utils/statusIcons';
 
@@ -39,10 +39,9 @@ const QuickActionGroup = memo(function QuickActionGroup({
   const fingerprintLocked =
     lockFingerprintPresence &&
     (staff?.status === ATTENDANCE_STATUS.DI_LAM || staff?.status === ATTENDANCE_STATUS.DI_TRE);
-  const actionsDisabled = disabled || fingerprintLocked;
 
-  const getButtonClass = (colorKey, isActive) => {
-    if (actionsDisabled) {
+  const getButtonClass = (colorKey, isActive, actionDisabled) => {
+    if (actionDisabled) {
       return `${BTN_BASE} border-line bg-neutral text-content-muted cursor-not-allowed`;
     }
     if (isActive) {
@@ -60,19 +59,21 @@ const QuickActionGroup = memo(function QuickActionGroup({
       role="group"
       aria-label="Thao tác Chấm công nhanh"
     >
-      {quickActions.map(({ value, color, icon }) => {
+      {quickActions.map((action) => {
+        const { value, color, icon } = action;
         const Icon = resolveStatusQuickIcon(icon);
         const isActive = Boolean(!isAttendanceBlank(staff) && staff.status === value);
+        const actionDisabled = disabled || (fingerprintLocked && !isPostScanOverrideAction(action));
 
         return (
           <button
             key={value}
             type="button"
-            disabled={actionsDisabled}
-            onClick={() => onQuickAction(staff.empCode, value)}
-            className={getButtonClass(color, isActive)}
+            disabled={actionDisabled}
+            onClick={() => onQuickAction(staff.empCode, action)}
+            className={getButtonClass(color, isActive, actionDisabled)}
             title={
-              fingerprintLocked
+              actionDisabled && fingerprintLocked
                 ? 'Nhân viên đã Chấm công bằng vân tay. Không được gán trạng thái khác.'
                 : statusBadge[value]?.label || value
             }

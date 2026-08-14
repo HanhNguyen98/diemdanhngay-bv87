@@ -14,5 +14,8 @@ public class AttendanceStatusTypeDto {
     private final String iconKey;
     private final int sortOrder;
     private final boolean active;
+    private final boolean manualAllowed;
+    private final boolean groupParent;
+    private final String parentCode;
     private final long usageCount;
 }

@@ -89,6 +89,11 @@ export const adminApi = {
     apiRequest('/admin/staff', { method: 'POST', body: JSON.stringify(body) }),
   updateStaff: (empCode, body) =>
     apiRequest(`/admin/staff/${empCode}`, { method: 'PUT', body: JSON.stringify(body) }),
+  transferStaff: (empCode, body) =>
+    apiRequest(`/admin/staff/${empCode}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   deleteStaff: (empCode) =>
     apiRequest(`/admin/staff/${empCode}`, { method: 'DELETE' }),
 
@@ -161,6 +166,11 @@ export const adminApi = {
     apiRequest('/admin/fingerprint/kiosk-tokens', { method: 'POST', body: JSON.stringify(body) }),
   setKioskEnrollPin: (id, body) =>
     apiRequest(`/admin/fingerprint/kiosk-tokens/${id}/enroll-pin`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateKioskTokenLabel: (id, body) =>
+    apiRequest(`/admin/fingerprint/kiosk-tokens/${id}/label`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),

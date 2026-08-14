@@ -1,14 +1,17 @@
 import { memo } from 'react';
 import {
-  MANUAL_ATTENDANCE_STATUSES,
+  ATTENDANCE_STATUS,
   MANUAL_SCHEDULE_UI,
   UI,
+  hasEmptyFourPunchSlot,
   isMissingCheckout,
 } from '../../../../constants/attendance';
-import { formatInstantHm } from '../../../../utils/formatters';
+import { formatKioskMachine } from '../../../../utils/kioskMachine';
+import PunchTimesCell from '../../../attendance/table/PunchTimesCell';
 import MobileQuickActionGrid from '../../../attendance/mobile/MobileQuickActionGrid';
 import StaffAvatar from '../../../attendance/table/StaffAvatar';
 import StatusBadge from '../../../attendance/table/StatusBadge';
+import VeSomNoteField from '../../../attendance/table/VeSomNoteField';
 import DeptFingerprintActionsMenu from './DeptFingerprintActionsMenu';
 
 const DeptAttendanceStaffCard = memo(function DeptAttendanceStaffCard({
@@ -18,9 +21,13 @@ const DeptAttendanceStaffCard = memo(function DeptAttendanceStaffCard({
   onFillTimes,
   onQuickAction,
   onClearAttendance,
+  onSaveVeSomNote,
 }) {
-  const isManualLeave = MANUAL_ATTENDANCE_STATUSES.includes(staff.status);
-  const canFillTimes = !isManualLeave && (!staff.checkInAt || !staff.checkOutAt);
+  const isManualLeave =
+    staff.status != null &&
+    staff.status !== ATTENDANCE_STATUS.DI_LAM &&
+    staff.status !== ATTENDANCE_STATUS.DI_TRE;
+  const canFillTimes = !isManualLeave && hasEmptyFourPunchSlot(staff);
   const canClear =
     staff.status != null || staff.checkInAt != null || staff.checkOutAt != null;
   const missingOut = isMissingCheckout(staff);
@@ -41,22 +48,23 @@ const DeptAttendanceStaffCard = memo(function DeptAttendanceStaffCard({
           {!staff.positionName && (
             <p className="mt-0.5 text-3xs text-content-muted">{UI.emptyCell}</p>
           )}
-          <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-3xs text-content-muted">
-            <span>
-              Vào:{' '}
-              <span className="tabular-nums font-semibold text-navy">
-                {formatInstantHm(staff.checkInAt) || UI.emptyCell}
-              </span>
-            </span>
-            <span>
-              Ra:{' '}
-              <span className="tabular-nums font-semibold text-navy">
-                {formatInstantHm(staff.checkOutAt) || UI.emptyCell}
-              </span>
-            </span>
+          <div className="mt-1.5">
+            <PunchTimesCell staff={staff} compact />
           </div>
+          <p className="mt-1 text-3xs text-content-muted truncate" title={formatKioskMachine(staff)}>
+            {formatKioskMachine(staff)}
+          </p>
           {missingOut ? (
             <p className="mt-1 text-3xs font-medium text-warning-fg">{UI.missingCheckoutHint}</p>
+          ) : null}
+          {staff.status === ATTENDANCE_STATUS.VE_SOM ? (
+            <div className="mt-1.5">
+              <VeSomNoteField staff={staff} onSave={onSaveVeSomNote} />
+            </div>
+          ) : staff.note ? (
+            <p className="mt-1 text-3xs text-content-muted italic truncate" title={staff.note}>
+              {UI.noteLabel}: {staff.note}
+            </p>
           ) : null}
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <DeptFingerprintActionsMenu

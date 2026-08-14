@@ -28,6 +28,7 @@ const AttendanceStatusTileScrollRow = memo(function AttendanceStatusTileScrollRo
           count={item.count}
           colorKey={item.colorKey}
           iconKey={item.iconKey}
+          children={item.children}
           peek
         />
       ))}
@@ -62,6 +63,7 @@ const AttendanceStatusTileGrid = memo(function AttendanceStatusTileGrid({
             count={item.count}
             colorKey={item.colorKey}
             iconKey={item.iconKey}
+            children={item.children}
             fluid
           />
         ))}
@@ -79,6 +81,7 @@ const AttendanceStatusTileGrid = memo(function AttendanceStatusTileGrid({
             count={item.count}
             colorKey={item.colorKey}
             iconKey={item.iconKey}
+            children={item.children}
             fluid
           />
         ))}
@@ -95,6 +98,7 @@ const AttendanceStatusTileGrid = memo(function AttendanceStatusTileGrid({
           count={item.count}
           colorKey={item.colorKey}
           iconKey={item.iconKey}
+          children={item.children}
           fluid
         />
       ))}

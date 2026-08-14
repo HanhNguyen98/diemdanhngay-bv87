@@ -12,6 +12,7 @@ const DeptAttendanceStaffCardList = memo(function DeptAttendanceStaffCardList({
   onFillTimes,
   onQuickAction,
   onClearAttendance,
+  onSaveVeSomNote,
 }) {
   const { dashboard: d } = ADMIN_UI;
 
@@ -42,6 +43,7 @@ const DeptAttendanceStaffCardList = memo(function DeptAttendanceStaffCardList({
             onFillTimes={onFillTimes}
             onQuickAction={onQuickAction}
             onClearAttendance={onClearAttendance}
+            onSaveVeSomNote={onSaveVeSomNote}
           />
         ))}
       </div>

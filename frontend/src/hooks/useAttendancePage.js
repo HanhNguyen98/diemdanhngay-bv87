@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, startTransition, use
 import { api } from '../api/client';
 import { useAppBootstrap } from '../context/AppBootstrapContext';
 import {
+  ATTENDANCE_STATUS,
   UI,
   isAttendanceUnchecked,
 } from '../constants/attendance';
@@ -150,24 +151,26 @@ export function useAttendancePage(user) {
       if (!staff) return;
       setManualRangeTarget({
         staff,
-        status: action,
-        statusLabel: statusBadge[action]?.label || action,
+        status: action.value,
+        statusLabel: statusBadge[action.value]?.label || action.label || action.value,
+        statusOptions: action.statusOptions || [],
       });
     },
     [statusBadge],
   );
 
   const handleManualRangeConfirm = useCallback(
-    async ({ fromDate, toDate }) => {
+    async ({ status, fromDate, toDate, note }) => {
       if (!manualRangeTarget || manualRangeSaving) return;
-      const { staff, status } = manualRangeTarget;
+      const { staff, status: fallbackStatus } = manualRangeTarget;
       setManualRangeSaving(true);
       try {
         const result = await api.updateAttendanceManualRange({
           empCode: staff.empCode,
-          status,
+          status: status || fallbackStatus,
           fromDate,
           toDate,
+          note,
         });
         showSuccess(result.message || 'Đã cập nhật Chấm công.');
         setManualRangeTarget(null);
@@ -189,6 +192,21 @@ export function useAttendancePage(user) {
       showSuccess,
       showError,
     ],
+  );
+
+  const handleVeSomNoteSave = useCallback(
+    async (empCode, note) => {
+      try {
+        await api.updateAttendance(empCode, ATTENDANCE_STATUS.VE_SOM, note, selectedDate);
+        showSuccess('Đã lưu lý do về sớm.');
+        cache.invalidate(selectedDept, selectedDate);
+        await fetchAttendance(selectedDept, selectedDate, { force: true, silent: true });
+      } catch (err) {
+        showError(err.message || UI.veSomNoteRequired);
+        throw err;
+      }
+    },
+    [selectedDate, selectedDept, cache, fetchAttendance, showSuccess, showError],
   );
 
   const handleUnlockConfirm = async (reason) => {
@@ -320,6 +338,7 @@ export function useAttendancePage(user) {
     totalPages,
     filteredCount: filteredStaff.length,
     handleQuickAction,
+    handleVeSomNoteSave,
     manualRangeTarget,
     setManualRangeTarget,
     manualRangeSaving,

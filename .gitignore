@@ -6,6 +6,8 @@ target/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+fingerprint-agent/dist/
+
 
 # IDE
 .idea/
@@ -23,3 +25,15 @@ Thumbs.db
 deploy/.env
 backend/local-secrets.yml
 backend/prod-secrets.yml
+
+# Fingerprint Agent (local secrets + build artifacts)
+fingerprint-agent/agent.properties
+fingerprint-agent/out/
+fingerprint-agent/bin/
+fingerprint-agent/dist/
+fingerprint-agent/logs/
+fingerprint-agent/fingerprint.bmp
+fingerprint-agent/*.class
+fingerprint-agent/hs_err_pid*.log
+fingerprint-agent/BV87-Agent-*/
+fingerprint-agent/BV87-Agent-*.zip

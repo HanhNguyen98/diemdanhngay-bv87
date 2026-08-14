@@ -213,19 +213,30 @@ export function useDeptAttendanceDetail() {
         'Mã nhân viên',
         'Cấp bậc',
         'Chức vụ',
-        'Giờ vào',
-        'Giờ ra',
+        'Vào sáng',
+        'Ra trưa',
+        'Vào chiều',
+        'Ra chiều',
         'Trạng thái',
+        'Đi trễ kèm',
+        'Máy',
         'Ghi chú',
       ];
+      const hm = (value) => (value
+        ? new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
+        : '');
       const rows = staff.map((s) => [
         s.fullname,
         s.empCodeFormatted,
         s.rankName || '',
         s.positionName || '',
-        s.checkInAt ? new Date(s.checkInAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
-        s.checkOutAt ? new Date(s.checkOutAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
+        hm(s.morningInAt || s.checkInAt),
+        hm(s.noonOutAt),
+        hm(s.afternoonInAt),
+        hm(s.afternoonOutAt || s.checkOutAt),
         statusLabel(s.status),
+        s.lateFlag ? '+ Đi trễ' : '',
+        [s.lastKioskLabel, s.lastKioskHostname, s.lastKioskIp].filter(Boolean).join(' · '),
         s.note || '',
       ]);
       downloadExcel({
@@ -263,13 +274,22 @@ export function useDeptAttendanceDetail() {
     [appliedDate, appliedDeptCode, departments, loadData],
   );
 
+  const saveVeSomNote = useCallback(
+    async (empCode, note) => {
+      await api.updateAttendance(empCode, 'VE_SOM', note, appliedDate);
+      await loadData(appliedDeptCode, appliedDate, departments, undefined);
+    },
+    [appliedDate, appliedDeptCode, departments, loadData],
+  );
+
   const saveManualRange = useCallback(
-    async ({ empCode, status, fromDate, toDate }) => {
+    async ({ empCode, status, fromDate, toDate, note }) => {
       const result = await api.updateAttendanceManualRange({
         empCode,
         status,
         fromDate,
         toDate,
+        note,
       });
       await loadData(appliedDeptCode, appliedDate, departments, undefined);
       return result;
@@ -307,5 +327,6 @@ export function useDeptAttendanceDetail() {
     fillAttendanceTimes,
     clearAttendanceDay,
     saveManualRange,
+    saveVeSomNote,
   };
 }

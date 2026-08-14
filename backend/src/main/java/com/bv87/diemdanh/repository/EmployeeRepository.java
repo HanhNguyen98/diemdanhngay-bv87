@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
 
     @Query("SELECT e FROM Employee e JOIN FETCH e.department ORDER BY e.empCode")
     List<Employee> findAllWithDepartment();
+
+    @Query("SELECT e FROM Employee e JOIN FETCH e.department WHERE e.empCode IN :empCodes")
+    List<Employee> findByEmpCodeIn(@Param("empCodes") Collection<Integer> empCodes);
 
     @Query("SELECT MAX(e.empCode) FROM Employee e WHERE e.department.deptCode = :deptCode")
     Optional<Integer> findMaxEmpCodeByDept(@Param("deptCode") Integer deptCode);

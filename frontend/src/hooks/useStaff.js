@@ -91,6 +91,15 @@ export function useStaff({
     [load, loadStats],
   );
 
+  const transfer = useCallback(
+    async (empCode, payload) => {
+      const updated = await adminApi.transferStaff(empCode, payload);
+      await Promise.all([load(), loadStats()]);
+      return updated;
+    },
+    [load, loadStats],
+  );
+
   const remove = useCallback(
     async (empCode) => {
       await adminApi.deleteStaff(empCode);
@@ -129,6 +138,7 @@ export function useStaff({
     fetchAllFiltered,
     create,
     update,
+    transfer,
     remove,
   };
 }

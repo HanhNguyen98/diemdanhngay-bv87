@@ -12,6 +12,7 @@ const AttendanceStatusTile = memo(function AttendanceStatusTile({
   count,
   colorKey,
   iconKey,
+  children = [],
   fluid = false,
   compact = false,
   dense = false,
@@ -37,6 +38,8 @@ const AttendanceStatusTile = memo(function AttendanceStatusTile({
   const countClass = dense || peek ? 'text-sm font-semibold' : 'text-lg font-bold';
   const labelClass = dense || peek ? KPI_STATUS_LABEL_CLASS_PEEK : KPI_STATUS_LABEL_CLASS_DEFAULT;
 
+  const hasChildren = children.length > 0;
+
   return (
     <article
       className={`rounded-xl border border-line bg-surface-white shadow-card flex flex-col justify-between min-w-0 ${padClass} ${sizeClass}`}
@@ -57,7 +60,21 @@ const AttendanceStatusTile = memo(function AttendanceStatusTile({
           {displayCount}
         </span>
       </div>
-      <p className={labelClass}>{label}</p>
+      <div className="space-y-1">
+        <p className={labelClass}>{label}</p>
+        {hasChildren && (
+          <div className="space-y-0.5 text-[0.625rem] leading-tight text-content-muted">
+            {children.map((child) => (
+              <div key={child.code} className="flex items-center justify-between gap-2">
+                <span className="truncate">{child.badgeLabel || child.label}</span>
+                <span className="shrink-0 font-semibold text-content-heading tabular-nums">
+                  {String(child.count ?? 0).padStart(2, '0')}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </article>
   );
 });

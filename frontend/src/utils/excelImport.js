@@ -239,7 +239,22 @@ export function mapStaffPositionImportRows(rows) {
  * @param {Record<string, string>[]} rows
  */
 export function mapStatusCatalogImportRows(rows) {
-  const allowedColors = new Set(['green', 'red', 'yellow', 'blue', 'teal', 'purple', 'amber']);
+  const allowedColors = new Set([
+    'green',
+    'red',
+    'yellow',
+    'blue',
+    'teal',
+    'purple',
+    'amber',
+    'pink',
+    'brown',
+    'gray',
+    'black',
+    'lime',
+    'cyan',
+    'indigo',
+  ]);
   const allowedIcons = new Set([
     'check',
     'x',
@@ -253,6 +268,14 @@ export function mapStatusCatalogImportRows(rows) {
     'late',
     'moon',
     'home',
+    'coffee',
+    'car',
+    'hospital',
+    'train',
+    'sun',
+    'star',
+    'shield',
+    'tools',
   ]);
   const payloads = [];
   const errors = [];
@@ -292,6 +315,9 @@ export function mapStatusCatalogImportRows(rows) {
           sortOrder:
             parseOptionalSortOrder(row[f.sortOrder], rowNumber, f.sortOrder) ?? 0,
           active: parseActiveStatus(row[f.active]),
+          manualAllowed: false,
+          groupParent: false,
+          parentCode: '',
         },
       });
     } catch (err) {

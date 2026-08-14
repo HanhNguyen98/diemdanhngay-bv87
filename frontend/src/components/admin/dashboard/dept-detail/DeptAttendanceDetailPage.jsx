@@ -52,6 +52,7 @@ function DeptAttendanceDetailContent() {
     fillAttendanceTimes,
     clearAttendanceDay,
     saveManualRange,
+    saveVeSomNote,
     summary,
   } = useDeptAttendanceDetail();
 
@@ -76,25 +77,27 @@ function DeptAttendanceDetailContent() {
     [],
   );
 
-  const handleQuickAction = (empCode, status) => {
+  const handleQuickAction = (empCode, action) => {
     const full = paginated.find((s) => s.empCode === empCode);
     if (!full) return;
     setManualRangeTarget({
       staff: full,
-      status,
-      statusLabel: statusBadge[status]?.label || status,
+      status: action.value,
+      statusLabel: statusBadge[action.value]?.label || action.label || action.value,
+      statusOptions: action.statusOptions || [],
     });
   };
 
-  const handleManualRangeConfirm = async ({ fromDate, toDate }) => {
+  const handleManualRangeConfirm = async ({ status, fromDate, toDate, note }) => {
     if (!manualRangeTarget || manualRangeSaving) return;
     setManualRangeSaving(true);
     try {
       const result = await saveManualRange({
         empCode: manualRangeTarget.staff.empCode,
-        status: manualRangeTarget.status,
+        status: status || manualRangeTarget.status,
         fromDate,
         toDate,
+        note,
       });
       showSuccess(result.message || 'Đã cập nhật Chấm công.');
       setManualRangeTarget(null);
@@ -144,6 +147,10 @@ function DeptAttendanceDetailContent() {
     onFillTimes: setFillTimesStaff,
     onQuickAction: handleQuickAction,
     onClearAttendance: setClearStaff,
+    onSaveVeSomNote: async (empCode, note) => {
+      await saveVeSomNote(empCode, note);
+      showSuccess('Đã lưu lý do về sớm.');
+    },
   };
 
   const kpiBar = (
@@ -229,6 +236,7 @@ function DeptAttendanceDetailContent() {
           staff={manualRangeTarget.staff}
           status={manualRangeTarget.status}
           statusLabel={manualRangeTarget.statusLabel}
+          statusOptions={manualRangeTarget.statusOptions}
           defaultDate={appliedDate}
           loading={manualRangeSaving}
           onConfirm={handleManualRangeConfirm}

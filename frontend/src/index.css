@@ -271,7 +271,7 @@
     }
   }
 
-  /* Page-level vertical scroll — no horizontal pan on mobile */
+  /* Page-level vertical scroll (Admin/HEAD main) — no horizontal pan */
   .mobile-page-y {
     overflow-x: hidden;
     overflow-y: auto;

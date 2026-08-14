@@ -6,6 +6,7 @@ const AttendanceStaffCardList = memo(function AttendanceStaffCardList({
   staffList,
   disabled,
   onQuickAction,
+  onSaveVeSomNote,
   onOpenScanLogs,
   onOpenManualSchedule,
 }) {
@@ -25,6 +26,7 @@ const AttendanceStaffCardList = memo(function AttendanceStaffCardList({
           staff={staff}
           disabled={disabled}
           onQuickAction={onQuickAction}
+          onSaveVeSomNote={onSaveVeSomNote}
           onOpenScanLogs={onOpenScanLogs}
           onOpenManualSchedule={onOpenManualSchedule}
         />

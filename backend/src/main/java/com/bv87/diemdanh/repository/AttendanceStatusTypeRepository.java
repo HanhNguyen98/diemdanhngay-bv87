@@ -20,6 +20,15 @@ public interface AttendanceStatusTypeRepository extends JpaRepository<Attendance
     @Query("SELECT t FROM AttendanceStatusType t WHERE t.active = true ORDER BY t.sortOrder ASC, t.code ASC")
     List<AttendanceStatusType> findAllActiveOrdered();
 
+    @Query("""
+            SELECT t FROM AttendanceStatusType t
+            WHERE t.active = true
+              AND t.manualAllowed = true
+              AND t.groupParent = false
+            ORDER BY t.sortOrder ASC, t.code ASC
+            """)
+    List<AttendanceStatusType> findAllActiveManualAssignableOrdered();
+
     @Query("SELECT COUNT(ar) FROM AttendanceRecord ar WHERE ar.status = :code")
     long countUsageByCode(@Param("code") String code);
 }

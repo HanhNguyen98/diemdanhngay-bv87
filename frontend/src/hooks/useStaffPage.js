@@ -33,6 +33,7 @@ export function useStaffPage() {
     fetchAllFiltered,
     create,
     update,
+    transfer,
     remove,
   } = useStaff({ page, pageSize });
   const { rankNames, positionNames } = useStaffCatalogOptions();
@@ -41,6 +42,7 @@ export function useStaffPage() {
   const [formStaff, setFormStaff] = useState(null);
   const [deleteStaff, setDeleteStaff] = useState(null);
   const [historyStaff, setHistoryStaff] = useState(null);
+  const [transferStaff, setTransferStaff] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
@@ -75,6 +77,18 @@ export function useStaffPage() {
       }
     },
     [create, update, showSuccess],
+  );
+
+  const handleTransfer = useCallback(
+    async (payload, editCode) => {
+      await transfer(editCode, payload);
+      if (payload.revokeHeadOnTransfer) {
+        showSuccess(ADMIN_UI.flash.staffTransferHeadRevokeSuccess);
+      } else {
+        showSuccess(ADMIN_UI.flash.staffTransferDeptSuccess);
+      }
+    },
+    [transfer, showSuccess],
   );
 
   const handleDelete = useCallback(async () => {
@@ -141,8 +155,11 @@ export function useStaffPage() {
     setDeleteStaff,
     historyStaff,
     setHistoryStaff,
+    transferStaff,
+    setTransferStaff,
     deleteLoading,
     handleSave,
+    handleTransfer,
     handleDelete,
     importing,
     handleTemplateDownload,

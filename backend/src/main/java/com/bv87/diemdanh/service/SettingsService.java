@@ -8,6 +8,7 @@ import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.SystemSettingsRepository;
 import com.bv87.diemdanh.security.AuthUser;
+import com.bv87.diemdanh.util.WorkSchedule;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -79,6 +80,7 @@ public class SettingsService {
         if (request.getAttendanceReminderTime() != null) {
             settings.setAttendanceReminderTime(validateReminderTime(request.getAttendanceReminderTime()));
         }
+        applyWorkSchedule(settings, request);
         SystemSettings saved = settingsRepository.save(settings);
         syncAttendanceTimes(saved);
         syncReminderTime(saved);
@@ -199,7 +201,67 @@ public class SettingsService {
         return defaultReminderTime;
     }
 
+    private void applyWorkSchedule(SystemSettings settings, BrandingUpdateRequest request) {
+        boolean anyWorkField =
+                request.getMorningInOfficial() != null
+                        || request.getNoonOutOfficial() != null
+                        || request.getAfternoonInOfficial() != null
+                        || request.getAfternoonOutOfficial() != null
+                        || request.getMorningOpen() != null
+                        || request.getMidpoint1() != null
+                        || request.getMidpointNoon() != null
+                        || request.getMidpoint2() != null
+                        || request.getDayClose() != null
+                        || request.getLateGraceMinutes() != null
+                        || request.getEarlyGraceMinutes() != null;
+        if (!anyWorkField) {
+            return;
+        }
+        WorkSchedule parsed = WorkSchedule.parse(
+                firstNonBlank(request.getMorningInOfficial(), settings.getMorningInOfficial()),
+                firstNonBlank(request.getNoonOutOfficial(), settings.getNoonOutOfficial()),
+                firstNonBlank(request.getAfternoonInOfficial(), settings.getAfternoonInOfficial()),
+                firstNonBlank(request.getAfternoonOutOfficial(), settings.getAfternoonOutOfficial()),
+                firstNonBlank(request.getMorningOpen(), settings.getMorningOpen()),
+                firstNonBlank(request.getMidpoint1(), settings.getMidpoint1()),
+                firstNonBlank(request.getMidpointNoon(), settings.getMidpointNoon()),
+                firstNonBlank(request.getMidpoint2(), settings.getMidpoint2()),
+                firstNonBlank(request.getDayClose(), settings.getDayClose()),
+                request.getLateGraceMinutes() != null ? request.getLateGraceMinutes() : settings.getLateGraceMinutes(),
+                request.getEarlyGraceMinutes() != null ? request.getEarlyGraceMinutes() : settings.getEarlyGraceMinutes());
+        settings.setMorningInOfficial(parsed.morningInOfficial());
+        settings.setNoonOutOfficial(parsed.noonOutOfficial());
+        settings.setAfternoonInOfficial(parsed.afternoonInOfficial());
+        settings.setAfternoonOutOfficial(parsed.afternoonOutOfficial());
+        settings.setMorningOpen(parsed.morningOpen());
+        settings.setMidpoint1(parsed.midpoint1());
+        settings.setMidpointNoon(parsed.midpointNoon());
+        settings.setMidpoint2(parsed.midpoint2());
+        settings.setDayClose(parsed.dayClose());
+        settings.setLateGraceMinutes(parsed.lateGraceMinutes());
+        settings.setEarlyGraceMinutes(parsed.earlyGraceMinutes());
+    }
+
+    private static String firstNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred.trim();
+        }
+        return fallback;
+    }
+
     private BrandingDto toDto(SystemSettings settings) {
+        WorkSchedule schedule = WorkSchedule.parse(
+                settings.getMorningInOfficial(),
+                settings.getNoonOutOfficial(),
+                settings.getAfternoonInOfficial(),
+                settings.getAfternoonOutOfficial(),
+                settings.getMorningOpen(),
+                settings.getMidpoint1(),
+                settings.getMidpointNoon(),
+                settings.getMidpoint2(),
+                settings.getDayClose(),
+                settings.getLateGraceMinutes(),
+                settings.getEarlyGraceMinutes());
         return BrandingDto.builder()
                 .portalTitle(normalizePortalTitle(settings.getPortalTitle()))
                 .logoUrl(settings.getLogoUrl())
@@ -207,6 +269,17 @@ public class SettingsService {
                 .attendanceLockTime(resolveLockTime(settings))
                 .attendanceOpenTime(defaultOpenTime)
                 .attendanceReminderTime(resolveReminderTime(settings))
+                .morningInOfficial(schedule.morningInOfficial())
+                .noonOutOfficial(schedule.noonOutOfficial())
+                .afternoonInOfficial(schedule.afternoonInOfficial())
+                .afternoonOutOfficial(schedule.afternoonOutOfficial())
+                .morningOpen(schedule.morningOpen())
+                .midpoint1(schedule.midpoint1())
+                .midpointNoon(schedule.midpointNoon())
+                .midpoint2(schedule.midpoint2())
+                .dayClose(schedule.dayClose())
+                .lateGraceMinutes(schedule.lateGraceMinutes())
+                .earlyGraceMinutes(schedule.earlyGraceMinutes())
                 .build();
     }
 }

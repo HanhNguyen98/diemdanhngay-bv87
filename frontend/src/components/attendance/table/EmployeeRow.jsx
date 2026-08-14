@@ -1,14 +1,17 @@
 import { memo } from 'react';
 import { MANUAL_SCHEDULE_UI, SCAN_LOG_UI, UI, isMissingCheckout } from '../../../constants/attendance';
-import { formatInstantHm } from '../../../utils/formatters';
+import { formatKioskMachine } from '../../../utils/kioskMachine';
+import PunchTimesCell from './PunchTimesCell';
 import QuickActionGroup from './QuickActionGroup';
 import StaffAvatar from './StaffAvatar';
 import StatusBadge from './StatusBadge';
+import VeSomNoteField from './VeSomNoteField';
 
 const EmployeeRow = memo(function EmployeeRow({
   staff,
   disabled,
   onQuickAction,
+  onSaveVeSomNote,
   onOpenScanLogs,
   onOpenManualSchedule,
 }) {
@@ -29,16 +32,14 @@ const EmployeeRow = memo(function EmployeeRow({
       <td className="py-3 px-4 align-middle text-sm text-slate-500">
         {staff.positionName || UI.emptyCell}
       </td>
-      <td className="py-3 px-4 align-middle text-sm tabular-nums text-navy font-medium">
-        {formatInstantHm(staff.checkInAt) || UI.emptyCell}
+      <td className="py-3 px-4 align-middle">
+        <PunchTimesCell staff={staff} />
+        {missingOut ? (
+          <p className="text-3xs font-medium text-warning-fg mt-0.5">{UI.missingCheckoutHint}</p>
+        ) : null}
       </td>
-      <td className="py-3 px-4 align-middle text-sm tabular-nums text-navy font-medium">
-        <div>
-          {formatInstantHm(staff.checkOutAt) || UI.emptyCell}
-          {missingOut ? (
-            <p className="text-3xs font-medium text-warning-fg mt-0.5">{UI.missingCheckoutHint}</p>
-          ) : null}
-        </div>
+      <td className="py-3 px-4 align-middle text-3xs text-content-muted max-w-[9rem]">
+        <span className="block truncate" title={formatKioskMachine(staff)}>{formatKioskMachine(staff)}</span>
       </td>
       <td className="py-3 px-4 align-middle">
         <StatusBadge staff={staff} />
@@ -46,6 +47,7 @@ const EmployeeRow = memo(function EmployeeRow({
       <td className="py-3 px-4 align-middle text-right">
         <div className={`flex flex-col items-end gap-1.5 ${disabled ? 'table-actions-readonly' : ''}`}>
           <QuickActionGroup staff={staff} disabled={disabled} onQuickAction={onQuickAction} />
+          <VeSomNoteField staff={staff} disabled={disabled} onSave={onSaveVeSomNote} />
           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
             <button
               type="button"

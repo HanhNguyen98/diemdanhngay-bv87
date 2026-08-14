@@ -63,6 +63,7 @@ export default function AttendancePage({
     filteredCount,
     pageSize,
     handleQuickAction,
+    handleVeSomNoteSave,
     manualRangeTarget,
     setManualRangeTarget,
     manualRangeSaving,
@@ -155,6 +156,7 @@ export default function AttendancePage({
               mobileStaffList={pagedStaff}
               disabled={tableDisabled}
               onQuickAction={handleQuickAction}
+              onSaveVeSomNote={handleVeSomNoteSave}
               onOpenScanLogs={setScanLogStaff}
               onOpenManualSchedule={setManualScheduleStaff}
               search={search}
@@ -202,6 +204,7 @@ export default function AttendancePage({
           staff={manualRangeTarget.staff}
           status={manualRangeTarget.status}
           statusLabel={manualRangeTarget.statusLabel}
+          statusOptions={manualRangeTarget.statusOptions}
           defaultDate={selectedDate}
           loading={manualRangeSaving}
           onConfirm={handleManualRangeConfirm}

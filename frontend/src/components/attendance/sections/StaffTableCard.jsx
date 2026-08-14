@@ -74,6 +74,7 @@ const StaffTableCard = memo(function StaffTableCard({
   mobileStaffList,
   disabled,
   onQuickAction,
+  onSaveVeSomNote,
   onOpenScanLogs,
   onOpenManualSchedule,
   search,
@@ -185,6 +186,7 @@ const StaffTableCard = memo(function StaffTableCard({
           staffList={mobileList}
           disabled={disabled}
           onQuickAction={onQuickAction}
+          onSaveVeSomNote={onSaveVeSomNote}
           onOpenScanLogs={onOpenScanLogs}
           onOpenManualSchedule={onOpenManualSchedule}
         />
@@ -204,6 +206,7 @@ const StaffTableCard = memo(function StaffTableCard({
           staffList={staffList}
           disabled={disabled}
           onQuickAction={onQuickAction}
+          onSaveVeSomNote={onSaveVeSomNote}
           onOpenScanLogs={onOpenScanLogs}
           onOpenManualSchedule={onOpenManualSchedule}
           page={page}

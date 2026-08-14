@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Fingerprint, History, Image, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, Fingerprint, History, Image, Pencil, Trash2 } from 'lucide-react';
 import { ADMIN_UI } from '../../constants/admin';
 import { getInitials } from '../../utils/formatters';
 import { ActionBtn } from '../admin/sections/ActionButtons';
@@ -27,6 +27,7 @@ const StaffRow = memo(function StaffRow({
   onEdit,
   onDelete,
   onHistory,
+  onTransfer,
   onDeleteFingerprint,
   avatarOnly = false,
   hideDeptColumn = false,
@@ -88,6 +89,14 @@ const StaffRow = memo(function StaffRow({
             }
             label={avatarOnly ? 'Ảnh đại diện' : 'Sửa'}
           />
+          {!avatarOnly && onTransfer && (
+            <ActionBtn
+              icon={ArrowRightLeft}
+              onClick={() => onTransfer(staff)}
+              colorClass="text-primary hover:bg-primary-light"
+              label={ADMIN_UI.staff.transferDeptAction}
+            />
+          )}
           {!avatarOnly && onHistory && (
             <ActionBtn
               icon={History}

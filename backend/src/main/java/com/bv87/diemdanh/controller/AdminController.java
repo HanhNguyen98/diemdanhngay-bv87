@@ -180,6 +180,14 @@ public class AdminController {
         return ResponseEntity.ok(adminService.listStaffDepartmentHistory(authService.getAuthUser(), empCode));
     }
 
+    @PostMapping("/staff/{empCode}/transfer")
+    public ResponseEntity<AdminStaffDto> transferStaff(
+            @PathVariable Integer empCode,
+            @Valid @RequestBody StaffTransferRequest request) {
+        return ResponseEntity.ok(
+                adminService.transferStaff(authService.getAuthUser(), empCode, request));
+    }
+
     @PostMapping("/staff")
     public ResponseEntity<AdminStaffDto> createStaff(@Valid @RequestBody StaffUpsertRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -367,6 +375,14 @@ public class AdminController {
             @Valid @RequestBody KioskTokenSetEnrollPinRequest request) {
         return ResponseEntity.ok(
                 fingerprintService.setEnrollPinForAdmin(authService.getAuthUser(), id, request));
+    }
+
+    @PostMapping("/fingerprint/kiosk-tokens/{id}/label")
+    public ResponseEntity<KioskTokenDto> updateKioskTokenLabel(
+            @PathVariable Long id,
+            @Valid @RequestBody KioskTokenUpdateLabelRequest request) {
+        return ResponseEntity.ok(
+                fingerprintService.updateKioskLabelForAdmin(authService.getAuthUser(), id, request));
     }
 
     @PostMapping("/fingerprint/kiosk-tokens/{id}/revoke")

@@ -7,7 +7,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 /**
- * Admin fills empty check-in / check-out slots only — SPEC §4.6.
+ * Admin fills empty 4-phase slots only — SPEC §4.6 / §4.13.
  */
 @Getter
 @Setter
@@ -19,9 +19,21 @@ public class FillAttendanceTimesRequest {
     /** Attendance calendar date (Asia/Ho_Chi_Minh). Default today if null. */
     private LocalDate date;
 
-    /** Wall-clock HH:mm — only applied when check_in_at is currently null. */
+    /** Wall-clock HH:mm — empty {@code morning_in_at} only. */
+    private String morningInTime;
+
+    /** Wall-clock HH:mm — empty {@code noon_out_at} only. */
+    private String noonOutTime;
+
+    /** Wall-clock HH:mm — empty {@code afternoon_in_at} only. */
+    private String afternoonInTime;
+
+    /** Wall-clock HH:mm — empty {@code afternoon_out_at} only. */
+    private String afternoonOutTime;
+
+    /** Alias for {@link #morningInTime} (pre-P7 clients). */
     private String checkInTime;
 
-    /** Wall-clock HH:mm — only applied when check_out_at is currently null. */
+    /** Alias for {@link #afternoonOutTime} (pre-P7 clients). */
     private String checkOutTime;
 }

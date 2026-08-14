@@ -253,6 +253,38 @@ public class FingerprintService implements ApplicationRunner {
         return toKioskTokenDto(saved, deptName);
     }
 
+    /**
+     * Renames the display label of an active kiosk token without rotating the secret (SPEC §10.1 P1.2d).
+     *
+     * @param authUser admin principal
+     * @param id       kiosk token id
+     * @param request  new label
+     * @return updated list row
+     * @throws BusinessException if missing or revoked
+     */
+    @Transactional
+    public KioskTokenDto updateKioskLabelForAdmin(AuthUser authUser, Long id, KioskTokenUpdateLabelRequest request) {
+        requireAdmin(authUser);
+        FingerprintKioskToken row = kioskTokenRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Token kiosk không tồn tại"));
+        if (!row.isActive()) {
+            throw new BusinessException("Chỉ đổi nhãn trên token đang dùng");
+        }
+        String label = request.getLabel() != null ? request.getLabel().trim() : "";
+        if (!StringUtils.hasText(label)) {
+            throw new BusinessException("Nhãn kiosk không được để trống");
+        }
+        if (label.length() > 100) {
+            throw new BusinessException("Nhãn kiosk tối đa 100 ký tự");
+        }
+        row.setLabel(label);
+        FingerprintKioskToken saved = kioskTokenRepository.save(row);
+        String deptName = departmentRepository.findById(saved.getDeptCode())
+                .map(d -> d.getDeptName())
+                .orElse(null);
+        return toKioskTokenDto(saved, deptName);
+    }
+
     private KioskTokenIssuedDto issueToken(Integer deptCode, String label) {
         return issueToken(deptCode, label, null);
     }

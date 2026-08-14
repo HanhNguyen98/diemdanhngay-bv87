@@ -82,10 +82,10 @@ export const api = {
       body: JSON.stringify({ empCode, status, fromDate, toDate, note }),
     }),
 
-  previewAttendanceManualRange: ({ empCode, fromDate, toDate }) =>
+  previewAttendanceManualRange: ({ empCode, fromDate, toDate, status }) =>
     apiRequest('/attendance/manual-range/preview', {
       method: 'POST',
-      body: JSON.stringify({ empCode, fromDate, toDate }),
+      body: JSON.stringify({ empCode, fromDate, toDate, status }),
     }),
 
   unlockDepartment: (deptCode, reason) =>

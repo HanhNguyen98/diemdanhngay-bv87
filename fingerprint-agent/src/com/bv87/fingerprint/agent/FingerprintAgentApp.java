@@ -1812,7 +1812,7 @@ public class FingerprintAgentApp extends JFrame {
     }
 
     /**
-     * Loads active department templates into SDK DB for Identify (SPEC §9.3 / §9.3.3).
+     * Loads active hospital-wide templates into SDK DB for Identify (SPEC §4.12 P6 / §9.3).
      * HTTP on worker; SDK DBAdd on EDT to avoid racing WorkThread Identify.
      */
     private void reloadIdentifyTemplates(boolean showBanner) {
@@ -1874,12 +1874,12 @@ public class FingerprintAgentApp extends JFrame {
         }
         if (showBanner) {
             if (total == 0) {
-                setBanner("Chưa có mẫu vân tay trong khoa. Chuyển sang Đăng ký để enroll.", BannerTone.WARNING);
+                setBanner("Chưa có mẫu vân tay toàn viện. Chuyển sang Đăng ký để enroll.", BannerTone.WARNING);
             } else if (loaded < total) {
-                setBanner("Đã nạp " + loaded + "/" + total + " mẫu (thiếu " + skipped
+                setBanner("Đã nạp " + loaded + "/" + total + " mẫu toàn viện (thiếu " + skipped
                         + "). Chờ đặt ngón tay…", BannerTone.WARNING);
             } else {
-                setBanner("Đã nạp " + loaded + "/" + total + " mẫu. Chờ đặt ngón tay…", BannerTone.SUCCESS);
+                setBanner("Đã nạp " + loaded + "/" + total + " mẫu toàn viện. Chờ đặt ngón tay…", BannerTone.SUCCESS);
             }
         }
     }
@@ -1962,42 +1962,44 @@ public class FingerprintAgentApp extends JFrame {
                 : String.format("%05d", result.empCode());
         String name = result.fullname() != null ? result.fullname() : "—";
         String dir = result.direction() != null ? result.direction() : "";
-        String statusText;
-        BannerTone tone;
-        if ("IN".equals(dir)) {
-            statusText = "VÀO THÀNH CÔNG";
-            tone = BannerTone.SUCCESS;
-        } else if ("OUT".equals(dir)) {
-            // SPEC §9.3.1 — OUT-only (no presence status) is incomplete
-            boolean outOnly = result.status() == null || result.status().isBlank();
-            if (outOnly) {
-                statusText = "RA — CHƯA CÓ GIỜ VÀO";
-                tone = BannerTone.WARNING;
-            } else {
-                statusText = "RA THÀNH CÔNG";
-                tone = BannerTone.SUCCESS;
-            }
-        } else if ("REJECTED".equals(dir)) {
-            // B1 / P4a — surface server reject reason on one banner line
-            String msg = result.message() != null ? result.message().trim() : "";
-            if (!msg.isEmpty()) {
-                statusText = "TỪ CHỐI — " + truncateBannerMessage(msg);
-            } else {
-                statusText = "TỪ CHỐI";
-            }
-            tone = BannerTone.WARNING;
-        } else {
-            statusText = dir.isBlank() ? "LỖI" : dir;
-            tone = BannerTone.DANGER;
-        }
-        setBanner(code + " - " + name + " - " + statusText, tone);
-        if ("REJECTED".equals(dir) || tone == BannerTone.WARNING) {
-            AgentBeep.failure();
-        } else if ("IN".equals(dir) || "OUT".equals(dir)) {
+        AttendanceBanner feedback = attendanceBannerFor(dir, result.status(), result.message());
+        setBanner(code + " - " + name + " - " + feedback.text(), feedback.tone());
+        if (feedback.tone() == BannerTone.SUCCESS) {
             AgentBeep.success();
         } else {
             AgentBeep.failure();
         }
+    }
+
+    /**
+     * SPEC §9.3.1 — Vietnamese 4-phase labels; never show raw AFTERNOON_IN / MORNING_IN.
+     */
+    private static AttendanceBanner attendanceBannerFor(String dir, String status, String message) {
+        return switch (dir) {
+            case "MORNING_IN" -> new AttendanceBanner("VÀO SÁNG THÀNH CÔNG", BannerTone.SUCCESS);
+            case "NOON_OUT" -> new AttendanceBanner("RA TRƯA THÀNH CÔNG", BannerTone.SUCCESS);
+            case "AFTERNOON_IN" -> new AttendanceBanner("VÀO CHIỀU THÀNH CÔNG", BannerTone.SUCCESS);
+            case "AFTERNOON_OUT" -> "VE_SOM".equals(status)
+                    ? new AttendanceBanner("RA CHIỀU — VỀ SỚM", BannerTone.WARNING)
+                    : new AttendanceBanner("RA CHIỀU THÀNH CÔNG", BannerTone.SUCCESS);
+            case "IN" -> new AttendanceBanner("VÀO THÀNH CÔNG", BannerTone.SUCCESS);
+            case "OUT" -> {
+                boolean outOnly = status == null || status.isBlank();
+                yield outOnly
+                        ? new AttendanceBanner("RA — CHƯA CÓ GIỜ VÀO", BannerTone.WARNING)
+                        : new AttendanceBanner("RA THÀNH CÔNG", BannerTone.SUCCESS);
+            }
+            case "REJECTED" -> {
+                String msg = message != null ? message.trim() : "";
+                yield msg.isEmpty()
+                        ? new AttendanceBanner("TỪ CHỐI", BannerTone.WARNING)
+                        : new AttendanceBanner("TỪ CHỐI — " + truncateBannerMessage(msg), BannerTone.WARNING);
+            }
+            default -> new AttendanceBanner("LỖI", BannerTone.DANGER);
+        };
+    }
+
+    private record AttendanceBanner(String text, BannerTone tone) {
     }
 
     private static String truncateBannerMessage(String message) {

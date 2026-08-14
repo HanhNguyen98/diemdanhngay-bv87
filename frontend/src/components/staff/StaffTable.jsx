@@ -8,6 +8,7 @@ const StaffTable = memo(function StaffTable({
   onEdit,
   onDelete,
   onHistory,
+  onTransfer,
   onDeleteFingerprint,
   avatarOnly = false,
   hideDeptColumn = false,
@@ -43,6 +44,7 @@ const StaffTable = memo(function StaffTable({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onHistory={onHistory}
+                onTransfer={onTransfer}
                 onDeleteFingerprint={onDeleteFingerprint}
               />
             ))

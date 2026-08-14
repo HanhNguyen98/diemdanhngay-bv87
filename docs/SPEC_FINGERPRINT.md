@@ -57,8 +57,10 @@ Thay bằng: quét = Chấm công **ngày hiện tại** → dữ liệu vào DB
 2. **Enroll:** trên **Agent** (chọn NV → quét 3 lần → lưu DB) — không quét trên Web.  
 3. **Mỗi ngày:** NV quét trên Agent → lưu DB (P2+).  
 4. **Web HEAD/ADMIN:** xem trạng thái ĐK / lịch sử / báo cáo / can thiệp Chấm công (Admin) — **không** enroll/xóa template trên Web.  
-5. **CRUD mẫu vân tay (enroll / ghi đè / xóa):** **chỉ Agent** + token kiosk. Admin enroll khoa khác = đổi `kiosk.token` trên máy Agent (§10.2).  
-6. Auth máy khoa: **token kiosk**.
+5. **CRUD mẫu vân tay (enroll / ghi đè / xóa):** **chỉ Agent** + token kiosk. Enroll khoa khác = đổi `kiosk.token` hoặc máy khoa hồ sơ (§10.2).  
+6. Auth máy khoa: **token kiosk**.  
+7. **Cross-kiosk (P6):** Mỗi kiosk vẫn 1 token / 1 `deptCode` (audit, heartbeat, enroll). **Chấm công (Identify/scan):** NV active + đã ĐK vân tay được quét **tại mọi kiosk**; dữ liệu chấm công thuộc **khoa hồ sơ** NV (`employees.dept_code`).  
+8. **Enroll:** không đổi — chỉ NV thuộc khoa token kiosk.
 
 **Production:** Agent `.jar`/Service — không dùng IntelliJ Demo2 hàng ngày.
 
@@ -111,6 +113,7 @@ KPI HEAD/Admin đọc catalog active theo `sort_order`. Thứ tự bắt buộc:
   - HEAD: Hệ thống → Chấm công; Hệ thống → Thống kê  
 - Quick-action HEAD **không** gồm `DI_LAM` / `DI_TRE` (chỉ 4 status thủ công).  
 - Seed catalog: **prod** Flyway `V12` (+ V4 đã drop `metric_key`); **local** (`flyway.enabled: false`) → `AttendanceStatusCatalogBootstrap` drop legacy `metric_key` nếu còn + upsert 6 status — **không** INSERT P3b trong `data.sql` (tránh lỗi cột `metric_key` / encoding).
+- Cột `attendance_records.status` **nullable** (P2.1f / §4.4): **prod** Flyway `V14`; **local** bootstrap `MODIFY … NULL` nếu cột còn NOT NULL (Hibernate `ddl-auto: update` không nới nullability). Thiếu bước này → quét chiều/trưa khi chưa có IN sáng ghi `status=NULL` → MySQL 500 → Agent banner `LỖI`.
 
 ### 3.2 Thủ công HEAD (có khoảng ngày)
 
@@ -128,12 +131,12 @@ Không gán chồng lên ngày đã có `DI_LAM`/`DI_TRE` từ vân tay (trừ A
 
 | Hạng mục | Rule |
 |----------|------|
-| Trigger | HEAD/Admin bấm quick-action 4 status thủ công → **mở modal** (không gán ngay 1 ngày im lặng) |
+| Trigger | HEAD/Admin bấm quick-action status thủ công (`manualAllowed = true`) → **mở modal** (không gán ngay 1 ngày im lặng); nếu là status cha `groupParent = true` thì modal phải hiện thêm lựa chọn status con trước khi lưu |
 | UI HEAD | Màn **Chấm công** (`AttendancePage`) |
 | UI ADMIN (P3f) | **Chi tiết Đơn vị** — cùng `QuickActionGroup` + `ManualStatusRangeModal` (tái dùng); **không** mở `AttendancePage` cho Admin |
 | API ghi | `PUT /api/attendance/manual-range` body: `empCode`, `status`, `fromDate`, `toDate`, `note?` |
 | API preview | `POST /api/attendance/manual-range/preview` body: `empCode`, `fromDate`, `toDate` → đếm ngày trùng vân tay / đã submit / sẽ ghi |
-| Validation | `fromDate <= toDate`; `(toDate - fromDate) + 1 ≤ 366`; status ∈ whitelist thủ công (khi ghi) |
+| Validation | `fromDate <= toDate`; `(toDate - fromDate) + 1 ≤ 366`; status ghi phải active + `manualAllowed = true` + **không** phải `groupParent`; `DI_LAM` / `DI_TRE` luôn bị từ chối |
 | Quyền | HEAD: khoa mình; ADMIN: mọi khoa. **Không** bắt buộc chỉ “hôm nay” |
 | Mỗi ngày (ghi) | Gọi **`applyManualStatus`** (§4.8.1): `status` thủ công; `source=MANUAL`; **xóa** `check_in_at` / `check_out_at`. Ngày đã có **status thủ công khác** → **ghi đè** (HEAD/Admin cùng semantics; không “từ chối”). |
 | Skip (HEAD) | Ngày đã `DI_LAM`/`DI_TRE` → **bỏ qua** (**cấm** ghi đè); ngày đã gửi báo cáo → bỏ qua |
@@ -141,7 +144,7 @@ Không gán chồng lên ngày đã có `DI_LAM`/`DI_TRE` từ vân tay (trừ A
 | FE lock quick-action | HEAD: disabled khi đã `DI_LAM`/`DI_TRE`. **ADMIN: không khóa** (mở modal để đè qua range) |
 | Response ghi | `updatedCount`, `skippedFingerprint`, `skippedReportSubmitted`, `message` VN |
 | Nếu `updatedCount=0` | BusinessException — không ngày nào được cập nhật |
-| UI modal | `ManualStatusRangeModal.jsx` — FormModal; **không** hint dài; subtitle **`{empCodeFormatted} - {fullname}`**; status; 2 ô date; số ngày; Hủy / Xác nhận |
+| UI modal | `ManualStatusRangeModal.jsx` — FormModal; **không** hint dài; subtitle **`{empCodeFormatted} - {fullname}`**; status; nếu là status cha thì thêm select status con; 2 ô date; ô `Ghi chú` tùy chọn; số ngày; Hủy / Xác nhận |
 | Cảnh báo trùng vân tay (HEAD) | Trước khi ghi: nếu preview `skippedFingerprint > 0` → banner cảnh báo VN: có N ngày đã quét vân tay **sẽ bỏ qua**; nút **Tiếp tục** (ghi với skip) / **Hủy** (đóng cảnh báo, không ghi). **Không** nút “Ghi đè”. |
 | Admin | Không cảnh báo skip vân tay (`requiresFingerprintSkipConfirm=false`) |
 | Sau OK | Refresh trang ngày đang xem; toast `message` |
@@ -230,72 +233,79 @@ Gọi `late_cutoff` = 07:00:00.
   - Log message: `Ra về (chưa có giờ vào)` — **không** còn nhánh “chỉ ghi log”.
 - OUT khi đã có status khóa thủ công (`NGHI_PHEP` / …): vẫn `REJECTED` (§3.3).
 - Không bắt buộc OUT để gửi báo cáo (chỉ cảnh báo UI nếu thiếu).
-- Cột DB `attendance_records.status` **nullable** (Flyway) để hỗ trợ OUT-only.
+- Cột DB `attendance_records.status` **nullable** (Flyway `V14`; local bootstrap nếu flyway tắt) để hỗ trợ OUT-only / vào chiều-trưa khi chưa có IN sáng.
 
 ### 4.5 Hợp lệ ngày / CompletionStatus / không nộp báo cáo khoa (P5 — bắt buộc)
 
 **Mô hình:** exception-based. Scan → DB ngay. **Cấm** CTA / API bắt HEAD **Gửi báo cáo** mỗi ngày. Admin thấy dữ liệu **realtime** trên dashboard.
 
-**Hợp lệ “đã chấm” (một NV trong ngày)** — dùng KPI / `markedCount` / hàng đợi (không còn cổng nộp):
+**Hợp lệ “đã chấm” (một NV trong ngày)** — dùng KPI / `markedCount` / hàng đợi (không còn cổng nộp).  
+Rule P7 đầy đủ: **§4.13.3**. Tóm tắt:
 
 | Loại | Điều kiện hợp lệ |
 |------|------------------|
-| Có mặt `DI_LAM` \| `DI_TRE` | Có **cả** `check_in_at` **và** `check_out_at` |
-| Thủ công `NGHI_PHEP` \| `DI_HOC` \| `DI_CONG_TAC` \| `THAI_SAN` | Chỉ cần **status** (không bắt giờ vào/ra) |
-| OUT-only / thiếu giờ / chưa record | **Chưa** hợp lệ → vào hàng đợi thiếu dữ liệu chấm công (§4.5.2) |
+| Có mặt `DI_LAM` \| `DI_TRE` | Đủ **4 mốc** **hoặc** grandfather pre-P7: chỉ `morning_in` + `afternoon_out` (`noon_out` + `afternoon_in` null) |
+| `VE_SOM` | Đủ 4 mốc + **note** (lý do) |
+| `NGHI_TRUC_HALF` | `morning_in` + `noon_out`, chiều trống |
+| Thủ công vắng / `NGHI_TRUC_FULL` / PHEP / HOC / CT / THAI_SAN / HSQ nghỉ… | Chỉ cần **status** (không bắt giờ) |
+| OUT-only / `punchCount` 1–3 (không phải HALF đã chốt) / chưa record | **Chưa** hợp lệ → hàng đợi §4.5.2 |
 
-`COMPLETED` khi mọi NV active của đơn vị trong ngày đều hợp lệ — **chỉ** cho KPI/badge “đủ dữ liệu”, **không** khóa nút nộp (nút đã bỏ).
+`COMPLETED` khi mọi NV active của đơn vị trong ngày đều hợp lệ (§4.13) — **chỉ** cho KPI/badge “đủ dữ liệu”, **không** khóa nút nộp (nút đã bỏ). KPI breakdown gồm **mọi** status catalog active (kể `VE_SOM`, nhóm `NGHI_TRUC`) — **không** giới hạn 6 mã cũ.
 
 - Không phụ thuộc cửa sổ 06:00–16:00.
 - `attendance_report_submissions` / `report-submit`: **deprecated** — không gate runtime; FE **không** hiện Gửi báo cáo. Bản ghi lịch sử cũ có thể giữ DB, không dùng để REJECTED scan / khóa HEAD.
 - `reportBlocked` (nếu còn): chỉ nghĩa **Admin khóa chỉnh sửa HEAD** cho khoa/ngày (tùy chọn legacy) — **không** mang nghĩa “chưa nộp báo cáo”.
 
-#### 4.5.1 Cảnh báo thiếu giờ ra (P3f — bắt buộc)
+#### 4.5.1 Cảnh báo thiếu dữ liệu chấm (P3f / P7)
 
 | Rule | Chi tiết |
 |------|----------|
-| Điều kiện | `status ∈ {DI_LAM, DI_TRE}` **và** có `check_in_at` **và** `check_out_at == null` |
+| Điều kiện | `status ∈ {DI_LAM, DI_TRE}` **và chưa** hợp lệ §4.13 (thiếu mốc so với 4 pha / không đủ grandfather 2 mốc) |
 | Mục đích | Giải thích badge có mặt nhưng KPI chưa đủ — **không** nới HEAD đè vân tay |
-| UI | Hint VN trên HEAD Chấm công + Admin Chi tiết Đơn vị — ví dụ: `Thiếu giờ ra` |
+| UI | Hint VN trên HEAD Chấm công + Admin Chi tiết Đơn vị: **`Thiếu dữ liệu chấm công`** (không chỉ “thiếu giờ ra” 2-cổng cũ) |
 
-#### 4.5.2 Hàng đợi thiếu dữ liệu chấm công (P5 — bắt buộc)
+#### 4.5.2 Hàng đợi thiếu dữ liệu chấm công (P5 / P7)
 
 | Rule | Chi tiết |
 |------|----------|
 | Mục đích | Auto liệt kê bất thường — **không** bắt HEAD nộp báo cáo mới thấy |
 | API | `GET /api/attendance/missing-punches?date=&deptCode=` — HEAD: luôn khoa mình; ADMIN: omit `deptCode` = toàn viện |
-| `MISSING_CHECK_OUT` | `DI_LAM`\|`DI_TRE` + có vào + không ra |
-| `UNMARKED` | NV active không hợp lệ §4.5 và **không** đang status thủ công vắng (gồm chưa record / OUT-only / thiếu dữ liệu) |
-| Loại trừ | Đã `NGHI_PHEP`\|`DI_HOC`\|`DI_CONG_TAC`\|`THAI_SAN` → **không** vào queue “không quét” |
-| UI | HEAD: panel/banner trên Chấm công; Admin: bảng/widget dashboard hoặc cùng API trên trang tiện ích |
-| Xử lý | HEAD: gán ngoại lệ khoảng ngày (whitelist) nếu đúng; Admin: điền giờ trống (§4.6) / soft clear (§4.11) |
+| `INCOMPLETE_PUNCHES` | Có mặt / chưa thủ công vắng và `punchCount` 1–3 (không grandfather) |
+| `MISSING_EARLY_LEAVE_REASON` | `VE_SOM` chưa có `note` |
+| `UNMARKED` | NV active không hợp lệ và không thuộc hai reason trên (chưa record / `punchCount=0`) |
+| `MISSING_CHECK_OUT` | **Deprecated** — reader cũ map sang `INCOMPLETE_PUNCHES` |
+| Loại trừ | Thủ công vắng hợp lệ (PHEP/HOC/CT/THAI_SAN/`NGHI_TRUC_FULL`/…) **không** vào queue |
+| UI | HEAD banner + Admin/AI widget: đếm đủ 3 reason mới (copy VN, **cấm** “punch”) |
+| Xử lý | HEAD: ngoại lệ khoảng ngày / lý do `VE_SOM` 1 ngày; Admin: điền **4 ô trống** (§4.6) / soft clear (§4.11) |
 
-### 4.6 Admin điền giờ trống (phương án X)
+### 4.6 Admin điền giờ trống (phương án X — P7: 4 mốc)
 
 | Rule | Chi tiết |
 |------|----------|
 | Ai | **Chỉ ADMIN** — HEAD **không** sửa giờ |
-| Ô được sửa | Chỉ field **đang null** (`check_in_at` / `check_out_at`). **Cấm** ghi đè giờ đã có từ máy quét |
-| API | `PUT /api/admin/attendance/times` body: `empCode`, `date`, `checkInTime?` (`HH:mm`), `checkOutTime?` (`HH:mm`) — ít nhất một ô trống được gửi |
-| Status (X) | Đã có `DI_LAM`/`DI_TRE` → **giữ**. `status=null` và vừa có giờ vào → tự gán theo **rule C** (`late_cutoff` = `AttendanceValidity.LATE_CUTOFF` **07:00** — một nguồn hằng). Chỉ điền giờ ra, chưa có giờ vào → vẫn `status=null` |
-| Can thiệp có mặt Admin | **Chỉ** kênh này (điền `check_in` trống → rule C) — **cấm** invent màn/API “đặt DI_LAM/DI_TRE không giờ” |
-| Status thủ công vắng | **Không** bắt giờ; API từ chối điền giờ nếu đang `NGHI_PHEP`/… |
+| Ô được sửa | Chỉ field **đang null** trong 4 mốc: `morning_in_at` / `noon_out_at` / `afternoon_in_at` / `afternoon_out_at`. **Cấm** ghi đè giờ đã có từ máy |
+| API | `PUT /api/admin/attendance/times` body: `empCode`, `date`, `morningInTime?`, `noonOutTime?`, `afternoonInTime?`, `afternoonOutTime?` (`HH:mm`) — ít nhất một ô trống được gửi. Alias tương thích: `checkInTime` ≡ `morningInTime`, `checkOutTime` ≡ `afternoonOutTime` |
+| Status | Sau khi điền: nếu đủ 4 mốc → gán `DI_LAM` / `DI_TRE` / `VE_SOM` theo §4.13.3 + `WorkSchedule` (grace settings, **không** hardcode 07:00). Nếu chưa đủ 4 và vừa có vào sáng + `status` trống → rule C (`lateCutoff` từ settings). `late_flag` theo `WorkSchedule.isLate` |
+| Sync legacy | `check_in_at` = `morning_in_at`; `check_out_at` = `afternoon_out_at` nếu có, không thì `noon_out_at` |
+| Can thiệp có mặt Admin | **Chỉ** kênh này — **cấm** invent màn “đặt DI_LAM/DI_TRE không giờ” |
+| Status thủ công vắng / hybrid | API từ chối nếu đang `isManualStatus` (PHEP/…/`VE_SOM`/`NGHI_TRUC_*`) |
 | Source | Nếu `source` trống → `ADMIN`; đã `FINGERPRINT` có thể giữ |
+| Note | Đủ 4 mốc → `VE_SOM`: giữ note; → `DI_LAM`/`DI_TRE`: **xóa** note (§4.13.3 P7b) |
 | Sau khóa mềm (§4.7) | Admin **vẫn được** điền ô trống |
 
 #### UI modal (Admin Chi tiết Đơn vị — **Điền giờ** qua menu §10.6)
 
 | Thành phần | Rule |
 |------------|------|
-| Trigger | Menu **Vân tay** → **Điền giờ** (chỉ hiện khi còn ô giờ trống và không đang status thủ công vắng) |
+| Trigger | Menu **Vân tay** → **Điền giờ** (chỉ hiện khi còn **≥1 / 4** ô trống và không đang status thủ công vắng) |
 | FE | `FillAttendanceTimesModal.jsx` trên `DeptAttendanceDetailPage` |
 | Asset | `frontend/src/assets/branding/biometrics.png` (copy từ Agent branding — **không** import path `fingerprint-agent/`) |
 | Header | Title `Điền giờ vào / ra`; dòng NV: icon user + `{tên} • {empCodeFormatted}` |
-| Hint | Banner `bg-primary-light` + **vạch trái primary** + icon info; copy §4.6 |
-| Layout giờ | **Grid 2 cột** (`GIỜ VÀO` \| `GIỜ RA`); label + icon vào/ra |
+| Hint | Banner `bg-primary-light` + **vạch trái primary** + icon info; copy §4.6 (4 mốc, không ghi đè, rule C theo settings) |
+| Layout giờ | **Grid 2×2**: Vào sáng \| Ra trưa / Vào chiều \| Ra chiều |
 | Ô đã có giờ | Input disabled; hiện `HH:mm` (24h); badge xanh **Đã có** **bên trong** ô (phải) |
 | Ô trống | Input `type="time"` editable, viền `primary`, nền trắng, icon clock trong ô |
-| Preview logic | Panel xám: header `XEM TRƯỚC LOGIC` + pill `TỰ ĐỘNG`; **ô vuông** ảnh `biometrics.png`; status + **progress bar** (rule C vs 07:00); caption giải thích. Giữ status nếu đã có; chưa có vào → CHƯA CHẤM |
+| Preview logic | Panel xám: header `XEM TRƯỚC LOGIC` + pill `TỰ ĐỘNG`; **ô vuông** ảnh `biometrics.png`; status + **progress bar** (rule C vs `lateCutoff` settings); caption giải thích |
 | Footer | **Hủy** outline primary; **Lưu giờ** `btn-primary` + icon Save |
 | Token | Semantic Tailwind — không hardcode hex |
 
@@ -314,16 +324,18 @@ Gọi `late_cutoff` = 07:00:00.
 | `report-submit` | Deprecated — API có thể 410/no-op; FE **không** gọi, **không** nút |
 | Bảng `attendance_report_submissions` | Chỉ lịch sử (nếu còn); **không** gate runtime |
 
-### 4.8 HEAD whitelist PUT (P2.1h — bắt buộc)
+### 4.8 HEAD whitelist PUT (P2.1h / P7)
 
 | Rule | Chi tiết |
 |------|----------|
-| Status được gán | Chỉ `NGHI_PHEP` \| `DI_HOC` \| `DI_CONG_TAC` \| `THAI_SAN` |
-| `DI_LAM` / `DI_TRE` | **Từ chối** — “Đi làm / Đi trễ chỉ ghi nhận qua vân tay.” |
-| Đã có `DI_LAM`/`DI_TRE` trong ngày | **Từ chối** gán status khác — “Nhân viên đã Chấm công bằng vân tay. Không được gán trạng thái khác.” |
-| `status=null` (OUT-only / chưa chấm) | HEAD được gán 4 status thủ công |
-| FE | Quick-action **disabled** khi đã có `DI_LAM`/`DI_TRE`; StatusPicker AI chỉ 4 status thủ công |
-| BE | Enforce trên `saveAttendance` + `previewBatchAttendance` / `confirmBatchAttendance` — không chỉ FE |
+| Status được gán | Status catalog `manualAllowed` (không `groupParent`); gồm PHEP / HOC / CT / THAI_SAN / HSQ con / `NGHI_TRUC_*` / lưu lý do `VE_SOM` |
+| `DI_LAM` / `DI_TRE` | **Từ chối** gán tay — “Đi làm / Đi trễ chỉ ghi nhận qua vân tay.” |
+| Đã có `DI_LAM`/`DI_TRE` trong ngày | **Từ chối** PHEP/HSQ/… ; **được** `NGHI_TRUC_HALF` / `NGHI_TRUC_FULL` / PUT `VE_SOM` + `note` (§4.13.4) |
+| `VE_SOM` | **Cấm** `manual-range`. Chỉ `PUT /api/attendance` 1 ngày + note bắt buộc. UI: ô lý do trên dòng roster (HEAD + Admin Chi tiết ĐV + mobile) |
+| `status=null` | HEAD được gán thủ công `manualAllowed` |
+| FE quick-action khi đã presence | **Khóa** PHEP/HSQ/…; **mở** nhóm `NGHI_TRUC`. **Không** hiện `VE_SOM` trên quick-action khoảng ngày |
+| Preview range | `POST …/manual-range/preview` body gồm `status?` — ngày vân tay **không** skip nếu `status` ∈ post-scan override (`NGHI_TRUC_*`) |
+| BE | Enforce `saveAttendance` + range + batch — không chỉ FE |
 
 #### 4.8.1 Một semantics ghi thủ công — `applyManualStatus` (P3f — bắt buộc)
 
@@ -376,6 +388,161 @@ Can thiệp đặc biệt khi cần hủy status/giờ ngày (sai sót, đè sau
 | UI | Chi tiết Đơn vị: mục **Đưa về chưa chấm** trong menu **Vân tay** (§10.6); `FormModal` + ô lý do |
 | UI khi ngày đã submit | Banner **warning** VN: đã gửi báo cáo — clear **không** hủy submit; kiosk vẫn từ chối scan; quân số ngày có thể lệch báo cáo đã nộp |
 
+### 4.12 Cross-kiosk scan (P6 — bắt buộc)
+
+NV hồ sơ một khoa có thể **quét chấm công tại mọi kiosk** (luân chuyển làm việc tạm thời). Enroll vẫn chỉ tại khoa hồ sơ (token kiosk).
+
+| Hạng mục | Rule |
+|----------|------|
+| Identify DB Agent | `GET /api/kiosk/fingerprints/templates` trả template **toàn viện** — mọi `employee_fingerprints.active` của NV `active` |
+| `POST /api/kiosk/fingerprints/scan` | **Không** từ chối vì `emp.deptCode ≠ kiosk.deptCode` |
+| Điều kiện scan OK | Token hợp lệ; LAN gate; NV tồn tại + active; đã ĐK vân tay; rule C + khung giờ + debounce |
+| `attendance_records` | Cập nhật theo `emp_code` + ngày — roster HEAD/Admin theo **khoa hồ sơ** |
+| `fingerprint_scan_logs.dept_code` | **Khoa máy quét** (kiosk token) — audit vị trí quét; không đổi semantics attendance |
+| Debounce | Key **`empCode`** toàn hệ thống (không `(kioskDept, empCode)`) — tránh double IN khi quét 2 kiosk liên tiếp |
+| Enroll / DELETE template | **Không đổi** — `requireEmployeeInDept` (scope khoa token) |
+| `GET /api/kiosk/staff` | **Không đổi** — chỉ NV khoa token (UI Đăng ký) |
+| LAN gate §8.1 | **Giữ** — payload template lớn hơn chấp nhận trong mạng viện; **cấm** public `/api/kiosk/**` |
+
+**Agent copy (P6):** sau nạp template — *「Đã nạp {n}/{total} mẫu toàn viện. Chờ đặt ngón tay…」* (hoặc tương đương khi `total=0`).
+
+**Checklist P6:**
+
+- [x] SPEC §4.12 reviewed
+- [x] BE: templates toàn viện + bỏ dept check scan + debounce `empCode`
+- [x] Agent: copy nạp template toàn viện
+- [ ] UAT: NV khoa A quét kiosk khoa B → HEAD khoa A thấy giờ vào/ra
+- [ ] UAT: enroll tại kiosk khác khoa hồ sơ → vẫn chặn
+- [ ] UAT: LAN gate vẫn chặn Internet
+
+### 4.13 Công ngày 4 pha + cờ phụ (P7 — bắt buộc)
+
+**1 NV / 1 ngày = 1 `status` chính** trong `attendance_records.status` (đúng 1 mã catalog). **Cấm** ghép chuỗi (`VE_SOM+DI_TRE`).  
+Đi trễ kèm về sớm: `status = VE_SOM` + cờ phụ **`late_flag`** (boolean) để truy vết / UI `+ Đi trễ`.
+
+#### 4.13.1 Settings — giờ hành chính + khung quét + grace
+
+Admin: `settings-system`. API `GET/PUT /api/admin/settings/branding` (cùng payload branding). **Không** gộp với `lockTime` (khóa mềm HEAD).  
+UI layout section 3 (card Mốc chuẩn / Midpoint / Khung nhận quét / Grace, chống tràn ngang + **scroll dọc `AdminShell` main**): **`SPEC_ADMIN` §3.1 + §9**.
+
+| Nhóm | Key | Mặc định | Việc dùng |
+|------|-----|----------|-----------|
+| Mốc chuẩn | `morningInOfficial` | `07:00` | Đi trễ nếu vào sáng sau mốc + grace |
+| | `noonOutOfficial` | `11:00` | Hiển thị / validate nửa ngày |
+| | `afternoonInOfficial` | `13:30` | Hiển thị |
+| | `afternoonOutOfficial` | `16:30` | Về sớm nếu ra chiều trước mốc − grace |
+| Biên khung quét | `morningOpen` | `05:00` | Giờ mở cửa sáng |
+| | `midpoint1` | `09:00` | Cắt Vào sáng / Ra trưa |
+| | `midpointNoon` | `12:16` | Cắt Ra trưa / Vào chiều |
+| | `midpoint2` | `15:00` | Cắt Vào chiều / Ra chiều |
+| | `dayClose` | `21:00` | Giờ đóng cửa (Ra chiều inclusive đến mốc này) |
+| Grace (phút, 0–60) | `lateGraceMinutes` | `5` | Trễ đầu giờ **không trừ công** |
+| | `earlyGraceMinutes` | `5` | Ra chiều trong grace **không** thành về sớm |
+
+Khung nhận lượt quét (nửa mở `[a,b)` trừ Ra chiều đóng inclusive):
+
+| Pha | Mốc chuẩn | Khung mặc định |
+|-----|-----------|----------------|
+| Vào sáng `MORNING_IN` | 07:00 | `[morningOpen, midpoint1)` → 05:00–08:59 |
+| Ra trưa `NOON_OUT` | 11:00 | `[midpoint1, midpointNoon)` → 09:00–12:15 |
+| Vào chiều `AFTERNOON_IN` | 13:30 | `[midpointNoon, midpoint2)` → 12:16–14:59 |
+| Ra chiều `AFTERNOON_OUT` | 16:30 | `[midpoint2, dayClose]` → 15:00–21:00 |
+
+Validate khi lưu: `morningOpen < midpoint1 < midpointNoon < midpoint2 < dayClose`; mỗi mốc chuẩn **nằm trong** khung pha tương ứng. Message VN nếu sai.
+
+```
+lateCutoff  = morningInOfficial + lateGraceMinutes
+earlyCutoff = afternoonOutOfficial − earlyGraceMinutes
+```
+
+Kiosk **chỉ** classify theo settings (cache/health); **cấm** hardcode `05:30–11:00` / `13:30–18:00`. Ngoài khung → `REJECTED`.
+
+#### 4.13.2 Data model ngày công
+
+`attendance_records` (ngoài `status`, `note`, `source`):
+
+| Cột | Ý nghĩa |
+|-----|---------|
+| `morning_in_at` | Vào sáng |
+| `noon_out_at` | Ra trưa |
+| `afternoon_in_at` | Vào chiều |
+| `afternoon_out_at` | Ra chiều |
+| `late_flag` | `true` khi vào sáng `> lateCutoff` **tại thời điểm ghi** (không đổi khi Admin sửa grace sau). DB: `TINYINT(1) NOT NULL DEFAULT 0` (V18). Entity JPA **phải** `columnDefinition` TINYINT — `ddl-auto: validate` prod không chấp nhận map `boolean` → `BIT` lệch Flyway |
+
+Catalog `attendance_status_types`: `active` (V3), `manual_allowed` / `group_parent` (V17) cũng là `TINYINT(1)`. Entity `AttendanceStatusType` **phải** `columnDefinition` TINYINT tương ứng (**P7c**) — cùng lý do validate prod.
+| `last_kiosk_hostname` / `last_kiosk_ip` / `last_kiosk_dept_code` / `last_kiosk_label` | Máy quét thành công **cuối** trong ngày — cột **Máy luôn hiện** |
+
+Tương thích: `check_in_at` = `morning_in_at`; `check_out_at` = `afternoon_out_at` nếu có, không thì `noon_out_at`. Soft clear (§4.11) xóa **cả 4 mốc** + `late_flag=false` + cột máy null.
+
+`fingerprint_scan_logs` thêm: `client_hostname`, `client_ip`, `kiosk_label` (dept_code kiosk **giữ**). Agent gửi hostname + IPv4 LAN trên scan (không tin IP proxy Cloudflare).
+
+**Cấm** lưu `"VE_SOM+DI_TRE"` vào `status`.
+
+#### 4.13.3 Rule C + grace + VE_SOM
+
+Sau mỗi scan hợp lệ, gán giờ vào **đúng ô pha** (một giờ hiệu lực / pha: IN sáng theo rule C; OUT lấy MAX trong khung; IN chiều lần đầu trong khung).
+
+Khi `punchCount == 4` (kiosk `refreshPresenceStatus` + Admin điền đủ 4 ô §4.6): gán theo **đồng hồ hiện tại** (OUT chiều = MAX):
+
+| Điều kiện | `status` | `late_flag` |
+|-----------|----------|-------------|
+| Vào sáng `≤ lateCutoff` và ra chiều `≥ earlyCutoff` | `DI_LAM` | false |
+| Vào sáng `> lateCutoff` và ra chiều `≥ earlyCutoff` | `DI_TRE` | true |
+| Ra chiều `< earlyCutoff` | `VE_SOM` | true nếu vào sáng `> lateCutoff`, else false |
+
+**`note` khi đổi status (P7b — bắt buộc):**
+- Vẫn `VE_SOM` (ra chiều vẫn sớm): **giữ** `note` nếu HEAD/Admin đã nhập.
+- **Rời** `VE_SOM` → `DI_LAM`/`DI_TRE` (quét ra chiều MAX không còn sớm): **xóa** `note`. Cấm để lý do về sớm trên bản ghi có mặt.
+- `NGHI_TRUC_HALF`: không chạy bảng trên (giữ status + note + giờ).
+
+`VE_SOM`: HEAD/Admin **bắt buộc** nhập lý do (`note`). Chưa note → hàng đợi thiếu dữ liệu (`MISSING_EARLY_LEAVE_REASON`).  
+UI: badge Về sớm; nếu `late_flag` → text đỏ **`+ Đi trễ`** bên cạnh. KPI **chỉ** đếm `VE_SOM` (không cộng card Đi trễ).
+
+`punchCount` 1–3 (đang có mặt / chưa status thủ công vắng): cờ **Thiếu dữ liệu chấm công** (`INCOMPLETE_PUNCHES`). `punchCount=0` + không thủ công → `UNMARKED`.
+
+**Grandfather pre-P7 (bắt buộc trước production):** bản ghi chỉ có `morning_in_at` + `afternoon_out_at` và `noon_out_at`/`afternoon_in_at` null (sau V18 copy từ `check_in`/`check_out`) vẫn **hợp lệ** `DI_LAM`/`DI_TRE`. Không bắt backfill 4 mốc. Admin vẫn được điền 2 ô còn trống nếu muốn.
+
+#### 4.13.4 Nghỉ trực (catalog nhóm)
+
+| Code | `manualAllowed` | `groupParent` | `parentCode` | Badge |
+|------|-----------------|---------------|--------------|-------|
+| `NGHI_TRUC` | true | **true** | null | NGHỈ TRỰC |
+| `NGHI_TRUC_FULL` | true | false | `NGHI_TRUC` | NGHỈ TRỰC · 1 NGÀY |
+| `NGHI_TRUC_HALF` | true | false | `NGHI_TRUC` | NGHỈ TRỰC · NỬA NGÀY |
+
+`VE_SOM`: active, `manualAllowed = true` (HEAD/Admin nhập lý do), **không** `groupParent`. Không dùng quick-action khoảng ngày cho `VE_SOM` (chỉ xác nhận lý do ngày đang xem).
+
+**Nửa ngày:** bắt buộc `morning_in_at` + `noon_out_at`; **chiều trống**. Thiếu 2 mốc sáng/trưa → từ chối. Đã có vào/ra chiều → từ chối. `applyManualStatus` HALF: **giữ giờ**, `late_flag` không xóa nếu đã set, `source=MIXED` nếu đã có giờ vân tay.
+
+**1 ngày:** không bắt quét; nếu `punchCount > 0` → HEAD từ chối (Admin clear trước nếu cần). FULL: xóa 4 giờ như thủ công vắng khác.
+
+**Quét trước, HEAD sau:** HEAD **được** gán `NGHI_TRUC_HALF` / `NGHI_TRUC_FULL` / lưu lý do `VE_SOM` dù ngày đã có `DI_LAM`/`DI_TRE`. **Không** đè sang PHEP/HSQ/… khi đã presence (giữ §4.8). Admin vẫn đè mọi thủ công.
+
+Kiosk `MANUAL_LOCK`: `isManualStatus` **trừ** hybrid `isHybridKeepTimes` (`VE_SOM`, `NGHI_TRUC_HALF`) — vẫn nhận quét (OUT lấy MAX / IN chiều lần đầu). `NGHI_TRUC_FULL` + PHEP + HSQ nghỉ → từ chối quét. Implement: `FingerprintScanService` dùng `isHybridKeepTimes`, **cấm** khóa mọi `isManualStatus`.
+
+**`source` sau scan (P7b):** không luôn ghi `FINGERPRINT`.
+| `source` trước scan | Sau scan hợp lệ |
+|---------------------|-----------------|
+| trống hoặc `FINGERPRINT` | `FINGERPRINT` |
+| `MANUAL` / `MIXED` / `ADMIN` | `MIXED` |
+
+Áp dụng cả hybrid (`VE_SOM` / `NGHI_TRUC_HALF`) và ngày có mặt. Cấm đè `MIXED` → `FINGERPRINT` khi HEAD đã gán lý do / nửa ngày rồi NV quét thêm.
+
+#### 4.13.5 Đơn giải trình / bổ sung công (pha A)
+
+**Không** portal nhân viên. HEAD/Admin nhập lý do `VE_SOM` trên **dòng roster** (ô + Lưu lý do, 1 ngày — `PUT /api/attendance`). Admin **Bổ sung công** = điền **ô giờ trống** 4 mốc (§4.6); **cấm** ghi đè giờ máy.
+
+#### 4.13.6 UI roster
+
+- Một cột **Giờ** 2×2: Vào sáng · Ra trưa / Vào chiều · Ra chiều (HEAD + Admin Chi tiết ĐV + mobile).  
+- Cột **Máy**: **luôn hiện** `{label kiosk} · {hostname} · {ip}` (hoặc `—` nếu chưa quét).  
+- Scan log modal: thêm cột Máy / IP.  
+- Excel: 4 giờ + lý do + máy + `+ Đi trễ` nếu `late_flag`.
+
+#### 4.13.7 Agent
+
+`POST /api/kiosk/fingerprints/scan` body thêm `clientHostname?`, `clientIp?` (optional — Agent cũ vẫn scan được, cột Máy trống). Heartbeat có thể gửi cùng field (không bắt buộc lưu token).
+
 ---
 
 ## 5. Data model — một nguồn cho mọi màn
@@ -414,7 +581,7 @@ Template đăng ký: `emp_code`, `finger_index`, `template`, `template_len`, `zk
 
 ### 5.2 `fingerprint_scan_logs`
 
-Mọi lần quét: `emp_code`, `dept_code`, `scanned_at`, `direction` (`IN`|`OUT`|`REJECTED`), `score`, `message`, `created_at`. Append-only.
+Mọi lần quét: `emp_code`, `dept_code`, `scanned_at`, `direction` (`MORNING_IN`|`NOON_OUT`|`AFTERNOON_IN`|`AFTERNOON_OUT`|`REJECTED`; alias cũ `IN`|`OUT`), `score`, `message`, `created_at`. Append-only.
 
 ### 5.3 Bản ghi ngày (mở rộng `attendance_records` hoặc bảng day-presence **map 1–1** rồi deprecate nguồn cũ)
 
@@ -425,7 +592,7 @@ Mỗi `(emp_code, attendance_date)`:
 | `status` | `DI_LAM` \| `DI_TRE` \| thủ công \| null |
 | `check_in_at` | IN hiệu lực (rule C) |
 | `check_out_at` | OUT MAX |
-| `source` | `FINGERPRINT` \| `MANUAL` \| `ADMIN` |
+| `source` | `FINGERPRINT` \| `MANUAL` \| `ADMIN` \| `MIXED` (giờ máy + thủ công/Admin trên cùng ngày — §4.13.4 P7b) |
 | `note` | Tùy chọn |
 
 Migration: cập nhật mọi reader (page/summary/stats/dashboard) sang nguồn này trong cùng phase dữ liệu.
@@ -590,13 +757,19 @@ Sau POST scan OK (hoặc REJECTED có NV): **một** dòng trên vùng banner (p
 
 | `direction` API | Điều kiện | `{STATUS}` (uppercase) | Banner tone | Âm |
 |-----------------|-----------|------------------------|-------------|-----|
-| `IN` | — | **`VÀO THÀNH CÔNG`** | SUCCESS | success |
-| `OUT` | Đã có `check_in_at` (status có mặt) | **`RA THÀNH CÔNG`** | SUCCESS | success |
-| `OUT` | OUT-only (`status` null / chưa có giờ vào) | **`RA — CHƯA CÓ GIỜ VÀO`** | WARNING | fail |
+| `MORNING_IN` | — | **`VÀO SÁNG THÀNH CÔNG`** | SUCCESS | success |
+| `NOON_OUT` | — | **`RA TRƯA THÀNH CÔNG`** | SUCCESS | success |
+| `AFTERNOON_IN` | — | **`VÀO CHIỀU THÀNH CÔNG`** | SUCCESS | success |
+| `AFTERNOON_OUT` | `status` ≠ `VE_SOM` | **`RA CHIỀU THÀNH CÔNG`** | SUCCESS | success |
+| `AFTERNOON_OUT` | `status` = `VE_SOM` | **`RA CHIỀU — VỀ SỚM`** | WARNING | fail |
+| `IN` (alias cũ) | — | **`VÀO THÀNH CÔNG`** | SUCCESS | success |
+| `OUT` (alias cũ) | Đã có giờ vào (status có mặt) | **`RA THÀNH CÔNG`** | SUCCESS | success |
+| `OUT` (alias cũ) | OUT-only (`status` null) | **`RA — CHƯA CÓ GIỜ VÀO`** | WARNING | fail |
 | `REJECTED` | Có `message` từ BE (B1 / P4a) | **`TỪ CHỐI — {message}`** (rút gọn 1 dòng nếu dài) | WARNING | fail |
 | `REJECTED` | `message` trống | **`TỪ CHỐI`** | WARNING | fail |
+| (HTTP/API fail) | — | **`LỖI`** (+ message VN nếu có) | DANGER | fail |
 
-- **IN/OUT thành công:** **không** ghép thêm message API kiểu “Đã ghi nhận ra.”  
+- **Thành công:** **không** ghép thêm message API kiểu “Đã ghi nhận ra.” **Cấm** hiện mã thô `AFTERNOON_IN` / `MORNING_IN` trên banner.
 - **REJECTED:** **bắt buộc** hiện `message` BE khi có (vd. `Đã gửi báo cáo.`, `Ngoài khung giờ vào/ra…`) — vẫn **một** dòng banner.  
 - **Không** hàng meta `{name} {code}` + pill badge dưới preview (mode Chấm công).  
 - **Không** rút STATUS thành công còn `VÀO` / `RA`.  
@@ -610,8 +783,8 @@ Kiểu **chime / buzz kiosk** (giống máy chấm công), **không** dùng sine
 
 | Sự kiện | Âm UI | File classpath |
 |---------|-------|----------------|
-| POST scan OK (`IN` / `OUT`) | Chime ngắn lên cao (ding 1–2 nốt) | `/sounds/scan-success.wav` |
-| Identify fail, API fail, `REJECTED` | Buzz / nốt thấp đi xuống | `/sounds/scan-fail.wav` |
+| POST scan OK (4 pha / alias `IN`/`OUT`, trừ `VE_SOM`) | Chime ngắn lên cao (ding 1–2 nốt) | `/sounds/scan-success.wav` |
+| Identify fail, API fail, `REJECTED`, `VE_SOM` | Buzz / nốt thấp đi xuống | `/sounds/scan-fail.wav` |
 | Debounce “vừa ghi nhận” | **Không** phát âm (chỉ banner WARNING) | — |
 
 Rule kỹ thuật:
@@ -638,7 +811,7 @@ Rule kỹ thuật:
 
 | Method | Path | Việc |
 |--------|------|------|
-| GET | `/api/kiosk/fingerprints/templates` | Template **active** khoa token: `empCode`, `fullname`, `zkFid` (**= empCode**, P2.1a), `templateBase64`, `templateLen` — **chỉ** Agent kiosk (LAN) |
+| GET | `/api/kiosk/fingerprints/templates` | Template **active** toàn viện (P6): NV `active` + `fingerprintRegistered`; fields `empCode`, `fullname`, `zkFid`, `templateBase64`, `templateLen` — **chỉ** Agent kiosk (LAN) |
 | POST | `/api/kiosk/fingerprints/scan` | Body: `empCode`, `score` (`scannedAt?` **ignored** P4b) → direction + rule C + log theo **giờ server** |
 
 Response scan (rút gọn): `direction`, `status` (nếu cập nhật summary), `fullname`, `empCodeFormatted`, `checkInAt`, `checkOutAt`, `message` (VN).
@@ -968,7 +1141,7 @@ API: `setBanner(text, tone)` — mọi chỗ gọi phải gắn tone đúng bả
 - **P3f:** quick-action 4 status + modal khoảng ngày (§3.2.1); hint **Thiếu giờ ra** (§4.5.1); link **Lịch thủ công** (§3.2.2).  
 - **P3g:** cột THAO TÁC — gom thao tác liên quan vân tay / Agent vào **một nút dropdown** (§10.6); quick-action 4 status vẫn hiện riêng.  
 - **Không** màn lịch sử ra vào riêng; **không** dùng `AttendancePage` HEAD cho Admin.  
-- Dashboard / donut / Excel / AI đọc: **đủ 6 status**, cùng nguồn DB mục 5.  
+- Dashboard / donut / Excel / AI đọc: **mọi status catalog active** (gồm `VE_SOM`, nhóm `NGHI_TRUC` / `HSQ_BS`) — cùng nguồn DB mục 5. `mergeBreakdowns` phải **flatten children** rồi `buildBreakdown` lại (cấm cộng mã cha rồi dựng con = 0).  
 - Catalog: `DI_TRE`, `THAI_SAN`.  
 - Settings: `late_cutoff`, cửa sổ IN/OUT (phase Settings) — **không** dùng làm khóa sổ HEAD.  
 - Admin dashboard toggle khóa sổ = **legacy** — copy UI phải nói rõ **không** khóa Agent/HEAD (§4.9).  
@@ -1066,6 +1239,7 @@ Chuẩn tham chiếu: `Bảng điều khiển > Chi tiết Đơn vị` (desktop)
 | Bảng danh sách | Cột: khoa, nhãn, **Token**, **PIN Đăng ký** (plaintext Admin — ops), trạng thái, ngày tạo, thao tác |
 | Cột Token (list) — **phương án A (ops)** | Admin **được** xem lại plaintext token **active** để copy vào `agent.properties` trên PC khoa (không cần xuống từng khoa). List API trả `token` khi `active=true` và DB còn `token_plaintext`. Token đã thu hồi: `token=null`, UI `—`. Bản ghi cũ thiếu plaintext: UI `—` + gợi ý **Xoay** để cấp lại |
 | Cột PIN Đăng ký (P2.1e — **cùng màn**, không tách Settings) | PIN khóa mode Enroll trên Agent (§9.3.2). List trả `enrollPin` khi **active** và đã lưu. Inactive / chưa đặt: UI `—`. Nút **Sao chép** + thao tác **Đặt PIN** (FormModal). Copy vào `enroll.pin` trong `agent.properties` |
+| Cột **Nhãn** (P1.2d) | Badge chỉ đọc trên bảng — **cấm** `contenteditable` / sửa inline. Đổi tên: thao tác **Đổi nhãn** (chỉ token **active**) → `FormModal`. Không phát hành / xoay token. Token đã thu hồi: không có nút. |
 | Cột **Agent** (P4 §9.5.2) | Pill **Online** / **Offline** từ `agentOnline` (+ `lastHeartbeatAt`). Poll list ~60s khi trang mở. KPI **Agent Online** trên StatGrid |
 | Plaintext lưu trữ | Cột DB `token_plaintext` **và** `enroll_pin` (VARCHAR) song song `token_hash`. Auth kiosk vẫn chỉ so **hash**. Thu hồi: **xóa** `token_plaintext` + `enroll_pin`. Xoay token: **giữ** `enroll_pin` sang bản ghi active mới |
 | Tạo / phát hành | Dialog **`FormModal`**: chọn khoa + nhãn → POST → **thu hồi token active cũ cùng khoa** (P4b §8.3) rồi phát hành mới; list có token; PIN đặt sau bằng **Đặt PIN** |
@@ -1090,8 +1264,10 @@ Chuẩn tham chiếu: `Bảng điều khiển > Chi tiết Đơn vị` (desktop)
 | Cột Token | Mono plaintext (active) + nút **Sao chép**; inactive / thiếu plaintext → `—` |
 | Cột trạng thái | Pill giống `AccountRow` (Phân quyền): `inline-block px-2.5 py-1 rounded-full text-xs font-semibold` + `badge-success` (Đang dùng) / `badge-neutral` (Đã thu hồi) — **không** chỉ gắn class màu không bo pill |
 | Cột PIN Đăng ký | Mono PIN (active + đã đặt) + **Sao chép**; thiếu → `—`; thao tác **Đặt PIN** trên dòng active |
+| Cột Nhãn + Đổi nhãn | Badge; nút **Đổi nhãn** chỉ active → `FormModal` (P1.2d) |
 | Modal phát hành | **`FormModal`** — không dùng overlay form tự chế lệch design system |
 | Modal Đặt PIN | **`FormModal`**: PIN 4–8 chữ số → POST enroll-pin; copy gợi ý `enroll.pin=…` |
+| Modal Đổi nhãn (P1.2d) | **`FormModal`**: nhãn bắt buộc sau trim, max **100** ký tự → POST `…/{id}/label`; **không** đổi token / PIN / hash. Cột Máy trên Chấm công (`last_kiosk_label`) đổi ở **lần quét thành công tiếp theo** — không backfill. UI Agent “Đơn vị” không đổi (`deptName`). |
 | Modal xác nhận Xoay | **`FormModal`** — không dùng `window.confirm` trình duyệt |
 | Modal xác nhận Thu hồi | **`DeleteModal`** — không dùng `window.confirm` trình duyệt |
 | Modal sau phát hành / xoay | FormModal hoặc tương đương: hiện token + Sao chép + Đóng |
@@ -1105,6 +1281,7 @@ Chuẩn tham chiếu: `Bảng điều khiển > Chi tiết Đơn vị` (desktop)
 | GET | `/api/admin/fingerprint/kiosk-tokens` | List + `token` + **`enrollPin`** khi active đã lưu — **không** trả `token_hash` |
 | POST | `/api/admin/fingerprint/kiosk-tokens` | Body: `deptCode`, `label?` → lưu hash + plaintext; response có `token` |
 | POST | `/api/admin/fingerprint/kiosk-tokens/{id}/enroll-pin` | Body: `{ "enrollPin": "8700" }` — chỉ token **active**; PIN **4–8 chữ số**; response DTO cập nhật |
+| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/label` | Body: `{ "label": "…" }` — chỉ token **active**; trim, không rỗng, max 100; **không** đổi token/PIN; response `KioskTokenDto` (P1.2d) |
 | POST | `/api/admin/fingerprint/kiosk-tokens/{id}/revoke` | Thu hồi + xóa plaintext token + PIN |
 | POST | `/api/admin/fingerprint/kiosk-tokens/{id}/rotate` | Xoay token; **giữ** PIN trên bản ghi mới |
 
@@ -1191,20 +1368,21 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 | GET `/api/kiosk/staff` | Agent + token kiosk | NV active khoa; `fingerprintRegistered` + **`fingerLabel`** (P2.2) |
 | POST `/api/kiosk/fingerprints/enroll` | Agent + token kiosk | Template Base64 + **`fingerLabel` bắt buộc**; scope khoa token |
 | DELETE `/api/kiosk/fingerprints/{empCode}` | Agent + token kiosk | Soft-delete template active (P2.2); scope khoa token |
-| GET `/api/kiosk/fingerprints/templates` | Agent + token kiosk | Template active khoa (P2.1 Identify) |
-| POST `/api/kiosk/fingerprints/scan` | Agent + token kiosk + LAN | Rule C; log; cập nhật day-record (P2.1) |
+| GET `/api/kiosk/fingerprints/templates` | Agent + token kiosk | Template active **toàn viện** (P6 Identify) |
+| POST `/api/kiosk/fingerprints/scan` | Agent + token kiosk + LAN | Rule C; **không** check dept hồ sơ = kiosk; log `dept_code` = kiosk |
 | GET `/api/admin/fingerprint/kiosk-tokens` | ADMIN | List metadata token kiosk (§10.1) |
 | POST `/api/admin/fingerprint/kiosk-tokens` | ADMIN | Phát hành; lưu + trả plaintext (P1.2c) |
 | PUT `/api/admin/attendance/times` | ADMIN | Điền ô giờ trống (§4.6); không ghi đè; rule C khi gán status |
 | POST `/api/admin/attendance/clear` | ADMIN | Soft clear → chưa chấm (§4.11); `reason` bắt buộc; được sau submit |
-| PUT `/api/attendance/manual-range` | HEAD / ADMIN | Khoảng ngày thủ công (§3.2.1); whitelist 4 status; `applyManualStatus` |
+| PUT `/api/attendance/manual-range` | HEAD / ADMIN | Khoảng ngày thủ công (§3.2.1); active + `manualAllowed = true` + không `groupParent`; `applyManualStatus` |
 | POST `/api/attendance/manual-range/preview` | HEAD / ADMIN | Đếm ngày trùng vân tay / submit trước khi ghi (§3.2.1) |
 | GET `/api/attendance/manual-schedule` | HEAD / ADMIN | Lịch thủ công gộp khoảng theo NV (§3.2.2) |
+| POST `/api/admin/fingerprint/kiosk-tokens/{id}/label` | ADMIN | Đổi nhãn token active; không phát hành lại (P1.2d / §10.1) |
 | POST `/api/admin/fingerprint/kiosk-tokens/{id}/revoke` | ADMIN | Thu hồi + xóa plaintext |
 | POST `/api/admin/fingerprint/kiosk-tokens/{id}/rotate` | ADMIN | Xoay; lưu + trả plaintext mới |
 | POST scan | Agent + token kiosk + LAN | Rule C; không assertCanWrite khóa sổ; khóa sau submit (§4.7) |
 | GET page / stats / dashboard | Session | Cùng nguồn mục 5 |
-| PUT attendance thủ công | HEAD whitelist 4 status + không đè DI_LAM/DI_TRE (§4.8); khóa sau submit | |
+| PUT attendance thủ công | HEAD chỉ status active có `manualAllowed = true`, không `groupParent`, không đè DI_LAM/DI_TRE (§4.8); khóa sau submit | |
 | Report submit | HEAD | COMPLETED = đủ hợp lệ §4.5 |
 | Head AI confirm-batch-attendance | **Reject** DI_LAM/DI_TRE | Mục 7; batch thủ công OK |
 
@@ -1222,6 +1400,7 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 | **P1.2** | Admin Web **Quản lý token vân tay** (§10.1) + docs workflow đổi token Agent (§10.2) |
 | **P1.2b** | UI token: 3 KPI + `RegistryTableShell` + `TablePagination` đồng bộ settings-users |
 | **P1.2c** | Phương án A: lưu/trả `token_plaintext` Admin; FormModal phát hành/xoay; DeleteModal thu hồi; cột Token + Copy |
+| **P1.2d** | Đổi nhãn token active trên bảng (§10.1) — không phát hành / xoay lại; POST `…/{id}/label` |
 | **P2** | Logs + day record (check_in/out, status) + rule C + khóa chéo + tắt AI batch DI_LAM |
 | **P2.1** | Agent mode **Chấm công** (§9.3): Identify + GET templates + POST scan + mutex Enroll |
 | **P2.1a** | `zk_fid = emp_code` (enroll + load Identify); migrate V10; banner nạp `loaded/total` |
@@ -1246,6 +1425,9 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 | **P4b** | LAN gate kiosk; native `java.library.path` + preflight DLL; preview reset đổi mode; Agent HTTP/scan off EDT + in-flight; server bỏ tin `scannedAt` + debounce 2s + upsert attendance; staff meta không LOB; 1 token active/khoa |
 | **P4c** | Agent: open/close device + enroll/delete HTTP off EDT; preview in-memory; README IntelliJ VM = bat |
 | **P4** | **Chốt A (ops):** dist JAR (không phụ thuộc IntelliJ); heartbeat Agent Online trên Admin; **watchdog** Task Scheduler tự mở lại khi crash. **Cấm** Windows Service mở Swing (session 0). Export báo cáo — phase riêng nếu cần |
+| **P7** | Công ngày 4 pha + settings midpoint/grace + `late_flag` + `VE_SOM`/`NGHI_TRUC_*` + cột máy + missing 1–3 (§4.13); Agent banner 4 pha VN (§9.3.1) |
+| **P7b** | Pre-prod harden §4.13: scan `source` MIXED khi đã MANUAL/ADMIN; rời `VE_SOM` xóa `note`; `late_flag` TINYINT validate |
+| **P7c** | Catalog boolean TINYINT validate (`active` / `manual_allowed` / `group_parent`); runbook Flyway V17/V18 + Agent/watchdog trong `deploy/README.md` |
 
 ---
 
@@ -1299,6 +1481,7 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 - [x] **P1.2c:** Dialog Phát hành / sau phát hành dùng `FormModal` (đồng bộ settings)
 - [x] **P1.2c:** Dialog xác nhận Xoay = `FormModal`; Thu hồi = `DeleteModal` (không `window.confirm`)
 - [x] **P1.2c:** Bootstrap YAML skip nếu `token_hash` đã tồn tại (kể cả revoked) — không crash UNIQUE
+- [x] **P1.2d:** Đổi nhãn token active: FormModal + POST `…/kiosk-tokens/{id}/label`; không đổi token/PIN; không backfill `last_kiosk_label`
 - [x] **P2.1:** Agent mode Chấm công (§9.3) + Identify 1 lần quét
 - [x] **P2.1:** GET `/api/kiosk/fingerprints/templates` + POST `/api/kiosk/fingerprints/scan` (rule C + scan logs)
 - [x] **P2.1a:** `zk_fid = emp_code` trên enroll/API/Agent load; Flyway V10 sync FID trùng
@@ -1311,7 +1494,7 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 - [x] **P2.1d:** PIN bắt buộc khi vào Đăng ký; `enroll.idleSeconds` idle → về Chấm công
 - [x] **P2.1d:** Dialog PIN idle `enroll.pinIdleSeconds` (mặc định 60) tự đóng → vẫn Chấm công
 - [x] **P2.1e:** Cột/API `enrollPin` trên Quản lý token vân tay; FormModal Đặt PIN; revoke xóa / rotate giữ PIN
-- [x] **P2.1f:** OUT-only tạo bản ghi ngày + giờ ra; `status` NULL (CHƯA CHẤM); Flyway nullable status
+- [x] **P2.1f:** OUT-only tạo bản ghi ngày + giờ ra; `status` NULL (CHƯA CHẤM); Flyway `V14` + local bootstrap nullable status
 - [x] **P2.1g:** Có mặt hợp lệ đủ giờ vào+ra; Admin `PUT …/attendance/times` ô trống + rule C; KPI/COMPLETED
 - [x] **P2.1g:** Modal Điền giờ UI mockup (banner, ô Đã có disabled, preview rule C, footer Hủy/Lưu)
 - [x] **P2.1g:** Modal polish mockup 2 — grid 2 cột; badge trong ô; fingerprint tile + progress bar; asset FE `biometrics.png`
@@ -1325,7 +1508,7 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 - [x] **P3a:** `GET /api/attendance/scan-logs` (HEAD khoa mình / ADMIN mọi khoa); modal Chi tiết quét
 - [x] **P3a:** FE cột giờ vào/ra trên Chấm công HEAD + Chi tiết Đơn vị Admin (không màn mới)
 - [x] **P3b:** Flyway seed/upsert `DI_TRE` (+ `THAI_SAN`); sort_order ngay sau `DI_LAM`
-- [x] **P3b:** Local `AttendanceStatusCatalogBootstrap` drop legacy `metric_key` + upsert (không INSERT P3b trong `data.sql`)
+- [x] **P3b:** Local `AttendanceStatusCatalogBootstrap` drop legacy `metric_key` + `status` nullable (V14) + upsert (không INSERT P3b trong `data.sql`)
 - [x] **P3b:** KPI HEAD/Admin hiện card Đi trễ bên phải Đi làm; quick-action loại trừ DI_LAM/DI_TRE
 - [x] **P3b:** `AttendanceStatusProvider` bao AdminApp (dashboard + Chi tiết Đơn vị dùng catalog)
 - [x] **P3c:** Nhãn card trạng thái KPI = `font-bold` + `text-black` (token chung; số vẫn semantic)
@@ -1367,6 +1550,11 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 - [x] **P4:** SPEC §9.5 chốt A — Startup + watchdog + JAR + heartbeat
 - [x] **P4:** Autostart/watchdog → `start-agent-silent.ps1` (`javaw`, ẩn CMD); `start-agent.bat` chỉ debug
 - [x] **P4:** Silent start — `ProcessStartInfo` + library path chỉ `lib`+System32; verify process sống; detect cmdline `FingerprintAgentApp`/`fingerprint-agent.jar`
+- [x] **P7b:** Scan: `source` MIXED nếu trước đó MANUAL/MIXED/ADMIN; không đè MIXED → FINGERPRINT (§4.13.4)
+- [x] **P7b:** `refreshPresenceStatus` / điền 4 ô: rời `VE_SOM` → xóa `note`; vẫn early → giữ note (§4.13.3)
+- [x] **P7b:** `late_flag` entity `TINYINT(1)` khớp V18 — Hibernate validate prod
+- [x] **P7c:** `AttendanceStatusType` `active` / `manual_allowed` / `group_parent` = `TINYINT(1)` khớp V3/V17
+- [x] **P7c:** `deploy/README.md` — backup, verify V14/V17/V18, Flyway lệch cột, Agent JAR + restart + watchdog
 - [x] **P5:** Bỏ Gửi báo cáo khoa; khóa mềm `lockTime`; `GET …/missing-punches`; nhắc auto D−1; copy settings
 - [x] **Trợ lý AI (sau P5):** Admin/HEAD missing-punch tools; bỏ framing nộp báo cáo — `SPEC_AI_ASSISTANT.md`
 

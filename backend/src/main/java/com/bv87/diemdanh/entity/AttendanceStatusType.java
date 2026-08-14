@@ -34,6 +34,18 @@ public class AttendanceStatusType {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
-    @Column(name = "active", nullable = false)
+    /** Flyway V3 TINYINT(1); columnDefinition required for ddl-auto: validate on prod. */
+    @Column(name = "active", nullable = false, columnDefinition = "TINYINT(1) NOT NULL DEFAULT 1")
     private boolean active = true;
+
+    /** Flyway V17 TINYINT(1); must not map to BIT under Hibernate validate. */
+    @Column(name = "manual_allowed", nullable = false, columnDefinition = "TINYINT(1) NOT NULL DEFAULT 0")
+    private boolean manualAllowed = false;
+
+    /** Flyway V17 TINYINT(1); must not map to BIT under Hibernate validate. */
+    @Column(name = "group_parent", nullable = false, columnDefinition = "TINYINT(1) NOT NULL DEFAULT 0")
+    private boolean groupParent = false;
+
+    @Column(name = "parent_code", length = 50)
+    private String parentCode;
 }

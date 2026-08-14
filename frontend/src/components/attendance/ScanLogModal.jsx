@@ -72,6 +72,7 @@ const ScanLogModal = memo(function ScanLogModal({ staff, date, onClose }) {
                   <th className="table-th-left whitespace-nowrap">{SCAN_LOG_UI.colTime}</th>
                   <th className="table-th-left whitespace-nowrap">{SCAN_LOG_UI.colDirection}</th>
                   <th className="table-th-left whitespace-nowrap">{SCAN_LOG_UI.colScore}</th>
+                  <th className="table-th-left whitespace-nowrap">{SCAN_LOG_UI.colMachine}</th>
                   <th className="table-th-left whitespace-nowrap">{SCAN_LOG_UI.colMessage}</th>
                 </tr>
               </thead>
@@ -86,6 +87,11 @@ const ScanLogModal = memo(function ScanLogModal({ staff, date, onClose }) {
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-content-muted tabular-nums">
                       {row.score != null ? `${row.score}%` : '—'}
+                    </td>
+                    <td className="px-4 py-2.5 text-content-muted text-xs whitespace-nowrap max-w-[14rem] truncate"
+                      title={[row.kioskLabel, row.clientHostname, row.clientIp].filter(Boolean).join(' · ')}
+                    >
+                      {[row.kioskLabel, row.clientHostname, row.clientIp].filter(Boolean).join(' · ') || '—'}
                     </td>
                     <td className="px-4 py-2.5 text-content-muted text-xs whitespace-nowrap">
                       {row.message || '—'}

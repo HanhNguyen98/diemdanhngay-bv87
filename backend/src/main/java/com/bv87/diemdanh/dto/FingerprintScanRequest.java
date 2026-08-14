@@ -21,4 +21,10 @@ public class FingerprintScanRequest {
      * Kept for API compatibility; value is ignored.
      */
     private String scannedAt;
+
+    /** Optional Agent LAN hostname — SPEC §4.13.7. */
+    private String clientHostname;
+
+    /** Optional Agent LAN IPv4 — SPEC §4.13.7. */
+    private String clientIp;
 }

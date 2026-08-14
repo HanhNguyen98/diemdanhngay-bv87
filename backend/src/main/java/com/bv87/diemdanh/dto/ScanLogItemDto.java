@@ -13,4 +13,7 @@ public class ScanLogItemDto {
     private final String direction;
     private final Integer score;
     private final String message;
+    private final String clientHostname;
+    private final String clientIp;
+    private final String kioskLabel;
 }

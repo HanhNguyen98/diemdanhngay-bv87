@@ -6,7 +6,15 @@ export const STATUS_CATALOG_COLOR_OPTIONS = [
   { value: 'teal', label: 'Xanh ngọc' },
   { value: 'amber', label: 'Cam' },
   { value: 'purple', label: 'Tím' },
+  { value: 'pink', label: 'Hồng' },
+  { value: 'brown', label: 'Nâu' },
+  { value: 'gray', label: 'Xám' },
+  { value: 'black', label: 'Đen' },
+  { value: 'lime', label: 'Xanh chanh' },
+  { value: 'cyan', label: 'Xanh cyan' },
+  { value: 'indigo', label: 'Xanh chàm' },
 ];
+
 
 export const STATUS_CATALOG_ICON_OPTIONS = [
   { value: 'check', label: 'Có mặt' },
@@ -21,4 +29,13 @@ export const STATUS_CATALOG_ICON_OPTIONS = [
   { value: 'moon', label: 'Trực đêm nghỉ' },
   { value: 'home', label: 'Nghỉ tại nhà' },
   { value: 'pending', label: 'Chờ' },
+  { value: 'coffee', label: 'Giải lao' },
+  { value: 'car', label: 'Đi công việc ngoài' },
+  { value: 'hospital', label: 'Đi khám bệnh' },
+  { value: 'train', label: 'Đi công tác xa' },
+  { value: 'sun', label: 'Ca sáng' },
+  { value: 'star', label: 'Ca đặc biệt' },
+  { value: 'shield', label: 'Bảo vệ' },
+  { value: 'tools', label: 'Sửa chữa' },
 ];
+

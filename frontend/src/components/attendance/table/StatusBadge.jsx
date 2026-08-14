@@ -45,6 +45,9 @@ const StatusBadge = memo(function StatusBadge({ staff, variant }) {
         aria-hidden="true"
       />
       <span className={isCard ? 'whitespace-nowrap' : 'truncate text-3xs'}>{label}</span>
+      {staff?.lateFlag && staff?.status === 'VE_SOM' ? (
+        <span className="text-danger-fg font-semibold whitespace-nowrap">{UI.plusLate}</span>
+      ) : null}
     </span>
   );
 });

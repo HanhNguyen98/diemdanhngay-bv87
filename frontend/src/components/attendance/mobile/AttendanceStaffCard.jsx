@@ -1,8 +1,10 @@
 import { memo } from 'react';
 import { MANUAL_SCHEDULE_UI, SCAN_LOG_UI, UI, isMissingCheckout } from '../../../constants/attendance';
-import { formatInstantHm } from '../../../utils/formatters';
+import { formatKioskMachine } from '../../../utils/kioskMachine';
+import PunchTimesCell from '../table/PunchTimesCell';
 import StaffAvatar from '../table/StaffAvatar';
 import StatusBadge from '../table/StatusBadge';
+import VeSomNoteField from '../table/VeSomNoteField';
 import MobileQuickActionGrid from './MobileQuickActionGrid';
 
 /** SPEC_HEAD §6.4 — mobile attendance roster card. */
@@ -10,6 +12,7 @@ const AttendanceStaffCard = memo(function AttendanceStaffCard({
   staff,
   disabled,
   onQuickAction,
+  onSaveVeSomNote,
   onOpenScanLogs,
   onOpenManualSchedule,
 }) {
@@ -33,26 +36,21 @@ const AttendanceStaffCard = memo(function AttendanceStaffCard({
             )}
           </div>
           <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-content-muted">
-            <span className="shrink-0">
-              Vào:{' '}
-              <span className="font-semibold tabular-nums text-navy">
-                {formatInstantHm(staff.checkInAt) || UI.emptyCell}
-              </span>
-            </span>
-            <span className="shrink-0">
-              Ra:{' '}
-              <span className="font-semibold tabular-nums text-navy">
-                {formatInstantHm(staff.checkOutAt) || UI.emptyCell}
-              </span>
-            </span>
+            <PunchTimesCell staff={staff} compact />
             <StatusBadge staff={staff} variant="card" />
           </div>
+          <p className="mt-1 text-3xs text-content-muted truncate" title={formatKioskMachine(staff)}>
+            {formatKioskMachine(staff)}
+          </p>
           {missingOut ? (
             <p className="mt-1 text-3xs font-medium text-warning-fg">{UI.missingCheckoutHint}</p>
           ) : null}
         </div>
       </div>
 
+      <div className="mt-2">
+        <VeSomNoteField staff={staff} disabled={disabled} onSave={onSaveVeSomNote} />
+      </div>
       <MobileQuickActionGrid staff={staff} disabled={disabled} onQuickAction={onQuickAction} />
       <div className="mt-1.5 flex gap-2">
         <button

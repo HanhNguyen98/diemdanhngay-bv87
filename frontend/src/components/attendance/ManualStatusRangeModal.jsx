@@ -21,13 +21,18 @@ const ManualStatusRangeModal = memo(function ManualStatusRangeModal({
   staff,
   status,
   statusLabel,
+  statusOptions = [],
   defaultDate,
   onConfirm,
   onClose,
   loading,
 }) {
+  const [selectedStatus, setSelectedStatus] = useState(
+    statusOptions.length > 0 ? (statusOptions[0]?.value || '') : (status || ''),
+  );
   const [fromDate, setFromDate] = useState(defaultDate);
   const [toDate, setToDate] = useState(defaultDate);
+  const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [previewing, setPreviewing] = useState(false);
   const [skipWarning, setSkipWarning] = useState(null);
@@ -40,6 +45,10 @@ const ManualStatusRangeModal = memo(function ManualStatusRangeModal({
   const subtitle = `${code} - ${name}`;
 
   const validateDates = () => {
+    if (!selectedStatus) {
+      setError('Vui lòng chọn trạng thái con.');
+      return false;
+    }
     if (!fromDate || !toDate) {
       setError('Vui lòng chọn đủ Từ ngày và Đến ngày.');
       return false;
@@ -67,6 +76,7 @@ const ManualStatusRangeModal = memo(function ManualStatusRangeModal({
         empCode: staff.empCode,
         fromDate,
         toDate,
+        status: selectedStatus,
       });
       if (preview.requiresFingerprintSkipConfirm) {
         setSkipWarning({
@@ -76,7 +86,7 @@ const ManualStatusRangeModal = memo(function ManualStatusRangeModal({
         });
         return;
       }
-      onConfirm({ fromDate, toDate });
+      onConfirm({ status: selectedStatus, fromDate, toDate, note });
     } catch (err) {
       setError(err.message || 'Không kiểm tra được khoảng ngày.');
     } finally {
@@ -86,7 +96,7 @@ const ManualStatusRangeModal = memo(function ManualStatusRangeModal({
 
   const handleContinueSkip = () => {
     setSkipWarning(null);
-    onConfirm({ fromDate, toDate });
+    onConfirm({ status: selectedStatus, fromDate, toDate, note });
   };
 
   const handleDismissSkip = () => {
@@ -107,6 +117,27 @@ const ManualStatusRangeModal = memo(function ManualStatusRangeModal({
         <p className="text-xs text-content-muted">Trạng thái</p>
         <p className="text-sm font-semibold text-navy mt-0.5">{statusLabel || status}</p>
       </div>
+
+      {statusOptions.length > 0 && (
+        <label className="block min-w-0">
+          <span className="text-xs font-medium text-content-muted">{UI.manualRangeChildStatus}</span>
+          <select
+            value={selectedStatus}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setSkipWarning(null);
+            }}
+            disabled={busy}
+            className="mt-1 w-full h-10 rounded-lg border border-line px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:bg-neutral"
+          >
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block min-w-0">
@@ -136,6 +167,18 @@ const ManualStatusRangeModal = memo(function ManualStatusRangeModal({
           />
         </label>
       </div>
+
+      <label className="block min-w-0">
+        <span className="text-xs font-medium text-content-muted">{UI.manualRangeNote}</span>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={busy}
+          rows={3}
+          placeholder={UI.manualRangeNotePlaceholder}
+          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm outline-none resize-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:bg-neutral"
+        />
+      </label>
 
       {dayCount > 0 && toDate >= fromDate && (
         <p className="text-xs text-content-muted">

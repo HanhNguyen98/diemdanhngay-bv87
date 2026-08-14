@@ -11,7 +11,11 @@ public enum AttendanceStatus {
     NGHI_PHEP("Nghỉ phép"),
     DI_HOC("Đi học"),
     DI_CONG_TAC("Đi công tác"),
-    THAI_SAN("Thai sản");
+    THAI_SAN("Thai sản"),
+    VE_SOM("Về sớm"),
+    NGHI_TRUC("Nghỉ trực"),
+    NGHI_TRUC_FULL("Nghỉ trực 1 ngày"),
+    NGHI_TRUC_HALF("Nghỉ trực nửa ngày");
 
     private final String label;
 

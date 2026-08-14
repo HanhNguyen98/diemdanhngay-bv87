@@ -22,6 +22,7 @@ export default function StatusCatalogPage() {
     setSearch,
     resetFilters,
     stats,
+    items,
     loading,
     initialLoading,
     refreshing,
@@ -59,6 +60,9 @@ export default function StatusCatalogPage() {
         iconKey: item.iconKey,
         sortOrder: item.sortOrder,
         active: !item.active,
+        manualAllowed: item.manualAllowed,
+        groupParent: item.groupParent,
+        parentCode: item.parentCode || '',
       };
 
       await handleSave(payload, item.id);
@@ -144,6 +148,7 @@ export default function StatusCatalogPage() {
           {formItem && (
             <StatusCatalogFormModal
               initial={formItem.id ? formItem : null}
+              items={items}
               onSave={handleSave}
               onClose={() => setFormItem(null)}
             />

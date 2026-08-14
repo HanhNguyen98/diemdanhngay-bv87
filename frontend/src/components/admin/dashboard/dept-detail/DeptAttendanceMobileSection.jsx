@@ -16,6 +16,7 @@ const DeptAttendanceMobileSection = memo(function DeptAttendanceMobileSection({
   onFillTimes,
   onQuickAction,
   onClearAttendance,
+  onSaveVeSomNote,
 }) {
   const { dashboard: d } = ADMIN_UI;
 
@@ -39,6 +40,7 @@ const DeptAttendanceMobileSection = memo(function DeptAttendanceMobileSection({
         onOpenManualSchedule={onOpenManualSchedule}
         onFillTimes={onFillTimes}
         onQuickAction={onQuickAction}
+        onSaveVeSomNote={onSaveVeSomNote}
         onClearAttendance={onClearAttendance}
       />
 

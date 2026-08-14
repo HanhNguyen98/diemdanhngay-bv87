@@ -18,6 +18,7 @@ import InlineErrorBanner from '../shared/InlineErrorBanner';
 const StaffFormModal = lazy(() => import('./StaffFormModal'));
 const StaffAvatarModal = lazy(() => import('./StaffAvatarModal'));
 const StaffTransferHistoryModal = lazy(() => import('./StaffTransferHistoryModal'));
+const StaffTransferModal = lazy(() => import('./StaffTransferModal'));
 const DeleteModal = lazy(() => import('../shared/DeleteModal'));
 
 function StaffRegistryView({
@@ -56,6 +57,9 @@ function StaffRegistryView({
   handleSaveAvatar,
   historyStaff,
   setHistoryStaff,
+  transferStaff,
+  setTransferStaff,
+  handleTransfer,
   flash,
   clearFlash,
 }) {
@@ -136,6 +140,7 @@ function StaffRegistryView({
             onEdit={isHead ? setAvatarStaff : setFormStaff}
             onDelete={isHead ? undefined : setDeleteStaff}
             onHistory={isHead ? undefined : setHistoryStaff}
+            onTransfer={isHead ? undefined : setTransferStaff}
           />
         </div>
         <div className="hidden lg:block">
@@ -146,6 +151,7 @@ function StaffRegistryView({
             onEdit={isHead ? setAvatarStaff : setFormStaff}
             onDelete={isHead ? undefined : setDeleteStaff}
             onHistory={isHead ? undefined : setHistoryStaff}
+            onTransfer={isHead ? undefined : setTransferStaff}
           />
         </div>
       </RegistryTableShell>
@@ -179,6 +185,14 @@ function StaffRegistryView({
           <StaffTransferHistoryModal
             staff={historyStaff}
             onClose={() => setHistoryStaff(null)}
+          />
+        )}
+        {!isHead && transferStaff && (
+          <StaffTransferModal
+            staff={transferStaff}
+            departments={departments}
+            onSave={handleTransfer}
+            onClose={() => setTransferStaff(null)}
           />
         )}
       </Suspense>
@@ -216,8 +230,11 @@ function AdminStaffContent() {
       setDeleteStaff={state.setDeleteStaff}
       historyStaff={state.historyStaff}
       setHistoryStaff={state.setHistoryStaff}
+      transferStaff={state.transferStaff}
+      setTransferStaff={state.setTransferStaff}
       deleteLoading={state.deleteLoading}
       handleSave={state.handleSave}
+      handleTransfer={state.handleTransfer}
       handleDelete={state.handleDelete}
       importing={state.importing}
       handleTemplateDownload={state.handleTemplateDownload}

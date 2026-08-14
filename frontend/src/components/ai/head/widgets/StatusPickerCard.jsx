@@ -1,14 +1,23 @@
 import { HEAD_AI_ASSISTANT_UI } from '../../../../constants/headAiAssistant';
 import { useAttendanceStatusConfig } from '../../../../context/AttendanceStatusContext';
+import { ATTENDANCE_STATUS } from '../../../../constants/attendance';
 
 export default function StatusPickerCard({ payload = {}, loading, onSubmit }) {
-  const { quickActions, statusBadge } = useAttendanceStatusConfig();
+  const { items, statusBadge } = useAttendanceStatusConfig();
   const scope = payload.scope || 'unchecked_only';
   // SPEC §4.8 / §7 — HEAD AI picker = manual statuses only (no DI_LAM / DI_TRE)
-  const options = quickActions.map(({ value }) => ({
-    value,
-    label: statusBadge[value]?.label || value,
-  }));
+  const options = (items || [])
+    .filter(
+      (item) =>
+        item.manualAllowed &&
+        !item.groupParent &&
+        item.code !== ATTENDANCE_STATUS.DI_LAM &&
+        item.code !== ATTENDANCE_STATUS.DI_TRE,
+    )
+    .map((item) => ({
+      value: item.code,
+      label: statusBadge[item.code]?.label || item.label || item.code,
+    }));
 
   return (
     <div className="mt-2 rounded-xl border border-line bg-surface-white p-3 text-left shadow-sm">

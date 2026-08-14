@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
@@ -280,9 +281,46 @@ public class AdminService {
         if (!employeeRepository.existsById(empCode)) {
             throw new BusinessException("Nhân viên không tồn tại");
         }
-        return assignmentRepository.findByEmpCodeOrderByFromDateDescIdDesc(empCode).stream()
-                .map(this::toAssignmentDto)
-                .toList();
+        List<EmployeeDepartmentAssignment> rows =
+                assignmentRepository.findByEmpCodeOrderByFromDateDescIdDesc(empCode);
+        List<StaffDepartmentAssignmentDto> result = new ArrayList<>(rows.size());
+        for (int i = 0; i < rows.size(); i++) {
+            EmployeeDepartmentAssignment row = rows.get(i);
+            EmployeeDepartmentAssignment prior = i + 1 < rows.size() ? rows.get(i + 1) : null;
+            result.add(toAssignmentDto(row, prior));
+        }
+        return result;
+    }
+
+    /**
+     * Transfers staff to another department without changing profile catalog fields (SPEC §7.3 P6-Adminc).
+     *
+     * @param authUser admin principal
+     * @param empCode  employee code
+     * @param request  target dept + reason (+ optional HEAD revoke)
+     * @return updated staff DTO
+     */
+    @Transactional
+    public AdminStaffDto transferStaff(AuthUser authUser, Integer empCode, StaffTransferRequest request) {
+        assertAdmin(authUser);
+        Employee emp = employeeRepository.findByEmpCodeWithDept(empCode)
+                .orElseThrow(() -> new BusinessException("Nhân viên không tồn tại"));
+        Integer oldDeptCode = emp.getDepartment().getDeptCode();
+        Integer newDeptCode = request.getDeptCode();
+        if (oldDeptCode.equals(newDeptCode)) {
+            throw new BusinessException("Đơn vị đích phải khác đơn vị hiện tại");
+        }
+        Department targetDept = departmentRepository.findById(newDeptCode)
+                .orElseThrow(() -> new BusinessException("Đơn vị không tồn tại"));
+
+        StaffUpsertRequest bridge = new StaffUpsertRequest();
+        bridge.setDeptCode(newDeptCode);
+        bridge.setTransferReason(request.getTransferReason());
+        bridge.setRevokeHeadOnTransfer(request.getRevokeHeadOnTransfer());
+        transferStaffDepartment(authUser, empCode, oldDeptCode, newDeptCode, targetDept, bridge);
+
+        emp.setDepartment(targetDept);
+        return toStaffDto(employeeRepository.save(emp));
     }
 
     @Transactional
@@ -331,12 +369,14 @@ public class AdminService {
         }
 
         validateStaffAccountConstraints(emp, request);
-        staffRankCatalogService.validateActiveRankName(trimOrNull(request.getRankName()));
-        staffPositionCatalogService.validateActivePositionName(trimOrNull(request.getPositionName()));
+        String nextRank = trimOrNull(request.getRankName());
+        String nextPosition = trimOrNull(request.getPositionName());
+        staffRankCatalogService.validateActiveRankNameOrUnchanged(nextRank, emp.getRankName());
+        staffPositionCatalogService.validateActivePositionNameOrUnchanged(nextPosition, emp.getPositionName());
         emp.setFullname(request.getFullname().trim());
         emp.setDepartment(dept);
-        emp.setRankName(trimOrNull(request.getRankName()));
-        emp.setPositionName(trimOrNull(request.getPositionName()));
+        emp.setRankName(nextRank);
+        emp.setPositionName(nextPosition);
         if (request.getActive() != null) {
             emp.setActive(request.getActive());
         }
@@ -680,23 +720,37 @@ public class AdminService {
                 });
     }
 
-    private StaffDepartmentAssignmentDto toAssignmentDto(EmployeeDepartmentAssignment row) {
-        Department dept = departmentRepository.findById(row.getDeptCode()).orElse(null);
-        String deptName = dept != null ? dept.getDeptName() : "—";
+    private StaffDepartmentAssignmentDto toAssignmentDto(
+            EmployeeDepartmentAssignment row, EmployeeDepartmentAssignment prior) {
+        Department toDept = departmentRepository.findById(row.getDeptCode()).orElse(null);
+        String toName = toDept != null ? toDept.getDeptName() : "—";
+        Integer fromCode = prior != null ? prior.getDeptCode() : null;
+        Department fromDept = fromCode != null
+                ? departmentRepository.findById(fromCode).orElse(null)
+                : null;
+        String fromName = fromDept != null ? fromDept.getDeptName() : null;
         LocalDateTime createdAt = row.getCreatedAt() != null
                 ? LocalDateTime.ofInstant(row.getCreatedAt(), VietnamTimeService.ZONE)
                 : null;
+        boolean initial = prior == null;
         return StaffDepartmentAssignmentDto.builder()
                 .id(row.getId())
+                .fromDeptCode(fromCode)
+                .fromDeptCodeFormatted(fromCode != null ? CodeFormatter.formatDeptCode(fromCode) : null)
+                .fromDeptName(fromName)
+                .toDeptCode(row.getDeptCode())
+                .toDeptCodeFormatted(CodeFormatter.formatDeptCode(row.getDeptCode()))
+                .toDeptName(toName)
                 .deptCode(row.getDeptCode())
                 .deptCodeFormatted(CodeFormatter.formatDeptCode(row.getDeptCode()))
-                .deptName(deptName)
+                .deptName(toName)
                 .fromDate(row.getFromDate())
                 .toDate(row.getToDate())
                 .reason(row.getReason())
                 .createdBy(row.getCreatedBy())
                 .createdAt(createdAt)
                 .current(row.getToDate() == null)
+                .initial(initial)
                 .build();
     }
 

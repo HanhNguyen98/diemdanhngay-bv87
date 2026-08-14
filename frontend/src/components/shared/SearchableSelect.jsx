@@ -2,10 +2,28 @@ import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from '
 import { ChevronDown, X } from 'lucide-react';
 import { matchesSearchText } from '../../utils/searchText';
 
+/** SPEC_ADMIN P6-Adminb — string option or `{ value, label }`. */
+function isObjectOption(option) {
+  return option != null && typeof option === 'object' && 'value' in option;
+}
+
+function optionValue(option) {
+  if (option == null) return '';
+  return isObjectOption(option) ? String(option.value ?? '') : String(option);
+}
+
+function optionLabel(option) {
+  if (option == null) return '';
+  if (isObjectOption(option)) {
+    return String(option.label ?? option.value ?? '');
+  }
+  return String(option);
+}
+
 const SearchableSelect = memo(function SearchableSelect({
   value,
   onChange,
-  options,
+  options = [],
   placeholder = 'Tìm hoặc chọn...',
   clearLabel = 'Xóa lựa chọn',
   emptyLabel = 'Không tìm thấy kết quả',
@@ -18,9 +36,18 @@ const SearchableSelect = memo(function SearchableSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
+  const list = Array.isArray(options) ? options : [];
+  const valueKey = value == null ? '' : String(value);
+
+  const selectedOption = useMemo(
+    () => list.find((opt) => optionValue(opt) === valueKey),
+    [list, valueKey],
+  );
+  const closedDisplay = selectedOption ? optionLabel(selectedOption) : valueKey;
+
   const filteredOptions = useMemo(
-    () => options.filter((opt) => matchesSearchText(opt, query)),
-    [options, query],
+    () => list.filter((opt) => matchesSearchText(opt, query)),
+    [list, query],
   );
 
   const close = useCallback(() => {
@@ -34,8 +61,8 @@ const SearchableSelect = memo(function SearchableSelect({
       skipQuerySyncRef.current = false;
       return;
     }
-    setQuery(value || '');
-  }, [value]);
+    setQuery(closedDisplay || '');
+  }, [closedDisplay]);
 
   useEffect(() => {
     if (!open) setQuery('');
@@ -55,7 +82,7 @@ const SearchableSelect = memo(function SearchableSelect({
   }, [open, close]);
 
   const handleSelect = (option) => {
-    onChange(option);
+    onChange(optionValue(option));
     close();
   };
 
@@ -68,7 +95,7 @@ const SearchableSelect = memo(function SearchableSelect({
     setOpen(true);
   };
 
-  const displayValue = open ? query : value;
+  const displayValue = open ? query : closedDisplay;
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
@@ -97,7 +124,7 @@ const SearchableSelect = memo(function SearchableSelect({
           }}
         />
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-          {(value || (open && query)) && (
+          {(valueKey || (open && query)) && (
             <button
               type="button"
               onMouseDown={handleClear}
@@ -129,9 +156,11 @@ const SearchableSelect = memo(function SearchableSelect({
             <li className="px-3 py-2 text-sm text-content-muted">{emptyLabel}</li>
           ) : (
             filteredOptions.map((option) => {
-              const selected = value === option;
+              const key = optionValue(option);
+              const label = optionLabel(option);
+              const selected = valueKey !== '' && valueKey === key;
               return (
-                <li key={option} role="option" aria-selected={selected}>
+                <li key={key || label} role="option" aria-selected={selected}>
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
@@ -141,7 +170,7 @@ const SearchableSelect = memo(function SearchableSelect({
                       : 'text-gray-800 hover:bg-surface-page'
                       }`}
                   >
-                    {option}
+                    {label}
                   </button>
                 </li>
               );

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Award, Building2, Camera, Fingerprint, History, Pencil, Trash2 } from 'lucide-react';
+import { Award, ArrowRightLeft, Building2, Camera, Fingerprint, History, Pencil, Trash2 } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { getInitials } from '../../../utils/formatters';
 
@@ -88,6 +88,7 @@ const StaffCard = memo(function StaffCard({
   onEdit,
   onDelete,
   onHistory,
+  onTransfer,
   onDeleteFingerprint,
   avatarOnly = false,
   hideDeptColumn = false,
@@ -98,6 +99,7 @@ const StaffCard = memo(function StaffCard({
   const showFpDelete = registered && onDeleteFingerprint;
   const footerActions = [
     !avatarOnly,
+    !avatarOnly && onTransfer,
     !avatarOnly && onHistory,
     showFpDelete,
     !avatarOnly && onDelete,
@@ -153,6 +155,16 @@ const StaffCard = memo(function StaffCard({
             >
               <Pencil className="w-4 h-4" />
               {s.mobile.edit}
+            </button>
+          )}
+          {!avatarOnly && onTransfer && (
+            <button
+              type="button"
+              onClick={() => onTransfer(staff)}
+              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-primary hover:text-primary-hover transition-colors"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              {s.transferDeptAction}
             </button>
           )}
           {!avatarOnly && onHistory && (
