@@ -32,7 +32,7 @@ public class AttendanceUnlockRequest {
     private String reason;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
     private UnlockRequestStatus status = UnlockRequestStatus.PENDING;
 
     @Column(name = "requested_by", nullable = false, length = 50)

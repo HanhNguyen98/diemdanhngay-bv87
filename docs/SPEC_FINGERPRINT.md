@@ -356,7 +356,7 @@ HEAD không gọi `POST /api/attendance/unlock`. Ngày quá khứ (và hôm nay 
 
 | Rule | Chi tiết |
 |------|----------|
-| DB | V22 `attendance_unlock_requests`: `attendance_date`, `dept_code`, `reason`, `status` (`PENDING` / `APPROVED` / `REJECTED`), `requested_by`, `requested_by_account_id`, `requested_at`, `reviewed_by`, `reviewed_at`, `review_note?` |
+| DB | V22 `attendance_unlock_requests`: `attendance_date`, `dept_code`, `reason`, `status` **VARCHAR(20)** (`PENDING` / `APPROVED` / `REJECTED`), `requested_by`, `requested_by_account_id`, `requested_at`, `reviewed_by`, `reviewed_at`, `review_note?`. Entity `status`: `columnDefinition = VARCHAR(20)` — **cấm** để Hibernate validate MySQL `ENUM` (prod `ddl-auto: validate` → crash startup) |
 | `notifications.type` | **VARCHAR(40)** — gồm `UNLOCK_REQUEST`, `UNLOCK_REQUEST_RESULT` (cộng 2 loại cũ). **Cấm** để Hibernate/MySQL `ENUM` chỉ 2 giá trị cũ: INSERT chuông → SQL lỗi → HTTP 500 + rollback yêu cầu. Local Flyway tắt: `schema.sql` `ALTER … MODIFY type VARCHAR(40)` mỗi startup. Prod: Flyway **V23**. Entity: `columnDefinition = VARCHAR(40)` |
 | Một PENDING | Cùng `(dept_code, attendance_date)` chỉ **một** `PENDING`. Đã unlock → cấm gửi. `REJECTED` → HEAD gửi lại (tạo bản ghi mới) |
 | Ngày | `date` ≤ hôm nay; **cấm** tương lai. HEAD chỉ khoa mình |
