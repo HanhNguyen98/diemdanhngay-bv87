@@ -1,22 +1,21 @@
 import { memo } from 'react';
-import { MANUAL_SCHEDULE_UI, SCAN_LOG_UI, UI, isMissingCheckout } from '../../../constants/attendance';
+import { MANUAL_SCHEDULE_UI, SCAN_LOG_UI, UI } from '../../../constants/attendance';
 import { formatKioskMachine } from '../../../utils/kioskMachine';
 import PunchTimesCell from './PunchTimesCell';
 import QuickActionGroup from './QuickActionGroup';
 import StaffAvatar from './StaffAvatar';
-import StatusBadge from './StatusBadge';
+import StatusCell from './StatusCell';
 import VeSomNoteField from './VeSomNoteField';
 
 const EmployeeRow = memo(function EmployeeRow({
   staff,
   disabled,
+  todayWriteDisabled = false,
   onQuickAction,
   onSaveVeSomNote,
   onOpenScanLogs,
   onOpenManualSchedule,
 }) {
-  const missingOut = isMissingCheckout(staff);
-
   return (
     <tr className="transition-colors hover:bg-slate-50/60">
       <td className="py-3 px-4 align-middle">
@@ -34,20 +33,21 @@ const EmployeeRow = memo(function EmployeeRow({
       </td>
       <td className="py-3 px-4 align-middle">
         <PunchTimesCell staff={staff} />
-        {missingOut ? (
-          <p className="text-3xs font-medium text-warning-fg mt-0.5">{UI.missingCheckoutHint}</p>
-        ) : null}
       </td>
       <td className="py-3 px-4 align-middle text-3xs text-content-muted max-w-[9rem]">
         <span className="block truncate" title={formatKioskMachine(staff)}>{formatKioskMachine(staff)}</span>
       </td>
       <td className="py-3 px-4 align-middle">
-        <StatusBadge staff={staff} />
+        <StatusCell staff={staff} />
       </td>
       <td className="py-3 px-4 align-middle text-right">
         <div className={`flex flex-col items-end gap-1.5 ${disabled ? 'table-actions-readonly' : ''}`}>
           <QuickActionGroup staff={staff} disabled={disabled} onQuickAction={onQuickAction} />
-          <VeSomNoteField staff={staff} disabled={disabled} onSave={onSaveVeSomNote} />
+          <VeSomNoteField
+            staff={staff}
+            disabled={disabled || todayWriteDisabled}
+            onSave={onSaveVeSomNote}
+          />
           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
             <button
               type="button"

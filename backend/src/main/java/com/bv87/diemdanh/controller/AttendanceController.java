@@ -4,6 +4,8 @@ import com.bv87.diemdanh.dto.*;
 import com.bv87.diemdanh.service.AttendanceService;
 import com.bv87.diemdanh.service.AttendanceStatisticsService;
 import com.bv87.diemdanh.service.AttendanceStatusCatalogService;
+import com.bv87.diemdanh.service.AttendanceUnlockRequestService;
+import com.bv87.diemdanh.service.AuditService;
 import com.bv87.diemdanh.service.AuthService;
 import com.bv87.diemdanh.util.VietnamTimeService;
 import jakarta.validation.Valid;
@@ -26,6 +28,8 @@ public class AttendanceController {
     private final AttendanceStatusCatalogService statusCatalogService;
     private final AuthService authService;
     private final VietnamTimeService timeService;
+    private final AuditService auditService;
+    private final AttendanceUnlockRequestService unlockRequestService;
 
     @GetMapping("/departments")
     public ResponseEntity<List<DepartmentDto>> getDepartments() {
@@ -141,6 +145,23 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.saveAttendance(authService.getAuthUser(), request, targetDate));
     }
 
+    @PutMapping("/attendance/missing-punch-explain")
+    public ResponseEntity<StaffAttendanceDto> explainMissingPunch(
+            @Valid @RequestBody MissingPunchExplainRequest request) {
+        if (request.getDate() == null) {
+            request.setDate(timeService.today());
+        }
+        return ResponseEntity.ok(
+                attendanceService.saveMissingPunchExplain(authService.getAuthUser(), request));
+    }
+
+    @PutMapping("/attendance/nghi-truc-assign")
+    public ResponseEntity<ManualAttendanceRangeResultDto> assignNghiTrucWizard(
+            @Valid @RequestBody NghiTrucAssignRequest request) {
+        return ResponseEntity.ok(
+                attendanceService.assignNghiTrucWizard(authService.getAuthUser(), request));
+    }
+
     @PutMapping("/attendance/manual-range")
     public ResponseEntity<ManualAttendanceRangeResultDto> updateAttendanceManualRange(
             @Valid @RequestBody ManualAttendanceRangeRequest request) {
@@ -159,20 +180,45 @@ public class AttendanceController {
     public ResponseEntity<Map<String, String>> unlockDepartment(
             @Valid @RequestBody UnlockDepartmentRequest request) {
         attendanceService.unlockDepartment(authService.getAuthUser(), request);
+        LocalDate unlockedDate = request.getDate();
+        String datePart = unlockedDate != null
+                ? " ngày " + unlockedDate
+                : " ngày hôm nay";
         return ResponseEntity.ok(Map.of(
                 "message",
                 "Đã cấp quyền sửa đổi đặc cách cho Đơn vị "
                         + String.format("%02d", request.getDeptCode())
-                        + " trong ngày hôm nay"
+                        + datePart
         ));
     }
 
     @DeleteMapping("/attendance/unlock/{deptCode}")
-    public ResponseEntity<Map<String, String>> relockDepartment(@PathVariable Integer deptCode) {
-        attendanceService.relockDepartment(authService.getAuthUser(), deptCode);
+    public ResponseEntity<Map<String, String>> relockDepartment(
+            @PathVariable Integer deptCode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        attendanceService.relockDepartment(authService.getAuthUser(), deptCode, date);
         return ResponseEntity.ok(Map.of(
                 "message",
-                "Đã khóa sổ lại cho Đơn vị " + String.format("%02d", deptCode)));
+                "Đã thu hồi mở khóa cho Đơn vị " + String.format("%02d", deptCode)));
+    }
+
+    @GetMapping("/attendance/audit-logs")
+    public ResponseEntity<AttendanceAuditLogPageDto> listAttendanceAuditLogs(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Integer deptCode,
+            @RequestParam(required = false) String username,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ResponseEntity.ok(auditService.listAttendanceLogs(
+                authService.getAuthUser(), from, to, deptCode, username, page, pageSize));
+    }
+
+    @PostMapping("/attendance/unlock-requests")
+    public ResponseEntity<UnlockRequestItemDto> createUnlockRequest(
+            @Valid @RequestBody UnlockRequestCreateRequest request) {
+        return ResponseEntity.ok(
+                unlockRequestService.create(authService.getAuthUser(), request));
     }
 
     @GetMapping("/attendance/missing-punches")

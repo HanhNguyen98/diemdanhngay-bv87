@@ -2,17 +2,18 @@ import { HEAD_AI_ASSISTANT_UI } from '../../../../constants/headAiAssistant';
 import { useAttendanceStatusConfig } from '../../../../context/AttendanceStatusContext';
 import { ATTENDANCE_STATUS } from '../../../../constants/attendance';
 
+/** P6-QuickParentUx — AI picker = manual leaves except VE_SOM / presence / group parents */
 export default function StatusPickerCard({ payload = {}, loading, onSubmit }) {
   const { items, statusBadge } = useAttendanceStatusConfig();
   const scope = payload.scope || 'unchecked_only';
-  // SPEC §4.8 / §7 — HEAD AI picker = manual statuses only (no DI_LAM / DI_TRE)
   const options = (items || [])
     .filter(
       (item) =>
         item.manualAllowed &&
         !item.groupParent &&
         item.code !== ATTENDANCE_STATUS.DI_LAM &&
-        item.code !== ATTENDANCE_STATUS.DI_TRE,
+        item.code !== ATTENDANCE_STATUS.DI_TRE &&
+        item.code !== ATTENDANCE_STATUS.VE_SOM,
     )
     .map((item) => ({
       value: item.code,

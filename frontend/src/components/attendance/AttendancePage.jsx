@@ -16,10 +16,12 @@ import StaffTableCard from './sections/StaffTableCard';
 import ScanLogModal from './ScanLogModal';
 import ManualScheduleModal from './ManualScheduleModal';
 import MissingPunchBanner from './MissingPunchBanner';
+import NghiTrucAssignModal from './NghiTrucAssignModal';
 import { HEAD_ATTENDANCE_MAIN_CLASS } from '../../constants/headLayout';
 import DatePillBar from '../dashboard/DatePillBar';
 import MobileHorizontalScroll from '../shared/MobileHorizontalScroll';
 import { useHeadAiSession } from '../../context/HeadAiSessionContext';
+import { todayISO } from '../../utils/formatters';
 
 export default function AttendancePage({
   user,
@@ -43,13 +45,25 @@ export default function AttendancePage({
     handleDateChange,
     locked,
     unlocked,
+    softLocked,
+    pastDateLocked,
     tableDisabled,
+    todayWriteDisabled,
+    aiWriteDisabled,
     unlockTarget,
     setUnlockTarget,
     handleUnlockConfirm,
+    handleRelock,
+    requestUnlockOpen,
+    setRequestUnlockOpen,
+    handleUnlockRequestConfirm,
+    canRequestUnlock,
+    unlockRequestPending,
+    unlockRequestRejected,
     statusBreakdown,
     total,
     reportBlocked,
+    lockTime,
     missingPunches,
     missingLoading,
     search,
@@ -64,6 +78,9 @@ export default function AttendancePage({
     pageSize,
     handleQuickAction,
     handleVeSomNoteSave,
+    nghiTrucTarget,
+    setNghiTrucTarget,
+    handleNghiTrucWizardSaved,
     manualRangeTarget,
     setManualRangeTarget,
     manualRangeSaving,
@@ -78,10 +95,10 @@ export default function AttendancePage({
   useEffect(() => {
     return registerAttendanceSession({
       selectedDate,
-      tableDisabled,
+      tableDisabled: aiWriteDisabled,
       onBatchComplete: refreshAttendance,
     });
-  }, [registerAttendanceSession, selectedDate, tableDisabled, refreshAttendance]);
+  }, [registerAttendanceSession, selectedDate, aiWriteDisabled, refreshAttendance]);
 
   const markedCount = statusBreakdown?.reduce((sum, s) => sum + (s.count || 0), 0) ?? 0;
 
@@ -109,10 +126,11 @@ export default function AttendancePage({
           unlocked={unlocked}
           isAdmin={isAdmin}
           onUnlock={
-            isToday && locked && !unlocked
+            selectedDate <= todayISO() && locked && !unlocked
               ? () => setUnlockTarget({ deptCode: selectedDept, deptName: selectedDeptName })
               : null
           }
+          onRelock={selectedDate <= todayISO() && unlocked ? handleRelock : null}
           onNotificationDate={handleDateChange}
           departments={departments}
           selectedDept={selectedDept}
@@ -140,9 +158,44 @@ export default function AttendancePage({
             </div>
 
             <div className="shrink-0 space-y-2.5 max-lg:space-y-4 lg:contents">
-              {!isToday && <HistoryViewBanner selectedDate={selectedDate} />}
+              {!isToday && (
+                <HistoryViewBanner
+                  selectedDate={selectedDate}
+                  readOnly={pastDateLocked}
+                />
+              )}
+              {unlockRequestPending && (
+                <LockBanner
+                  badge={UI.unlockRequestPendingBadge}
+                  lockMessage={UI.unlockRequestPendingBanner}
+                />
+              )}
+              {pastDateLocked && !unlockRequestPending && (
+                <LockBanner
+                  badge={UI.pastDateLockedBadge}
+                  lockMessage={
+                    unlockRequestRejected
+                      ? UI.unlockRequestRejectedBanner
+                      : UI.pastDateLockedBanner
+                  }
+                  actionLabel={canRequestUnlock ? UI.unlockRequestButton : undefined}
+                  onAction={canRequestUnlock ? () => setRequestUnlockOpen(true) : undefined}
+                />
+              )}
               {isToday && reportBlocked && !isAdmin && (
                 <LockBanner lockMessage={UI.reportBlocked} />
+              )}
+              {isToday && softLocked && !unlockRequestPending && (
+                <LockBanner
+                  badge={UI.softLockBadge}
+                  lockMessage={
+                    unlockRequestRejected
+                      ? UI.unlockRequestRejectedBanner
+                      : UI.softLockBanner(lockTime)
+                  }
+                  actionLabel={canRequestUnlock ? UI.unlockRequestButton : undefined}
+                  onAction={canRequestUnlock ? () => setRequestUnlockOpen(true) : undefined}
+                />
               )}
               <MissingPunchBanner items={missingPunches} loading={missingLoading} />
               <StableDataZone refreshing={refreshing} className="shrink-0">
@@ -155,6 +208,7 @@ export default function AttendancePage({
               staffList={pagedStaff}
               mobileStaffList={pagedStaff}
               disabled={tableDisabled}
+              todayWriteDisabled={todayWriteDisabled}
               onQuickAction={handleQuickAction}
               onSaveVeSomNote={handleVeSomNoteSave}
               onOpenScanLogs={setScanLogStaff}
@@ -190,10 +244,25 @@ export default function AttendancePage({
         />
       )}
 
+      {requestUnlockOpen && (
+        <UnlockModal
+          deptCode={selectedDept}
+          deptName={selectedDeptName}
+          date={selectedDate}
+          title={UI.unlockRequestModalTitle}
+          body={UI.unlockRequestModalBody}
+          placeholder={UI.unlockRequestModalPlaceholder}
+          confirmLabel={UI.unlockRequestConfirmLabel}
+          onConfirm={handleUnlockRequestConfirm}
+          onClose={() => setRequestUnlockOpen(false)}
+        />
+      )}
+
       {unlockTarget && (
         <UnlockModal
           deptCode={unlockTarget.deptCode}
           deptName={unlockTarget.deptName}
+          date={selectedDate}
           onConfirm={handleUnlockConfirm}
           onClose={() => setUnlockTarget(null)}
         />
@@ -205,10 +274,20 @@ export default function AttendancePage({
           status={manualRangeTarget.status}
           statusLabel={manualRangeTarget.statusLabel}
           statusOptions={manualRangeTarget.statusOptions}
+          isNghiTruc={manualRangeTarget.isNghiTruc}
           defaultDate={selectedDate}
           loading={manualRangeSaving}
           onConfirm={handleManualRangeConfirm}
           onClose={() => !manualRangeSaving && setManualRangeTarget(null)}
+        />
+      )}
+
+      {nghiTrucTarget && (
+        <NghiTrucAssignModal
+          staff={nghiTrucTarget.staff}
+          defaultDate={selectedDate}
+          onClose={() => setNghiTrucTarget(null)}
+          onSaved={handleNghiTrucWizardSaved}
         />
       )}
     </HeadAppShell>

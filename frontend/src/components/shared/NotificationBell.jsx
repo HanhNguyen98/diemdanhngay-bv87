@@ -27,6 +27,7 @@ const VARIANT_STYLES = {
 const NotificationBell = memo(function NotificationBell({
   enabled = true,
   onAttendanceNavigate,
+  onUnlockRequestNavigate,
   badgeStyle = 'count',
   variant = 'default',
   className = '',
@@ -35,7 +36,7 @@ const NotificationBell = memo(function NotificationBell({
   const styles = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
   const resolvedIconClass = iconClassName || styles.icon;
   const { items, unreadCount, open, loading, rootRef, handleOpen, handleItemClick } =
-    useNotifications({ enabled, onAttendanceNavigate });
+    useNotifications({ enabled, onAttendanceNavigate, onUnlockRequestNavigate });
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>

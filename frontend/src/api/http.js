@@ -33,7 +33,10 @@ export async function apiRequest(path, options = {}) {
       notifySessionExpired();
     }
     const err = await response.json().catch(() => ({}));
-    throw new ApiError(resolveErrorMessage(response.status, err.message), response.status);
+    throw new ApiError(
+      resolveErrorMessage(response.status, err.message || err.detail),
+      response.status,
+    );
   }
 
   if (response.status === 204) return null;

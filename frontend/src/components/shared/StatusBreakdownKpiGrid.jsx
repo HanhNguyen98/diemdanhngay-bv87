@@ -2,14 +2,13 @@ import { memo } from 'react';
 import { KPI_METRIC_ICON_BOX, KPI_METRIC_ICON_SIZE } from '../../constants/attendance';
 import {
   KPI_BG_BY_COLOR,
+  KPI_METRIC_CARD_SHELL,
   KPI_STATUS_LABEL_CLASS_METRIC,
   KPI_STATUS_LABEL_CLASS_METRIC_COMPACT,
+  KPI_TOTAL_CARD_SHELL,
   normalizeStatusBreakdown,
 } from '../../utils/statusBreakdown';
 import { StatusBreakdownIcon } from './StatusBreakdownIcon';
-
-const CARD_SHELL =
-  'bg-surface-white border border-line rounded-xl px-3 py-2.5 shadow-card flex';
 
 export const KpiMetricCard = memo(function KpiMetricCard({
   label,
@@ -19,10 +18,12 @@ export const KpiMetricCard = memo(function KpiMetricCard({
   unit,
   unitClassName = 'text-2xs text-content-muted',
   compact = false,
+  isTotal = false,
 }) {
+  const cardShell = isTotal ? KPI_TOTAL_CARD_SHELL : KPI_METRIC_CARD_SHELL;
   const shell = compact
-    ? `${CARD_SHELL} items-center justify-start h-full min-h-[4.25rem] px-2.5 py-2`
-    : `${CARD_SHELL} items-center justify-start h-full min-h-[4.75rem]`;
+    ? `${cardShell} items-center justify-start h-full min-h-[4.25rem] px-2.5 py-2`
+    : `${cardShell} items-center justify-start h-full min-h-[4.75rem] px-3 py-2.5`;
   const gap = compact ? 'gap-2' : 'gap-3';
   const valueClass = compact ? 'text-base' : 'text-xl';
   const labelClass = compact ? KPI_STATUS_LABEL_CLASS_METRIC_COMPACT : KPI_STATUS_LABEL_CLASS_METRIC;
@@ -54,7 +55,7 @@ export const KpiMetricCard = memo(function KpiMetricCard({
 
 const StatusBreakdownKpiGrid = memo(function StatusBreakdownKpiGrid({
   statusBreakdown,
-  className = 'grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5',
+  className = 'grid grid-cols-5 gap-1.5',
   gridStyle,
   unit,
   unitClassName,

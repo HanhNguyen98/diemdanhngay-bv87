@@ -12,6 +12,8 @@ export const ADMIN_TAB_IDS = {
   SETTINGS_USERS: 'settings-users',
   SETTINGS_FINGERPRINT_TOKENS: 'settings-fingerprint-tokens',
   UTILITIES_REMINDER_HISTORY: 'utilities-reminder-history',
+  UTILITIES_ATTENDANCE_AUDIT: 'utilities-attendance-audit',
+  UTILITIES_UNLOCK_REQUESTS: 'utilities-unlock-requests',
 };
 
 export const ADMIN_DEFAULT_TAB = ADMIN_TAB_IDS.DASHBOARD_OVERVIEW;
@@ -51,7 +53,11 @@ export const CATALOG_TAB_IDS = [
   ADMIN_TAB_IDS.STATUS_CATALOG,
 ];
 
-export const UTILITIES_TAB_IDS = [ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY];
+export const UTILITIES_TAB_IDS = [
+  ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY,
+  ADMIN_TAB_IDS.UTILITIES_ATTENDANCE_AUDIT,
+  ADMIN_TAB_IDS.UTILITIES_UNLOCK_REQUESTS,
+];
 
 export const SETTINGS_TAB_IDS = [
   ADMIN_TAB_IDS.SETTINGS_SYSTEM,
@@ -77,6 +83,8 @@ export const CATALOG_NAV = [
 /** Submenu Tiện ích */
 export const UTILITIES_NAV = [
   { id: ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY, labelKey: 'reminderHistory' },
+  { id: ADMIN_TAB_IDS.UTILITIES_ATTENDANCE_AUDIT, labelKey: 'attendanceAuditLog' },
+  { id: ADMIN_TAB_IDS.UTILITIES_UNLOCK_REQUESTS, labelKey: 'unlockRequests' },
 ];
 
 /** Submenu Cài đặt */

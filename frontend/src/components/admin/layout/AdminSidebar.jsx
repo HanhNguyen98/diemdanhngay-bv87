@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   LayoutGrid,
   Library,
@@ -21,6 +21,7 @@ import {
 } from '../../../constants/admin';
 import { useAppBranding } from '../../../context/AppBrandingContext';
 import { useAiAssistantActions } from '../../../context/AiAssistantContext';
+import { useAdminUnlockRequestCount } from '../../../context/AdminUnlockRequestCountContext';
 import AppLogo from '../../shared/AppLogo';
 import SidebarUserCard from '../../layout/SidebarUserCard';
 import AdminNavGroup from './AdminNavGroup';
@@ -28,13 +29,19 @@ import AdminNavGroup from './AdminNavGroup';
 const AdminSidebar = memo(function AdminSidebar({ activeTab, onTabChange, onLogout, user, className = '' }) {
   const { branding } = useAppBranding();
   const { setOpen: openAiAssistant } = useAiAssistantActions();
+  const { pendingCount } = useAdminUnlockRequestCount();
+
+  const utilitiesBadgeByTabId = useMemo(
+    () => ({ [ADMIN_TAB_IDS.UTILITIES_UNLOCK_REQUESTS]: pendingCount }),
+    [pendingCount],
+  );
 
   const handleChangePassword = () => {
     onTabChange(ADMIN_TAB_IDS.PASSWORD);
   };
 
   return (
-    <aside className={`w-[240px] shrink-0 bg-sidebar-bg border-r border-line flex flex-col min-h-screen ${className}`}>
+    <aside className={`w-[272px] shrink-0 bg-sidebar-bg border-r border-line flex flex-col min-h-screen ${className}`}>
       <div className="px-5 py-5 border-b border-line/60">
         <button
           type="button"
@@ -80,6 +87,7 @@ const AdminSidebar = memo(function AdminSidebar({ activeTab, onTabChange, onLogo
           tabIds={UTILITIES_TAB_IDS}
           activeTab={activeTab}
           onTabChange={onTabChange}
+          badgeByTabId={utilitiesBadgeByTabId}
         />
 
         <AdminNavGroup

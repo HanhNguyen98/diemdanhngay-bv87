@@ -116,8 +116,7 @@ public class HeadAiAssistantService {
             case UNKNOWN -> streamText(emitter,
                     intent.getReplyHint() != null && !intent.getReplyHint().isBlank()
                             ? intent.getReplyHint()
-                            : "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng nút \"Thiếu dữ liệu\" / "
-                                    + "\"Chấm công hàng loạt\", hoặc hỏi: \"Ai thiếu giờ ra?\"");
+                            : HeadAiIntentRouter.UNKNOWN_REPLY);
         }
     }
 

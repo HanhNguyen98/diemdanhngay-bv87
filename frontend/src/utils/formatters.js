@@ -206,3 +206,14 @@ export function getStatisticsDateRange(preset, refDate = todayISO()) {
       return monthRangeISO(y, m);
   }
 }
+
+const LOOPBACK_IPV6 = new Set(['::1', '0:0:0:0:0:0:0:1', '0000:0000:0000:0000:0000:0000:0000:0001']);
+
+/**
+ * Normalizes IPv6 loopback variants to the more readable "127.0.0.1".
+ * All other values are returned as-is.
+ */
+export function displayIp(ip) {
+  if (!ip) return ip;
+  return LOOPBACK_IPV6.has(ip.trim()) ? '127.0.0.1' : ip;
+}

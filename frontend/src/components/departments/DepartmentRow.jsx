@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { MapPin, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { ADMIN_UI } from '../../constants/admin';
 import { getInitials } from '../../utils/formatters';
 import AvatarStack from '../admin/sections/AvatarStack';
@@ -14,9 +14,7 @@ const DepartmentRow = memo(function DepartmentRow({
   showGroupColumn = false,
   onEdit,
   onDelete,
-  onViewLocation,
 }) {
-  const hasLocationMap = Boolean(dept.locationImageUrl);
   const deleteBlocked = (dept.staffCount ?? 0) > 0;
 
   return (
@@ -35,46 +33,22 @@ const DepartmentRow = memo(function DepartmentRow({
       <td className={`${CELL_CLASS} max-w-[6.5rem] sm:max-w-none`}>
         <p className={`font-semibold text-gray-800 text-xs lg:text-sm ${CLAMP_TEXT}`}>{dept.deptName}</p>
       </td>
-      <td className={CELL_CLASS}>
-        <div className="flex items-start gap-1.5 text-xs lg:text-sm text-content-muted min-w-0 max-w-[5.5rem] sm:max-w-none">
-          <button
-            type="button"
-            onClick={() => hasLocationMap && onViewLocation(dept)}
-            disabled={!hasLocationMap}
-            title={
-              hasLocationMap
-                ? ADMIN_UI.departments.viewLocationMap
-                : ADMIN_UI.departments.locationMapEmpty
-            }
-            className={`shrink-0 rounded-md p-0.5 lg:p-1 transition-colors ${hasLocationMap
-                ? 'text-primary hover:bg-primary-light cursor-pointer'
-                : 'text-content-muted/40 cursor-not-allowed'
-              }`}
-            aria-label={
-              hasLocationMap
-                ? ADMIN_UI.departments.viewLocationMap
-                : ADMIN_UI.departments.locationMapEmpty
-            }
-          >
-            <MapPin className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-          </button>
-          <span className={`min-w-0 ${CLAMP_TEXT}`}>{dept.location || '—'}</span>
-        </div>
-      </td>
-      <td className={`${CELL_CLASS} max-w-[7rem] sm:max-w-none`}>
+      <td className={`${CELL_CLASS} max-w-[5.5rem] sm:max-w-[7rem]`}>
         {dept.headName ? (
           <div className="flex items-start gap-1.5 min-w-0">
             <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full avatar-gradient text-white text-2xs font-bold flex items-center justify-center shrink-0">
               {getInitials(dept.headName)}
             </div>
-            <p className={`min-w-0 flex-1 text-xs lg:text-sm leading-snug ${CLAMP_TEXT}`}>
-              <span className="font-semibold text-gray-800">{dept.headName}</span>
+            <div className="min-w-0 flex-1">
+              <p className={`font-semibold text-gray-800 text-xs lg:text-sm leading-snug line-clamp-2`}>
+                {dept.headName}
+              </p>
               {dept.headRank && (
-                <span className="text-2xs text-success-fg uppercase font-semibold tracking-wide">
-                  <span className="max-lg:block lg:inline lg:ml-1">{dept.headRank}</span>
-                </span>
+                <p className="text-2xs text-content-muted uppercase font-medium tracking-wide leading-snug line-clamp-1 mt-0.5">
+                  {dept.headRank}
+                </p>
               )}
-            </p>
+            </div>
           </div>
         ) : (
           <span className="text-xs lg:text-sm text-content-muted">—</span>

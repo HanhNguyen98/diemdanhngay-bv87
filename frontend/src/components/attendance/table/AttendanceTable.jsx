@@ -7,6 +7,7 @@ import EmployeeRow from './EmployeeRow';
 const AttendanceTable = memo(function AttendanceTable({
   staffList,
   disabled,
+  todayWriteDisabled = false,
   onQuickAction,
   onSaveVeSomNote,
   onOpenScanLogs,
@@ -54,6 +55,7 @@ const AttendanceTable = memo(function AttendanceTable({
                   key={staff.empCode}
                   staff={staff}
                   disabled={disabled}
+                  todayWriteDisabled={todayWriteDisabled}
                   onQuickAction={onQuickAction}
                   onSaveVeSomNote={onSaveVeSomNote}
                   onOpenScanLogs={onOpenScanLogs}

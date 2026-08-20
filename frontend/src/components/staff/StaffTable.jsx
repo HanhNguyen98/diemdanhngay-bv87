@@ -17,39 +17,40 @@ const StaffTable = memo(function StaffTable({
 
   return (
     <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10">
-          <tr className="table-header-row">
-            <th className="table-th-left">{ADMIN_UI.staff.columns.code}</th>
-            {!hideDeptColumn && (
-              <th className="table-th-left">{ADMIN_UI.staff.columns.dept}</th>
-            )}
-            <th className="table-th-left">{ADMIN_UI.staff.columns.name}</th>
-            <th className="table-th-left">{ADMIN_UI.staff.columns.rank}</th>
-            <th className="table-th-left">{ADMIN_UI.staff.columns.position}</th>
-            <th className="table-th-left">{ADMIN_UI.staff.columns.status}</th>
-            <th className="table-th-left">{ADMIN_UI.staff.columns.fingerprint}</th>
-            <th className="table-th-right">{ADMIN_UI.staff.columns.actions}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.length === 0 ? (
-            <RegistryTableEmptyRow colSpan={colSpan} />
-          ) : (
-            items.map((staff) => (
-              <StaffRow
-                key={staff.empCode}
-                staff={staff}
-                avatarOnly={avatarOnly}
-                hideDeptColumn={hideDeptColumn}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onHistory={onHistory}
-                onTransfer={onTransfer}
-                onDeleteFingerprint={onDeleteFingerprint}
-              />
-            ))
+      <thead className="sticky top-0 z-10">
+        <tr className="table-header-row">
+          {!hideDeptColumn && (
+            <th className="table-th-left">{ADMIN_UI.staff.columns.dept}</th>
           )}
-        </tbody>
+          <th className="table-th-left">{ADMIN_UI.staff.columns.code}</th>
+
+          <th className="table-th-left">{ADMIN_UI.staff.columns.name}</th>
+          <th className="table-th-left">{ADMIN_UI.staff.columns.rank}</th>
+          <th className="table-th-left">{ADMIN_UI.staff.columns.position}</th>
+          <th className="table-th-left">{ADMIN_UI.staff.columns.status}</th>
+          <th className="table-th-left">{ADMIN_UI.staff.columns.fingerprint}</th>
+          <th className="table-th-right">{ADMIN_UI.staff.columns.actions}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.length === 0 ? (
+          <RegistryTableEmptyRow colSpan={colSpan} />
+        ) : (
+          items.map((staff) => (
+            <StaffRow
+              hideDeptColumn={hideDeptColumn}
+              key={staff.empCode}
+              staff={staff}
+              avatarOnly={avatarOnly}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onHistory={onHistory}
+              onTransfer={onTransfer}
+              onDeleteFingerprint={onDeleteFingerprint}
+            />
+          ))
+        )}
+      </tbody>
     </table>
   );
 });

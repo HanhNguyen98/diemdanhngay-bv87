@@ -3,7 +3,7 @@ import { api } from '../api/client';
 
 const POLL_MS = 60000;
 
-export function useNotifications({ enabled = true, onAttendanceNavigate } = {}) {
+export function useNotifications({ enabled = true, onAttendanceNavigate, onUnlockRequestNavigate } = {}) {
   const [items, setItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -61,11 +61,17 @@ export function useNotifications({ enabled = true, onAttendanceNavigate } = {}) 
         if (item.type === 'ATTENDANCE_REMINDER' && item.attendanceDate && onAttendanceNavigate) {
           onAttendanceNavigate(item.attendanceDate);
         }
+        if (item.type === 'UNLOCK_REQUEST_RESULT' && item.attendanceDate && onAttendanceNavigate) {
+          onAttendanceNavigate(item.attendanceDate);
+        }
+        if (item.type === 'UNLOCK_REQUEST' && onUnlockRequestNavigate) {
+          onUnlockRequestNavigate();
+        }
       } catch {
         /* keep UI responsive */
       }
     },
-    [onAttendanceNavigate, refresh],
+    [onAttendanceNavigate, onUnlockRequestNavigate, refresh],
   );
 
   return {

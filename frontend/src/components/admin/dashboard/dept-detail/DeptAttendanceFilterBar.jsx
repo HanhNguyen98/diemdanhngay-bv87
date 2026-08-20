@@ -19,6 +19,12 @@ const DeptAttendanceFilterBar = memo(function DeptAttendanceFilterBar({
   onApply,
   onReset,
   onExport,
+  onUnlock,
+  onRelock,
+  onApproveUnlockRequest,
+  canUnlock,
+  canRelock,
+  canApproveUnlockRequest,
   initialLoading,
   exporting,
   canExport,
@@ -70,6 +76,36 @@ const DeptAttendanceFilterBar = memo(function DeptAttendanceFilterBar({
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
+          {canApproveUnlockRequest && (
+            <button
+              type="button"
+              onClick={onApproveUnlockRequest}
+              disabled={initialLoading}
+              className="h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-60"
+            >
+              {d.deptDetailApproveUnlockRequest}
+            </button>
+          )}
+          {canUnlock && (
+            <button
+              type="button"
+              onClick={onUnlock}
+              disabled={initialLoading}
+              className="h-9 px-4 rounded-lg border border-line text-navy text-sm font-medium hover:bg-neutral transition-colors disabled:opacity-60"
+            >
+              {d.deptDetailUnlock}
+            </button>
+          )}
+          {canRelock && (
+            <button
+              type="button"
+              onClick={onRelock}
+              disabled={initialLoading}
+              className="h-9 px-4 rounded-lg border border-line text-content-muted text-sm font-medium hover:bg-neutral transition-colors disabled:opacity-60"
+            >
+              {d.deptDetailRelock}
+            </button>
+          )}
           <button
             type="button"
             onClick={onExport}

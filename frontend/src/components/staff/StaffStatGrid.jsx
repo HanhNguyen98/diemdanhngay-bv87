@@ -38,6 +38,7 @@ const StaffStatGrid = memo(function StaffStatGrid({ stats, mobileCompact = false
       <div className="lg:hidden flex flex-col gap-2">
         <StatCard
           compact
+          isTotal
           label={ADMIN_UI.staff.stats.totalStaff}
           value={stats?.totalStaff ?? '—'}
           icon={Users}
@@ -57,6 +58,7 @@ const StaffStatGrid = memo(function StaffStatGrid({ stats, mobileCompact = false
         <StatCard
           compact
           dense={dense}
+          isTotal
           label={ADMIN_UI.staff.stats.totalStaff}
           value={stats?.totalStaff ?? '—'}
           icon={Users}

@@ -2,6 +2,8 @@ package com.bv87.diemdanh.service;
 
 import com.bv87.diemdanh.dto.*;
 import com.bv87.diemdanh.entity.*;
+import com.bv87.diemdanh.enums.PayrollFillStatus;
+import com.bv87.diemdanh.enums.PayrollIntent;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.*;
@@ -46,7 +48,9 @@ public class AttendanceService {
     private final AttendanceStatusCatalogService statusCatalogService;
     private final AccountRepository accountRepository;
     private final FingerprintScanLogRepository scanLogRepository;
+    private final AuditService auditService;
     private final WorkScheduleService workScheduleService;
+    private final AttendanceUnlockRequestService unlockRequestService;
 
     public List<DepartmentDto> getAllDepartments(AuthUser authUser) {
         LocalDate today = timeService.today();
@@ -345,6 +349,8 @@ public class AttendanceService {
             record.setNote(request.getNote());
         }
         AttendanceRecord saved = attendanceRepository.save(record);
+        auditService.logAttendance(authUser, "ATTENDANCE_SAVE", deptCode, request.getEmpCode(), date,
+                Map.of("status", request.getStatus() != null ? request.getStatus() : ""));
         return toStaffDto(employee, deptCode, saved);
     }
 
@@ -380,6 +386,7 @@ public class AttendanceService {
                 .assignableCount(counts.assignable)
                 .skippedFingerprint(counts.skippedFingerprint)
                 .skippedReportSubmitted(counts.skippedReport)
+                .skippedSoftLock(counts.skippedSoftLock)
                 .requiresFingerprintSkipConfirm(requiresConfirm)
                 .message(message)
                 .build();
@@ -417,8 +424,14 @@ public class AttendanceService {
         int updated = 0;
         int skippedFingerprint = 0;
         int skippedReport = 0;
+        int skippedSoftLock = 0;
 
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
+            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day)) {
+                skippedSoftLock++;
+                continue;
+            }
+
             AttendanceRecord record = existingByDate.get(day);
 
             if (record != null && AttendanceValidity.isPresenceStatus(record.getStatus())
@@ -441,33 +454,37 @@ public class AttendanceService {
 
         if (updated == 0) {
             throw new BusinessException(
-                    "Không cập nhật được ngày nào trong khoảng (đã quét vân tay hoặc đã gửi báo cáo).");
+                    "Không cập nhật được ngày nào trong khoảng (đã quét vân tay hoặc đã khóa mềm ngày công).");
         }
 
         String statusLabel = statusCatalogService.resolveLabel(request.getStatus());
         StringBuilder msg = new StringBuilder();
         msg.append("Đã gán ").append(statusLabel).append(" cho ").append(updated).append(" ngày");
-        if (skippedFingerprint > 0 || skippedReport > 0) {
+        if (skippedFingerprint > 0 || skippedSoftLock > 0) {
             msg.append(" (");
             boolean first = true;
             if (skippedFingerprint > 0) {
                 msg.append("bỏ qua ").append(skippedFingerprint).append(" ngày đã quét vân tay");
                 first = false;
             }
-            if (skippedReport > 0) {
+            if (skippedSoftLock > 0) {
                 if (!first) {
                     msg.append("; ");
                 }
-                msg.append("bỏ qua ").append(skippedReport).append(" ngày đã gửi báo cáo");
+                msg.append("bỏ qua ").append(skippedSoftLock).append(" ngày bị khóa mềm");
             }
             msg.append(")");
         }
         msg.append(".");
 
+        auditService.logAttendance(authUser, "ATTENDANCE_MANUAL_RANGE", deptCode, request.getEmpCode(), from,
+                Map.of("toDate", to.toString(), "status", request.getStatus(), "updated", updated));
+
         return ManualAttendanceRangeResultDto.builder()
                 .updatedCount(updated)
                 .skippedFingerprint(skippedFingerprint)
                 .skippedReportSubmitted(skippedReport)
+                .skippedSoftLock(skippedSoftLock)
                 .status(request.getStatus())
                 .statusLabel(statusLabel)
                 .message(msg.toString())
@@ -493,8 +510,13 @@ public class AttendanceService {
         int assignable = 0;
         int skippedFingerprint = 0;
         int skippedReport = 0;
+        int skippedSoftLock = 0;
 
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
+            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day)) {
+                skippedSoftLock++;
+                continue;
+            }
             AttendanceRecord record = existingByDate.get(day);
             if (record != null && AttendanceValidity.isPresenceStatus(record.getStatus())
                     && !isPostScanOverride(targetStatus)
@@ -504,10 +526,11 @@ public class AttendanceService {
             }
             assignable++;
         }
-        return new RangeSkipCounts(assignable, skippedFingerprint, skippedReport);
+        return new RangeSkipCounts(assignable, skippedFingerprint, skippedReport, skippedSoftLock);
     }
 
-    private record RangeSkipCounts(int assignable, int skippedFingerprint, int skippedReport) {
+    private record RangeSkipCounts(
+            int assignable, int skippedFingerprint, int skippedReport, int skippedSoftLock) {
     }
 
     private static boolean isPostScanOverride(String status) {
@@ -539,25 +562,32 @@ public class AttendanceService {
             return;
         }
         if (AttendanceValidity.NGHI_TRUC_HALF.equals(status)) {
-            if (record.getMorningInAt() == null || record.getNoonOutAt() == null) {
-                throw new BusinessException(
-                        "Nghỉ trực nửa ngày cần đủ giờ vào sáng và ra trưa trước khi chấm.");
-            }
-            if (AttendanceValidity.hasAfternoonPunch(record)) {
-                throw new BusinessException(
-                        "Nghỉ trực nửa ngày yêu cầu buổi chiều trống (không có vào chiều / ra chiều).");
+            PayrollIntent intent = PayrollIntent.fromCode(record.getPayrollIntent());
+            boolean wizardHalf = intent == PayrollIntent.HALF_MORNING || intent == PayrollIntent.HALF_AFTERNOON;
+            if (!wizardHalf) {
+                requireHeadMissingPunchExplainForNghiTruc(record);
+                if (!AttendanceValidity.isHalfMorningPattern(record)
+                        && !AttendanceValidity.isHalfAfternoonPattern(record)) {
+                    throw new BusinessException(
+                            "Nghỉ trực nửa ngày cần đủ (vào sáng + ra trưa) hoặc (vào chiều + ra chiều), buổi còn lại trống.");
+                }
             }
             record.setStatus(status);
             record.setNote(note);
             record.setSource(AttendanceValidity.punchCount(record) > 0 ? "MIXED" : "MANUAL");
             AttendanceValidity.syncLegacyTimes(record);
+            applyPayrollFillPendingIfNeeded(record);
             return;
         }
-        if (AttendanceValidity.NGHI_TRUC_FULL.equals(status)
-                && AttendanceValidity.punchCount(record) > 0
-                && authUser != null && authUser.isHead()) {
-            throw new BusinessException(
-                    "Nghỉ trực 1 ngày chỉ gán khi chưa có giờ quét. Liên hệ Admin nếu cần xóa giờ.");
+        if (AttendanceValidity.NGHI_TRUC_FULL.equals(status)) {
+            if (AttendanceValidity.punchCount(record) > 0
+                    && authUser != null && authUser.isHead()) {
+                throw new BusinessException(
+                        "Nghỉ trực 1 ngày chỉ gán khi chưa có giờ quét. Liên hệ Admin nếu cần xóa giờ.");
+            }
+            if (AttendanceValidity.punchCount(record) > 0) {
+                requireHeadMissingPunchExplainForNghiTruc(record);
+            }
         }
         record.setStatus(status);
         record.setNote(note);
@@ -624,6 +654,247 @@ public class AttendanceService {
         record.setLastKioskLabel(null);
         record.setSource("ADMIN");
         record.setNote(reason);
+        record.setMissingPunchReason(null);
+        record.setPayrollIntent(null);
+        record.setPayrollFillStatus(null);
+        AttendanceRecord saved = attendanceRepository.save(record);
+        auditService.logAttendance(authUser, "ATTENDANCE_CLEAR", deptCode, request.getEmpCode(),
+                record.getAttendanceDate(), Map.of("reason", reason));
+        return toStaffDto(employee, deptCode, saved);
+    }
+
+    /**
+     * HEAD/Admin wizard — explain + assign NGHI_TRUC in one step — SPEC P8-NghiTrucWizard.
+     */
+    @Transactional
+    public ManualAttendanceRangeResultDto assignNghiTrucWizard(AuthUser authUser, NghiTrucAssignRequest request) {
+        if (!authUser.isHead() && !authUser.isAdmin()) {
+            throw new AccessDeniedException("Chỉ Trưởng đơn vị hoặc Admin mới được chấm nghỉ trực kèm giải trình");
+        }
+
+        LocalDate from = request.getFromDate();
+        LocalDate to = request.getToDate();
+        validateManualRangeDates(from, to);
+
+        PayrollIntent intent = PayrollIntent.fromCode(request.getPayrollIntent());
+        if (intent == null || !intent.isNghiTrucAssignable()) {
+            throw new BusinessException("Loại nghỉ trực không hợp lệ.");
+        }
+        String targetStatus = intent.targetStatusCode();
+        statusCatalogService.assertActiveStatus(targetStatus);
+
+        Employee employee = employeeRepository.findByEmpCodeWithDept(request.getEmpCode())
+                .orElseThrow(() -> new BusinessException(
+                        "Không tìm thấy nhân viên mã " + CodeFormatter.formatEmpCode(request.getEmpCode())));
+        Integer deptCode = employee.getDepartment().getDeptCode();
+        lockService.assertCanAssignManual(authUser, deptCode);
+
+        String reason = request.getReason().trim();
+        String note = request.getNote() != null ? request.getNote().trim() : null;
+
+        Map<LocalDate, AttendanceRecord> existingByDate = attendanceRepository
+                .findByEmpCodeAndDateBetween(employee.getEmpCode(), from, to).stream()
+                .collect(Collectors.toMap(AttendanceRecord::getAttendanceDate, r -> r, (a, b) -> a));
+
+        int updated = 0;
+        int skippedFingerprint = 0;
+        int skippedSoftLock = 0;
+
+        for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
+            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day)) {
+                skippedSoftLock++;
+                continue;
+            }
+
+            AttendanceRecord record = existingByDate.get(day);
+            if (record == null) {
+                record = new AttendanceRecord();
+                record.setAttendanceDate(day);
+                record.setEmployee(employee);
+                existingByDate.put(day, record);
+            }
+
+            int punches = AttendanceValidity.punchCount(record);
+            if (AttendanceValidity.NGHI_TRUC_FULL.equals(targetStatus) && punches > 0) {
+                skippedFingerprint++;
+                continue;
+            }
+
+            record.setMissingPunchReason(reason);
+            record.setPayrollIntent(intent.name());
+            record.setNote(note);
+
+            if (AttendanceValidity.NGHI_TRUC_FULL.equals(targetStatus)) {
+                record.setStatus(targetStatus);
+                record.setMorningInAt(null);
+                record.setNoonOutAt(null);
+                record.setAfternoonInAt(null);
+                record.setAfternoonOutAt(null);
+                record.setLateFlag(false);
+                record.setCheckInAt(null);
+                record.setCheckOutAt(null);
+                record.setSource("MANUAL");
+                record.setPayrollFillStatus(null);
+            } else {
+                record.setStatus(AttendanceValidity.NGHI_TRUC_HALF);
+                record.setSource(punches > 0 ? AttendanceValidity.SOURCE_MIXED : AttendanceValidity.SOURCE_MANUAL);
+                AttendanceValidity.syncLegacyTimes(record);
+                applyPayrollFillPendingIfNeeded(record);
+            }
+
+            attendanceRepository.save(record);
+            updated++;
+        }
+
+        if (updated == 0) {
+            if (skippedFingerprint > 0) {
+                throw new BusinessException(
+                        "Không có ngày nào được cập nhật. Có "
+                                + skippedFingerprint
+                                + " ngày không áp dụng được (ví dụ: nghỉ trực cả ngày khi đã có giờ quét).");
+            }
+            throw new BusinessException("Không có ngày nào được cập nhật trong khoảng đã chọn.");
+        }
+
+        String message = "Đã chấm nghỉ trực " + updated + " ngày.";
+        if (skippedFingerprint > 0) {
+            message += " Bỏ qua " + skippedFingerprint + " ngày không áp dụng được.";
+        }
+        if (skippedSoftLock > 0) {
+            message += " Bỏ qua " + skippedSoftLock + " ngày do khóa mềm / chưa mở khóa.";
+        }
+
+        auditService.logAttendance(authUser, "ATTENDANCE_NGHI_TRUC", deptCode, request.getEmpCode(), from,
+                Map.of("toDate", to.toString(), "payrollIntent", intent.name(), "updated", updated));
+
+        return ManualAttendanceRangeResultDto.builder()
+                .updatedCount(updated)
+                .skippedFingerprint(skippedFingerprint)
+                .skippedSoftLock(skippedSoftLock)
+                .skippedReportSubmitted(0)
+                .status(targetStatus)
+                .statusLabel(statusCatalogService.resolveLabel(targetStatus))
+                .message(message)
+                .build();
+    }
+
+    /**
+     * Admin approves payroll auto-fill with official schedule times — SPEC P8.
+     */
+    @Transactional
+    public StaffAttendanceDto approvePayrollFill(AuthUser authUser, PayrollFillApproveRequest request) {
+        if (!authUser.isAdmin()) {
+            throw new AccessDeniedException("Chỉ Admin mới được duyệt bổ sung giờ");
+        }
+
+        Employee employee = employeeRepository.findByEmpCodeWithDept(request.getEmpCode())
+                .orElseThrow(() -> new BusinessException(
+                        "Không tìm thấy nhân viên mã " + CodeFormatter.formatEmpCode(request.getEmpCode())));
+
+        Integer deptCode = employee.getDepartment().getDeptCode();
+        LocalDate date = request.getDate() != null ? request.getDate() : timeService.today();
+
+        AttendanceRecord record = attendanceRepository
+                .findByDateAndEmpCode(date, request.getEmpCode())
+                .orElseThrow(() -> new BusinessException("Không có bản ghi Chấm công để duyệt."));
+
+        if (!AttendanceValidity.isNghiTrucStatus(record.getStatus())) {
+            throw new BusinessException("Chỉ duyệt bổ sung giờ cho nghỉ trực.");
+        }
+        if (PayrollFillStatus.fromCode(record.getPayrollFillStatus()) != PayrollFillStatus.PENDING) {
+            throw new BusinessException("Không có yêu cầu duyệt giờ đang chờ.");
+        }
+        if (record.getMissingPunchReason() == null || record.getMissingPunchReason().isBlank()) {
+            throw new BusinessException("Thiếu giải trình của Trưởng đơn vị.");
+        }
+
+        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        WorkSchedule schedule = workScheduleService.current();
+        fillOfficialTimesForNullSlots(record, date, zone, schedule);
+        record.setPayrollFillStatus(PayrollFillStatus.APPROVED.name());
+        if (AttendanceValidity.SOURCE_FINGERPRINT.equals(record.getSource())
+                || AttendanceValidity.SOURCE_MIXED.equals(record.getSource())) {
+            record.setSource(AttendanceValidity.SOURCE_MIXED);
+        } else {
+            record.setSource(AttendanceValidity.SOURCE_ADMIN);
+        }
+        AttendanceValidity.syncLegacyTimes(record);
+        AttendanceRecord saved = attendanceRepository.save(record);
+        auditService.logAttendance(authUser, "ATTENDANCE_PAYROLL_APPROVE", deptCode, request.getEmpCode(), date,
+                Map.of());
+        return toStaffDto(employee, deptCode, saved);
+    }
+
+    private void applyPayrollFillPendingIfNeeded(AttendanceRecord record) {
+        if (AttendanceValidity.hasEmptyPunchSlot(record)) {
+            record.setPayrollFillStatus(PayrollFillStatus.PENDING.name());
+        } else {
+            record.setPayrollFillStatus(null);
+        }
+    }
+
+    private void fillOfficialTimesForNullSlots(
+            AttendanceRecord record, LocalDate date, ZoneId zone, WorkSchedule schedule) {
+        if (record.getMorningInAt() == null) {
+            record.setMorningInAt(toOfficialInstant(date, zone, schedule.morningInOfficial()));
+        }
+        if (record.getNoonOutAt() == null) {
+            record.setNoonOutAt(toOfficialInstant(date, zone, schedule.noonOutOfficial()));
+        }
+        if (record.getAfternoonInAt() == null) {
+            record.setAfternoonInAt(toOfficialInstant(date, zone, schedule.afternoonInOfficial()));
+        }
+        if (record.getAfternoonOutAt() == null) {
+            record.setAfternoonOutAt(toOfficialInstant(date, zone, schedule.afternoonOutOfficial()));
+        }
+    }
+
+    private static java.time.Instant toOfficialInstant(LocalDate date, ZoneId zone, String hm) {
+        LocalTime time = LocalTime.parse(hm, WorkSchedule.TIME_FMT);
+        return date.atTime(time).atZone(zone).toInstant();
+    }
+
+    /**
+     * HEAD explains missing punch slots — SPEC P7-NghiTrucExplainGate.
+     *
+     * @param authUser must be HEAD for own department
+     * @param request  emp, date, reason, payrollIntent
+     * @return updated staff row
+     */
+    @Transactional
+    public StaffAttendanceDto saveMissingPunchExplain(AuthUser authUser, MissingPunchExplainRequest request) {
+        if (!authUser.isHead()) {
+            throw new AccessDeniedException("Chỉ Trưởng đơn vị mới được giải trình thiếu giờ");
+        }
+
+        Employee employee = employeeRepository.findByEmpCodeWithDept(request.getEmpCode())
+                .orElseThrow(() -> new BusinessException(
+                        "Không tìm thấy nhân viên mã " + CodeFormatter.formatEmpCode(request.getEmpCode())));
+
+        Integer deptCode = employee.getDepartment().getDeptCode();
+        lockService.assertCanWrite(authUser, deptCode, request.getDate() != null ? request.getDate() : timeService.today());
+        LocalDate date = request.getDate() != null ? request.getDate() : timeService.today();
+
+        PayrollIntent intent = PayrollIntent.fromCode(request.getPayrollIntent());
+        if (intent == null) {
+            throw new BusinessException("Hướng xử lý không hợp lệ.");
+        }
+
+        AttendanceRecord record = attendanceRepository
+                .findByDateAndEmpCode(date, request.getEmpCode())
+                .orElseGet(() -> {
+                    AttendanceRecord r = new AttendanceRecord();
+                    r.setAttendanceDate(date);
+                    r.setEmployee(employee);
+                    return r;
+                });
+
+        if (AttendanceValidity.isComplete(record)) {
+            throw new BusinessException("Nhân viên đã đủ dữ liệu chấm công — không cần giải trình.");
+        }
+
+        record.setMissingPunchReason(request.getReason().trim());
+        record.setPayrollIntent(intent.name());
         AttendanceRecord saved = attendanceRepository.save(record);
         return toStaffDto(employee, deptCode, saved);
     }
@@ -658,10 +929,21 @@ public class AttendanceService {
                     return r;
                 });
 
-        if (AttendanceValidity.isManualStatus(record.getStatus())) {
+        if (AttendanceValidity.isManualStatus(record.getStatus())
+                && !AttendanceValidity.isNghiTrucStatus(record.getStatus())) {
             throw new BusinessException(
                     "Nhân viên đang " + statusCatalogService.resolveLabel(record.getStatus())
                             + " — không cần điền giờ vào/ra.");
+        }
+
+        if (AttendanceValidity.isNghiTrucStatus(record.getStatus())
+                && PayrollFillStatus.PENDING == PayrollFillStatus.fromCode(record.getPayrollFillStatus())) {
+            throw new BusinessException(
+                    "Nghỉ trực đang chờ duyệt — dùng chức năng Duyệt bổ sung giờ.");
+        }
+
+        if (!AttendanceValidity.isNghiTrucStatus(record.getStatus())) {
+            assertHeadExplainedBeforeAdminFill(record);
         }
 
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
@@ -692,6 +974,8 @@ public class AttendanceService {
             record.setSource("ADMIN");
         }
         AttendanceRecord saved = attendanceRepository.save(record);
+        auditService.logAttendance(authUser, "ATTENDANCE_FILL_TIMES", deptCode, request.getEmpCode(), date,
+                Map.of());
         return toStaffDto(employee, deptCode, saved);
     }
 
@@ -724,6 +1008,11 @@ public class AttendanceService {
     }
 
     private void applyFillTimesStatus(AttendanceRecord record, WorkSchedule schedule) {
+        PayrollIntent intent = PayrollIntent.fromCode(record.getPayrollIntent());
+        if (intent != null && intent.defersPresenceStatus()) {
+            AttendanceValidity.syncLegacyTimes(record);
+            return;
+        }
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
         if (AttendanceValidity.punchCount(record) == 4) {
             LocalTime morning = record.getMorningInAt().atZone(zone).toLocalTime();
@@ -769,25 +1058,28 @@ public class AttendanceService {
                 .orElseThrow(() -> new BusinessException(
                         "Đơn vị không tồn tại: " + CodeFormatter.formatDeptCode(request.getDeptCode())));
 
-        LocalDate today = timeService.today();
-        if (unlockRepository.existsByDeptCodeAndDate(request.getDeptCode(), today)) {
+        LocalDate date = resolveUnlockDate(request.getDate());
+        if (unlockRepository.existsByDeptCodeAndDate(request.getDeptCode(), date)) {
             throw new BusinessException(
                     "Đơn vị " + CodeFormatter.formatDeptCode(request.getDeptCode())
-                            + " đã được mở khóa hôm nay");
+                            + " đã được mở khóa cho ngày " + date);
         }
 
         AttendanceUnlock unlock = new AttendanceUnlock();
         unlock.setDepartment(dept);
-        unlock.setAttendanceDate(today);
+        unlock.setAttendanceDate(date);
         unlock.setReason(request.getReason().trim());
         unlockRepository.save(unlock);
+        unlockRequestService.completePendingOnDirectUnlock(authUser, request.getDeptCode(), date);
+        auditService.logAttendance(authUser, "ATTENDANCE_UNLOCK", request.getDeptCode(), null, date,
+                Map.of("reason", request.getReason().trim()));
     }
 
     /**
-     * Revokes an admin unlock for today so the department returns to locked state after cutoff.
+     * Revokes an admin unlock for the given date (default today).
      */
     @Transactional
-    public void relockDepartment(AuthUser authUser, Integer deptCode) {
+    public void relockDepartment(AuthUser authUser, Integer deptCode, LocalDate requestedDate) {
         if (!authUser.isAdmin()) {
             throw new AccessDeniedException("Chỉ Admin mới được khóa sổ lại");
         }
@@ -796,13 +1088,23 @@ public class AttendanceService {
                 .orElseThrow(() -> new BusinessException(
                         "Đơn vị không tồn tại: " + CodeFormatter.formatDeptCode(deptCode)));
 
-        LocalDate today = timeService.today();
-        AttendanceUnlock unlock = unlockRepository.findByDeptCodeAndDate(deptCode, today)
+        LocalDate date = resolveUnlockDate(requestedDate);
+        AttendanceUnlock unlock = unlockRepository.findByDeptCodeAndDate(deptCode, date)
                 .orElseThrow(() -> new BusinessException(
                         "Đơn vị " + CodeFormatter.formatDeptCode(deptCode)
-                                + " chưa được mở khóa hôm nay"));
+                                + " chưa được mở khóa cho ngày " + date));
 
         unlockRepository.delete(unlock);
+        auditService.logAttendance(authUser, "ATTENDANCE_RELOCK", deptCode, null, date, Map.of());
+    }
+
+    private LocalDate resolveUnlockDate(LocalDate requested) {
+        LocalDate today = timeService.today();
+        LocalDate date = requested != null ? requested : today;
+        if (date.isAfter(today)) {
+            throw new BusinessException("Không được mở khóa ngày tương lai.");
+        }
+        return date;
     }
 
     private static final String DASHBOARD_MANUAL_LOCK_REASON = "Khóa sổ từ bảng điều khiển";
@@ -919,6 +1221,7 @@ public class AttendanceService {
                 reportSubmissionRepository.findByAttendanceDateAndDeptCode(date, deptCode).isPresent();
         boolean reportBlocked =
                 reportBlockRepository.findByAttendanceDateAndDeptCode(date, deptCode).isPresent();
+        AttendanceUnlockRequest latestRequest = unlockRequestService.latestFor(deptCode, date);
         // editable already includes reportBlocked via AttendanceLockService.isEditable (SPEC_AI §3.2)
 
         return AttendanceSummaryDto.builder()
@@ -943,6 +1246,9 @@ public class AttendanceService {
                 .reportBlocked(reportBlocked)
                 .manualLocked(manualLocked)
                 .hasActiveHeadAccount(hasActiveHeadAccount)
+                .unlockRequestId(latestRequest != null ? latestRequest.getId() : null)
+                .unlockRequestStatus(latestRequest != null ? latestRequest.getStatus().name() : null)
+                .unlockRequestReason(latestRequest != null ? latestRequest.getReason() : null)
                 .build();
     }
 
@@ -1160,13 +1466,16 @@ public class AttendanceService {
             int punches = AttendanceValidity.punchCount(record);
             String reason;
             if (AttendanceValidity.VE_SOM.equals(status)) {
-                reason = "MISSING_EARLY_LEAVE_REASON";
+                if (punches != 4) {
+                    reason = "INCOMPLETE_PUNCHES";
+                } else if (record.getNote() == null || record.getNote().isBlank()) {
+                    reason = "MISSING_EARLY_LEAVE_REASON";
+                } else {
+                    // Should be complete — skip via isComplete above; defensive fallback
+                    reason = "UNMARKED";
+                }
             } else if (punches >= 1 && punches <= 3) {
                 reason = "INCOMPLETE_PUNCHES";
-            } else if (AttendanceValidity.isPresenceStatus(status) && punches == 4
-                    && (record.getNote() == null || record.getNote().isBlank())
-                    && AttendanceValidity.VE_SOM.equals(status)) {
-                reason = "MISSING_EARLY_LEAVE_REASON";
             } else {
                 reason = "UNMARKED";
             }
@@ -1194,8 +1503,41 @@ public class AttendanceService {
                 .toList();
     }
 
+    private void assertHeadExplainedBeforeAdminFill(AttendanceRecord record) {
+        if (record.getMissingPunchReason() == null || record.getMissingPunchReason().isBlank()) {
+            throw new BusinessException(
+                    "Trưởng đơn vị chưa giải trình thiếu giờ. Không thể điền giờ cho nhân viên này.");
+        }
+    }
+
+    private void requireHeadMissingPunchExplainForNghiTruc(AttendanceRecord record) {
+        if (record.getMissingPunchReason() == null || record.getMissingPunchReason().isBlank()) {
+            throw new BusinessException(
+                    "Trưởng đơn vị phải giải trình thiếu giờ trước khi chấm nghỉ trực.");
+        }
+    }
+
+    private String resolveStatusLabel(AttendanceRecord record, String status) {
+        if (status == null) {
+            return null;
+        }
+        if (AttendanceValidity.NGHI_TRUC_HALF.equals(status) && record != null) {
+            PayrollIntent intent = PayrollIntent.fromCode(record.getPayrollIntent());
+            if (intent == PayrollIntent.HALF_MORNING || intent == PayrollIntent.HALF_AFTERNOON) {
+                return intent.getLabel();
+            }
+        }
+        if (AttendanceValidity.NGHI_TRUC_FULL.equals(status)) {
+            return PayrollIntent.NGHI_TRUC_FULL.getLabel();
+        }
+        return statusCatalogService.resolveLabel(status);
+    }
+
     private StaffAttendanceDto toStaffDto(Employee emp, Integer deptCode, AttendanceRecord record) {
         String status = record != null ? record.getStatus() : null;
+        PayrollIntent intent = record != null ? PayrollIntent.fromCode(record.getPayrollIntent()) : null;
+        PayrollFillStatus fillStatus = record != null
+                ? PayrollFillStatus.fromCode(record.getPayrollFillStatus()) : null;
         return StaffAttendanceDto.builder()
                 .recordId(record != null ? record.getId() : null)
                 .empCode(emp.getEmpCode())
@@ -1207,8 +1549,13 @@ public class AttendanceService {
                 .positionName(emp.getPositionName())
                 .avatarUrl(emp.getAvatarUrl())
                 .status(status)
-                .statusLabel(status != null ? statusCatalogService.resolveLabel(status) : null)
+                .statusLabel(resolveStatusLabel(record, status))
                 .note(record != null ? record.getNote() : null)
+                .missingPunchReason(record != null ? record.getMissingPunchReason() : null)
+                .payrollIntent(intent != null ? intent.name() : null)
+                .payrollIntentLabel(intent != null ? intent.getLabel() : null)
+                .payrollFillStatus(fillStatus != null ? fillStatus.name() : null)
+                .payrollFillStatusLabel(fillStatus != null ? fillStatus.getLabel() : null)
                 .checkInAt(record != null ? record.getCheckInAt() : null)
                 .checkOutAt(record != null ? record.getCheckOutAt() : null)
                 .morningInAt(record != null ? record.getMorningInAt() : null)

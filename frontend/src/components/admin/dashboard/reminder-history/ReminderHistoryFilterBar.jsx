@@ -25,8 +25,10 @@ const ReminderHistoryFilterBar = memo(function ReminderHistoryFilterBar({
   onReset,
   loading,
   layout = 'desktop-toolbar',
+  rangeLabel,
 }) {
   const { dashboard: d } = ADMIN_UI;
+  const rangeText = rangeLabel || d.reminderFilterRange;
 
   const applyButton = (
     <button
@@ -69,7 +71,7 @@ const ReminderHistoryFilterBar = memo(function ReminderHistoryFilterBar({
             onDateToChange(to);
           }}
           disabled={loading}
-          ariaLabel={d.reminderFilterRange}
+          ariaLabel={rangeText}
           className="flex-1 min-w-0"
         />
         {applyButton}
@@ -88,7 +90,7 @@ const ReminderHistoryFilterBar = memo(function ReminderHistoryFilterBar({
       />
 
       <div className="flex items-center gap-2 shrink-0 min-w-0">
-        <span className={LABEL_CLASS}>{d.reminderFilterRange}</span>
+        <span className={LABEL_CLASS}>{rangeText}</span>
         <DateRangePickerField
           dateFrom={dateFrom}
           dateTo={dateTo}
@@ -97,7 +99,7 @@ const ReminderHistoryFilterBar = memo(function ReminderHistoryFilterBar({
             onDateToChange(to);
           }}
           disabled={loading}
-          ariaLabel={d.reminderFilterRange}
+          ariaLabel={rangeText}
           className="w-auto shrink-0"
           triggerClassName="min-w-[220px]"
         />

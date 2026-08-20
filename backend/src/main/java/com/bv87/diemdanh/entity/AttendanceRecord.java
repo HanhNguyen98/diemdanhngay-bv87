@@ -31,6 +31,18 @@ public class AttendanceRecord {
     @Column(name = "note", length = 255)
     private String note;
 
+    /** HEAD explanation for missing punch slots — separate from note (P7). */
+    @Column(name = "missing_punch_reason", length = 255)
+    private String missingPunchReason;
+
+    /** HEAD payroll intent when explaining — PayrollIntent name (P7). */
+    @Column(name = "payroll_intent", length = 40)
+    private String payrollIntent;
+
+    /** PENDING | APPROVED — Admin auto-fill official times (P8). */
+    @Column(name = "payroll_fill_status", length = 20)
+    private String payrollFillStatus;
+
     @Column(name = "check_in_at")
     private java.time.Instant checkInAt;
 

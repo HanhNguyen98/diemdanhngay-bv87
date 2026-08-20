@@ -42,6 +42,7 @@ const KioskTokenStatGrid = memo(function KioskTokenStatGrid({ stats }) {
       <div className="lg:hidden flex flex-col gap-2">
         <StatCard
           compact
+          isTotal
           label={labels.total}
           value={stats?.total ?? '—'}
           icon={KeyRound}
@@ -59,6 +60,7 @@ const KioskTokenStatGrid = memo(function KioskTokenStatGrid({ stats }) {
       <div className="hidden lg:grid grid-cols-4 gap-2.5">
         <StatCard
           compact
+          isTotal
           label={labels.total}
           value={stats?.total ?? '—'}
           icon={KeyRound}

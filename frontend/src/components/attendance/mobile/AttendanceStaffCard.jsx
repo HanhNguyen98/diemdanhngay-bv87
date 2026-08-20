@@ -1,9 +1,9 @@
 import { memo } from 'react';
-import { MANUAL_SCHEDULE_UI, SCAN_LOG_UI, UI, isMissingCheckout } from '../../../constants/attendance';
+import { MANUAL_SCHEDULE_UI, SCAN_LOG_UI } from '../../../constants/attendance';
 import { formatKioskMachine } from '../../../utils/kioskMachine';
 import PunchTimesCell from '../table/PunchTimesCell';
 import StaffAvatar from '../table/StaffAvatar';
-import StatusBadge from '../table/StatusBadge';
+import StatusCell from '../table/StatusCell';
 import VeSomNoteField from '../table/VeSomNoteField';
 import MobileQuickActionGrid from './MobileQuickActionGrid';
 
@@ -11,13 +11,12 @@ import MobileQuickActionGrid from './MobileQuickActionGrid';
 const AttendanceStaffCard = memo(function AttendanceStaffCard({
   staff,
   disabled,
+  todayWriteDisabled = false,
   onQuickAction,
   onSaveVeSomNote,
   onOpenScanLogs,
   onOpenManualSchedule,
 }) {
-  const missingOut = isMissingCheckout(staff);
-
   return (
     <article className="min-w-0 rounded-xl border border-line bg-surface-white p-2.5 shadow-sm">
       <div className="flex items-start gap-2.5">
@@ -35,21 +34,22 @@ const AttendanceStaffCard = memo(function AttendanceStaffCard({
               <span className="min-w-0 truncate text-4xs text-content-muted">{staff.positionName}</span>
             )}
           </div>
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-content-muted">
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-start gap-x-2.5 gap-y-1 text-xs text-content-muted">
             <PunchTimesCell staff={staff} compact />
-            <StatusBadge staff={staff} variant="card" />
+            <StatusCell staff={staff} variant="card" />
           </div>
           <p className="mt-1 text-3xs text-content-muted truncate" title={formatKioskMachine(staff)}>
             {formatKioskMachine(staff)}
           </p>
-          {missingOut ? (
-            <p className="mt-1 text-3xs font-medium text-warning-fg">{UI.missingCheckoutHint}</p>
-          ) : null}
         </div>
       </div>
 
       <div className="mt-2">
-        <VeSomNoteField staff={staff} disabled={disabled} onSave={onSaveVeSomNote} />
+        <VeSomNoteField
+          staff={staff}
+          disabled={disabled || todayWriteDisabled}
+          onSave={onSaveVeSomNote}
+        />
       </div>
       <MobileQuickActionGrid staff={staff} disabled={disabled} onQuickAction={onQuickAction} />
       <div className="mt-1.5 flex gap-2">

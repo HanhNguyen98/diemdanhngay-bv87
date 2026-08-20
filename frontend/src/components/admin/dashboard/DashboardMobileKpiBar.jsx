@@ -3,12 +3,11 @@ import { Users } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { KPI_METRIC_ICON_BOX, KPI_METRIC_ICON_SIZE } from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
-import { mergeBreakdownWithCatalog, KPI_STATUS_LABEL_CLASS_PEEK } from '../../../utils/statusBreakdown';
+import { mergeBreakdownWithCatalog, KPI_STATUS_LABEL_CLASS_PEEK, KPI_TOTAL_CARD_SHELL } from '../../../utils/statusBreakdown';
 import AttendanceStatusTile from '../../attendance/sections/AttendanceStatusTile';
 import MobileHorizontalScroll from '../../shared/MobileHorizontalScroll';
 
-const TOTAL_CARD =
-  'bg-surface-white border border-line rounded-xl px-3 py-2.5 shadow-card flex items-center gap-2.5 min-h-[4.75rem]';
+const TOTAL_CARD = `${KPI_TOTAL_CARD_SHELL} px-3 py-2.5 flex items-center gap-2.5 min-h-[4.75rem]`;
 
 /** ~3.5 card visible; đủ cao cho nhãn 2 dòng (ĐI CÔNG TÁC, CHƯA CHẤM) */
 export const ADMIN_KPI_PEEK_TILE_CLASS =

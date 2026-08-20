@@ -25,8 +25,8 @@ import java.util.concurrent.Executor;
 public class AiAssistantService {
 
     private static final String GREETING =
-            "Chào Admin, tôi có thể giúp thống kê Chấm công, xem ĐƠN VỊ còn thiếu dữ liệu chấm công "
-                    + "và gửi nhắc nhở (mặc định ngày hôm qua).";
+            "Chào Admin, tôi có thể giúp thống kê Chấm công, xem ĐƠN VỊ thiếu dữ liệu chấm công "
+                    + "và gửi nhắc nhở (mặc định ngày hôm qua). Dùng các nút gợi ý bên dưới nhé!";
 
     private final AiIntentRouter intentRouter;
     private final AiToolService toolService;
@@ -143,10 +143,9 @@ public class AiAssistantService {
             }
             case BATCH_REMINDERS -> emitBatchReminders(authUser, emitter, intent);
             case UNKNOWN -> streamText(emitter,
-                    "Tôi chưa hiểu yêu cầu này. Bạn có thể dùng các nút gợi ý hoặc hỏi: "
-                            + "\"Báo cáo trạng thái làm việc hôm nay\", "
-                            + "\"Xuất báo cáo Chấm công ngày hôm nay\", "
-                            + "\"Khoa nào thiếu dữ liệu chấm công hôm qua?\"");
+                    intent.getReplyHint() != null && !intent.getReplyHint().isBlank()
+                            ? intent.getReplyHint()
+                            : AiIntentRouter.UNKNOWN_REPLY);
         }
     }
 

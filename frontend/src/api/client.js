@@ -76,6 +76,18 @@ export const api = {
     });
   },
 
+  saveMissingPunchExplain: ({ empCode, date, reason, payrollIntent }) =>
+    apiRequest('/attendance/missing-punch-explain', {
+      method: 'PUT',
+      body: JSON.stringify({ empCode, date, reason, payrollIntent }),
+    }),
+
+  assignNghiTrucWizard: ({ empCode, fromDate, toDate, reason, payrollIntent, note }) =>
+    apiRequest('/attendance/nghi-truc-assign', {
+      method: 'PUT',
+      body: JSON.stringify({ empCode, fromDate, toDate, reason, payrollIntent, note }),
+    }),
+
   updateAttendanceManualRange: ({ empCode, status, fromDate, toDate, note }) =>
     apiRequest('/attendance/manual-range', {
       method: 'PUT',
@@ -88,14 +100,24 @@ export const api = {
       body: JSON.stringify({ empCode, fromDate, toDate, status }),
     }),
 
-  unlockDepartment: (deptCode, reason) =>
-    apiRequest('/attendance/unlock', {
+  requestUnlockDepartment: (date, reason) =>
+    apiRequest('/attendance/unlock-requests', {
       method: 'POST',
-      body: JSON.stringify({ deptCode, reason }),
+      body: JSON.stringify({ date, reason }),
     }),
 
-  relockDepartment: (deptCode) =>
-    apiRequest(`/attendance/unlock/${deptCode}`, { method: 'DELETE' }),
+  unlockDepartment: (deptCode, reason, date) =>
+    apiRequest('/attendance/unlock', {
+      method: 'POST',
+      body: JSON.stringify({ deptCode, reason, ...(date ? { date } : {}) }),
+    }),
+
+  relockDepartment: (deptCode, date) => {
+    const params = new URLSearchParams();
+    if (date) params.set('date', date);
+    const q = params.toString();
+    return apiRequest(`/attendance/unlock/${deptCode}${q ? `?${q}` : ''}`, { method: 'DELETE' });
+  },
 
   submitReport: (deptCode, date) => {
     const params = new URLSearchParams();

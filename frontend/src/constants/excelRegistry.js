@@ -20,8 +20,8 @@ export const DEPARTMENT_EXCEL = {
   templateFilename: 'mau-phong-ban-khoa.xlsx',
   exportFilename: 'phong-ban-khoa.xlsx',
   sheetName: 'Đơn vị',
-  templateHeaders: [form.groupName, form.deptName, form.location, form.headName],
-  templateSampleRow: ['CƠ QUAN', 'Ban Giám đốc', 'Tòa A, Tầng 2', 'Nguyễn Văn A'],
+  templateHeaders: [form.groupName, form.deptName, form.headName],
+  templateSampleRow: ['CƠ QUAN', 'Ban Giám đốc', 'Nguyễn Văn A'],
 };
 
 export function buildStaffExportSheet(filtered) {
@@ -49,14 +49,13 @@ export function buildStaffExportSheet(filtered) {
 export function buildDepartmentExportSheet(filtered) {
   const { columns } = departments;
   return {
-    headers: [columns.group, columns.name, columns.location, columns.head, columns.staff],
+    headers: [columns.group, columns.name, columns.head, columns.staff],
     rows: filtered.map((d) => [
       d.groupName || '—',
       d.deptName,
-      d.location || '—',
       d.headName
         ? d.headRank
-          ? `${d.headName} (${d.headRank})`
+          ? `${d.headName}\n${d.headRank}`
           : d.headName
         : '—',
       d.staffCount,

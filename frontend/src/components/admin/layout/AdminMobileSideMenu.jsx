@@ -1,4 +1,4 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import {
   LayoutGrid,
   Library,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import {
   ADMIN_UI,
+  ADMIN_TAB_IDS,
   DASHBOARD_NAV,
   DASHBOARD_TAB_IDS,
   CATALOG_NAV,
@@ -20,6 +21,7 @@ import {
   SETTINGS_TAB_IDS,
 } from '../../../constants/admin';
 import { useAiAssistantActions } from '../../../context/AiAssistantContext';
+import { useAdminUnlockRequestCount } from '../../../context/AdminUnlockRequestCountContext';
 import { getInitials } from '../../../utils/formatters';
 import AdminNavGroup from './AdminNavGroup';
 
@@ -32,6 +34,12 @@ const AdminMobileSideMenu = memo(function AdminMobileSideMenu({
   user,
 }) {
   const { setOpen: openAiAssistant } = useAiAssistantActions();
+  const { pendingCount } = useAdminUnlockRequestCount();
+
+  const utilitiesBadgeByTabId = useMemo(
+    () => ({ [ADMIN_TAB_IDS.UTILITIES_UNLOCK_REQUESTS]: pendingCount }),
+    [pendingCount],
+  );
 
   useEffect(() => {
     if (!open) return undefined;
@@ -58,7 +66,7 @@ const AdminMobileSideMenu = memo(function AdminMobileSideMenu({
         aria-label="Đóng menu"
       />
 
-      <aside className="absolute inset-y-0 left-0 w-[min(17.5rem,82vw)] bg-sidebar-bg border-r border-line/80 shadow-panel flex flex-col animate-fade-in">
+      <aside className="absolute inset-y-0 left-0 w-[min(18.5rem,86vw)] bg-sidebar-bg border-r border-line/80 shadow-panel flex flex-col animate-fade-in">
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-line/60 bg-white/40">
           <button
             type="button"
@@ -102,6 +110,7 @@ const AdminMobileSideMenu = memo(function AdminMobileSideMenu({
             tabIds={UTILITIES_TAB_IDS}
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            badgeByTabId={utilitiesBadgeByTabId}
           />
           <AdminNavGroup
             label={ADMIN_UI.nav.settings}

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { MapPin, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { getInitials, parseDeptNameParts } from '../../../utils/formatters';
 import AvatarStack from '../../admin/sections/AvatarStack';
@@ -29,9 +29,7 @@ const DepartmentCard = memo(function DepartmentCard({
   showGroupName = false,
   onEdit,
   onDelete,
-  onViewLocation,
 }) {
-  const hasLocationMap = Boolean(dept.locationImageUrl);
   const isActive = dept.active !== false;
   const deleteBlocked = (dept.staffCount ?? 0) > 0;
   const { displayName, unitCode: parsedUnitCode } = parseDeptNameParts(dept.deptName);
@@ -57,35 +55,25 @@ const DepartmentCard = memo(function DepartmentCard({
           {showGroupName && dept.groupName && (
             <p className="mt-1 text-xs font-medium text-info-fg leading-snug">{dept.groupName}</p>
           )}
-
-          <div className="mt-1 flex items-center gap-1 min-w-0 text-xs text-content-muted">
-            <button
-              type="button"
-              onClick={() => hasLocationMap && onViewLocation(dept)}
-              disabled={!hasLocationMap}
-              title={hasLocationMap ? d.viewLocationMap : d.locationMapEmpty}
-              className={`shrink-0 rounded p-0.5 transition-colors ${hasLocationMap
-                  ? 'text-primary hover:bg-primary-light cursor-pointer'
-                  : 'text-content-muted/40 cursor-default'
-                }`}
-              aria-label={hasLocationMap ? d.viewLocationMap : d.locationMapEmpty}
-            >
-              <MapPin className="w-3.5 h-3.5" />
-            </button>
-            <span className="truncate">{dept.location || '—'}</span>
-          </div>
         </div>
 
         <div className="mt-3 rounded-lg bg-table-header border border-primary-light px-3 py-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-start gap-2.5 min-w-0">
             {dept.headName ? (
               <div className="w-9 h-9 rounded-lg bg-primary-light text-primary text-xs font-bold flex items-center justify-center shrink-0">
                 {getInitials(dept.headName)}
               </div>
             ) : null}
-            <p className="text-sm font-semibold text-navy truncate min-w-0 flex-1 leading-snug">
-              {dept.headName || '—'}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-navy leading-snug line-clamp-2">
+                {dept.headName || '—'}
+              </p>
+              {dept.headRank && (
+                <p className="text-2xs text-content-muted uppercase font-medium tracking-wide leading-snug line-clamp-1 mt-0.5">
+                  {dept.headRank}
+                </p>
+              )}
+            </div>
           </div>
           <div className="mt-1.5 flex items-center justify-between gap-3 min-w-0">
             <span className="text-3xs font-semibold text-content-muted uppercase tracking-wide leading-none">

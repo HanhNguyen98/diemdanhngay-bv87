@@ -11,6 +11,7 @@ public class ManualAttendanceRangePreviewDto {
     private final int assignableCount;
     private final int skippedFingerprint;
     private final int skippedReportSubmitted;
+    private final int skippedSoftLock;
     /** True when caller is HEAD and fingerprint days would be skipped (show confirm). */
     private final boolean requiresFingerprintSkipConfirm;
     private final String message;

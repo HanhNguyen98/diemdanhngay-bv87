@@ -10,6 +10,7 @@ const DeptAttendanceStaffCardList = memo(function DeptAttendanceStaffCardList({
   onOpenScanLogs,
   onOpenManualSchedule,
   onFillTimes,
+  onApprovePayrollFill,
   onQuickAction,
   onClearAttendance,
   onSaveVeSomNote,
@@ -33,7 +34,7 @@ const DeptAttendanceStaffCardList = memo(function DeptAttendanceStaffCardList({
   return (
     <div className="relative">
       {refreshing && <RefreshOverlay />}
-      <div className="flex flex-col gap-2 px-2.5 py-2" role="list">
+      <div className="flex flex-col gap-1.5 px-2 py-1.5" role="list">
         {items.map((staff) => (
           <DeptAttendanceStaffCard
             key={staff.empCode}
@@ -41,6 +42,7 @@ const DeptAttendanceStaffCardList = memo(function DeptAttendanceStaffCardList({
             onOpenScanLogs={onOpenScanLogs}
             onOpenManualSchedule={onOpenManualSchedule}
             onFillTimes={onFillTimes}
+            onApprovePayrollFill={onApprovePayrollFill}
             onQuickAction={onQuickAction}
             onClearAttendance={onClearAttendance}
             onSaveVeSomNote={onSaveVeSomNote}

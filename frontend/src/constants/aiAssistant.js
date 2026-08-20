@@ -8,6 +8,7 @@ export const AI_ASSISTANT_UI = {
   quickActions: [
     { id: 'work_status_report', label: 'Báo cáo trạng thái làm việc' },
     { id: 'attendance_status_report', label: 'Báo cáo trạng thái Chấm công' },
+    { id: 'list_missing_punches', label: 'Đơn vị thiếu dữ liệu' },
     { id: 'remind_missing_punch_depts', label: 'Nhắc thiếu dữ liệu chấm công' },
   ],
   widgets: {

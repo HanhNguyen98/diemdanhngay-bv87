@@ -13,6 +13,7 @@ const AttendanceHeader = memo(function AttendanceHeader({
   onDateChange,
   isAdmin,
   onUnlock,
+  onRelock,
   locked,
   unlocked,
   onNotificationDate,
@@ -62,6 +63,15 @@ const AttendanceHeader = memo(function AttendanceHeader({
           className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line bg-surface-white text-navy hover:bg-neutral"
         >
           {UI.unlockButton}
+        </button>
+      )}
+      {isAdmin && unlocked && onRelock && (
+        <button
+          type="button"
+          onClick={onRelock}
+          className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line bg-surface-white text-content-muted hover:bg-neutral"
+        >
+          {UI.relockButton}
         </button>
       )}
     </HeadPageHeader>

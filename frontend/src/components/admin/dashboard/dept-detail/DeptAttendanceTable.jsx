@@ -8,9 +8,9 @@ const COLUMNS = [
   { key: 'empCode', labelKey: 'deptDetailColEmpCode', width: '8%' },
   { key: 'fullname', labelKey: 'deptDetailColStaff', width: '16%' },
   { key: 'times', labelKey: 'deptDetailColTimes', width: '16%' },
-  { key: 'machine', labelKey: 'deptDetailColMachine', width: '12%' },
-  { key: 'status', labelKey: 'deptDetailColStatus', width: '12%' },
-  { key: 'note', labelKey: 'deptDetailColNote', width: '12%' },
+  { key: 'machine', labelKey: 'deptDetailColMachine', width: '10%' },
+  { key: 'status', labelKey: 'deptDetailColStatus', width: '14%' },
+  { key: 'note', labelKey: 'deptDetailColNote', width: '10%' },
   { key: 'actions', labelKey: 'deptDetailColActions', width: '24%' },
 ];
 
@@ -26,6 +26,7 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
   onOpenScanLogs,
   onOpenManualSchedule,
   onFillTimes,
+  onApprovePayrollFill,
   onQuickAction,
   onClearAttendance,
   onSaveVeSomNote,
@@ -77,6 +78,7 @@ const DeptAttendanceTable = memo(function DeptAttendanceTable({
                   onOpenScanLogs={onOpenScanLogs}
                   onOpenManualSchedule={onOpenManualSchedule}
                   onFillTimes={onFillTimes}
+                  onApprovePayrollFill={onApprovePayrollFill}
                   onQuickAction={onQuickAction}
                   onClearAttendance={onClearAttendance}
                   onSaveVeSomNote={onSaveVeSomNote}

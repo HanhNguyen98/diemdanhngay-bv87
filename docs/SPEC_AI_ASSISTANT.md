@@ -37,6 +37,15 @@ Base: `/api/admin/ai`
 - NLP vẫn nhận câu cũ (“chưa báo cáo”, “thiếu punch”) nhưng **reply/UI chỉ** tiếng Việt; không submit.
 - Greeting FE/BE: nhắc mặc định **hôm qua**; `reminderHint` theo `dateFormatted` thực tế.
 
+**NLP routing (P6-AiNlp):**
+
+- Thứ tự free-text Admin: **nhắc / gửi nhắc** (`BATCH_REMINDERS`) **trước** liệt kê thiếu dữ liệu (`PENDING_DEPARTMENTS`) — tránh câu “nhắc thiếu dữ liệu chấm công” rơi nhầm sang xem danh sách.
+- Needle Admin **lowercase** sau `toLowerCase` (`chấm công`, không `Chấm công`) — đồng bộ §3.2 HEAD.
+- **Chip Admin:** thêm **「Đơn vị thiếu dữ liệu」** → `list_missing_punches` (bảng + CTA nhắc).
+- **Intent không rõ / chưa training:** trả lời **cảm thán hướng dẫn** (tiếng Việt) — gợi ý nút chip + 1–2 câu mẫu; **không** im lặng / không widget lạ.
+  - Admin ví dụ: *“Xin lỗi, tôi chưa hiểu rõ yêu cầu này! …”*
+  - HEAD — chỉ nói “chấm công” không kèm trạng thái: hướng dẫn bấm **Chấm công hàng loạt** hoặc nói rõ nghỉ phép / đi học / …
+
 ### 2.3 Reminder dispatch (P5 fix)
 
 - Không bỏ qua ĐƠN VỊ chỉ vì `CompletionStatus.COMPLETED` (có thể vẫn `MISSING_CHECK_OUT`).
@@ -78,7 +87,7 @@ UI khóa mềm / `reportBlocked` / màn ngoài Chấm công (`tableDisabled`): *
 |--------|---------|
 | `pending_dept_table` | Admin: ĐƠN VỊ thiếu dữ liệu chấm công + CTA nhắc (**có `date`**) |
 | `reminder_confirm` | Admin: checkbox xác nhận gửi |
-| `missing_punch_list` | HEAD: danh sách NV + lý do (Thiếu giờ ra / Chưa chấm) |
+| `missing_punch_list` | HEAD: danh sách NV + lý do (`INCOMPLETE_PUNCHES` / `MISSING_EARLY_LEAVE_REASON` / `UNMARKED` — §4.5.2) |
 | `status_picker` / `batch_attendance_confirm` | HEAD batch ngoại lệ |
 
 Constants: `frontend/src/constants/aiAssistant.js`, `headAiAssistant.js`.
@@ -92,3 +101,4 @@ Constants: `frontend/src/constants/aiAssistant.js`, `headAiAssistant.js`.
 - [x] FE: FAB HEAD mount `Dashboard` (mọi màn); bridge session từ Chấm công
 - [x] QA copy: UI/API message không dùng từ “punch” (giữ needle NLP cũ)
 - [x] UAT harden: CTA nhắc giữ `date`; `assertCanWrite` + `reportBlocked`; NLP casing; free-text write gate; greeting/hint; `pb-24` Đổi MK
+- [x] **P6-AiNlp:** Admin NLP — nhắc trước list; needle lowercase; chip 「Đơn vị thiếu dữ liệu」; UNKNOWN cảm thán hướng dẫn (Admin + HEAD)

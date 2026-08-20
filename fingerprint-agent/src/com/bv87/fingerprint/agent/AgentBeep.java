@@ -13,15 +13,18 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
 /**
- * Kiosk success/fail sounds for attendance Identify (SPEC §9.3.1 P2.1c).
- * Prefers classpath WAV chimes; falls back to PCM melody then {@link Toolkit#beep()}.
+ * Kiosk success/fail sounds for attendance Identify (SPEC §9.3.1 P2.1c / P2.1i).
+ * Prefers classpath WAV; falls back to PCM melody then {@link Toolkit#beep()}.
  */
 public final class AgentBeep {
 
     private static final String SUCCESS_WAV = "/sounds/scan-success.wav";
     private static final String FAIL_WAV = "/sounds/scan-fail.wav";
     private static final float SAMPLE_RATE = 44_100f;
-    private static final float AMPLITUDE = 0.5f;
+    /** Success chime — moderate. */
+    private static final float AMPLITUDE_SUCCESS = 0.5f;
+    /** Fail buzz — louder so it is not masked by ZK hardware capture beep (P2.1i). */
+    private static final float AMPLITUDE_FAIL = 0.88f;
 
     private static volatile boolean enabled = true;
 
@@ -42,7 +45,7 @@ public final class AgentBeep {
         playAsync(true);
     }
 
-    /** Kiosk fail buzz — identify fail, API fail, REJECTED. */
+    /** Kiosk fail buzz — identify fail, API fail, REJECTED / VE_SOM. */
     public static void failure() {
         playAsync(false);
     }
@@ -52,17 +55,22 @@ public final class AgentBeep {
             return;
         }
         Thread t = new Thread(() -> {
+            String kind = success ? "success" : "fail";
             try {
                 if (playClasspathWav(success ? SUCCESS_WAV : FAIL_WAV)) {
+                    System.err.println("[FingerprintAgent] sound=" + kind + " source=wav");
                     return;
                 }
                 if (playPcmMelody(success)) {
+                    System.err.println("[FingerprintAgent] sound=" + kind + " source=pcm");
                     return;
                 }
                 toolkitPattern(success);
+                System.err.println("[FingerprintAgent] sound=" + kind + " source=toolkit");
             } catch (Exception ex) {
                 System.err.println("[FingerprintAgent] beep failed: " + ex.getMessage());
                 toolkitPattern(success);
+                System.err.println("[FingerprintAgent] sound=" + kind + " source=toolkit");
             }
         }, "agent-beep");
         t.setDaemon(true);
@@ -110,7 +118,8 @@ public final class AgentBeep {
             if (ms <= 0) {
                 ms = 400;
             }
-            Thread.sleep(Math.min(ms + 40, 2_000));
+            // Fail WAV ~850ms — allow up to 2.5s
+            Thread.sleep(Math.min(ms + 40, 2_500));
             clip.drain();
             clip.stop();
             return true;
@@ -123,17 +132,19 @@ public final class AgentBeep {
         }
     }
 
-    /** Soft ascending/descending melody when WAV unavailable. */
+    /** Soft ascending / loud descending buzz when WAV unavailable (P2.1i fail = 3 low buzzes). */
     private static boolean playPcmMelody(boolean success) {
         try {
             if (success) {
-                tone(880, 110, true);
+                tone(880, 110, true, AMPLITUDE_SUCCESS);
                 Thread.sleep(55);
-                tone(1109, 170, true);
+                tone(1109, 170, true, AMPLITUDE_SUCCESS);
             } else {
-                tone(220, 140, false);
-                Thread.sleep(40);
-                tone(165, 210, false);
+                tone(190, 180, false, AMPLITUDE_FAIL);
+                Thread.sleep(90);
+                tone(155, 180, false, AMPLITUDE_FAIL);
+                Thread.sleep(90);
+                tone(120, 220, false, AMPLITUDE_FAIL);
             }
             return true;
         } catch (InterruptedException ie) {
@@ -147,10 +158,12 @@ public final class AgentBeep {
 
     private static void toolkitPattern(boolean success) {
         toolkitBeepOnce();
-        sleepQuiet(110);
+        sleepQuiet(success ? 110 : 130);
         toolkitBeepOnce();
         if (!success) {
-            sleepQuiet(110);
+            sleepQuiet(130);
+            toolkitBeepOnce();
+            sleepQuiet(130);
             toolkitBeepOnce();
         }
     }
@@ -171,7 +184,8 @@ public final class AgentBeep {
         }
     }
 
-    private static void tone(int hz, int millis, boolean chimeHarmonics) throws LineUnavailableException {
+    private static void tone(int hz, int millis, boolean chimeHarmonics, float amplitude)
+            throws LineUnavailableException {
         int sampleCount = Math.max(1, (int) (millis * SAMPLE_RATE / 1000));
         byte[] buf = new byte[sampleCount * 2];
         int fade = Math.min(400, sampleCount / 4);
@@ -182,6 +196,11 @@ public final class AgentBeep {
                 s += 0.35 * Math.sin(2.0 * Math.PI * hz * 2 * t);
                 s += 0.18 * Math.sin(2.0 * Math.PI * hz * 3 * t);
                 s *= 0.65;
+            } else {
+                // Buzzier odd harmonics for fail (P2.1i)
+                s += 0.35 * Math.sin(2.0 * Math.PI * hz * 3 * t);
+                s += 0.2 * Math.sin(2.0 * Math.PI * hz * 5 * t);
+                s *= 0.55;
             }
             float env = 1f;
             if (i < fade) {
@@ -189,8 +208,10 @@ public final class AgentBeep {
             } else if (i > sampleCount - fade) {
                 env = Math.max(0f, (sampleCount - i) / (float) fade);
             }
-            env *= (float) Math.exp(-3.0 * t / Math.max(0.05, millis / 1000.0));
-            short val = (short) (s * AMPLITUDE * env * Short.MAX_VALUE);
+            if (chimeHarmonics) {
+                env *= (float) Math.exp(-3.0 * t / Math.max(0.05, millis / 1000.0));
+            }
+            short val = (short) (s * amplitude * env * Short.MAX_VALUE);
             buf[i * 2] = (byte) (val & 0xff);
             buf[i * 2 + 1] = (byte) ((val >> 8) & 0xff);
         }

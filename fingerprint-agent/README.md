@@ -9,7 +9,7 @@ Binding: `docs/SPEC_FINGERPRINT.md` (§9, **P4a–P4** §9.4–§9.5).
 1. Copy `agent.properties.example` → `agent.properties`, sửa `kiosk.token` / `api.baseUrl` / `enroll.pin` (+ P4a `device.autoOpen*` / P4 `heartbeat.*` nếu cần).
 2. Logo Agent: `src/branding/biometrics.png`, `src/branding/hospital-logo.png` — **không** lấy từ Web.
 3. Native ZKFinger: `lib\` (`ZKFingerReader.jar` + DLL nếu có) — bat/IntelliJ: `-Djava.library.path` gồm **`lib` + `%SystemRoot%\System32`** (P4b). Preflight `libzkfp.dll`.
-4. Âm (P2.1c): `src/sounds/…`; tắt `sound.enabled=false`.
+4. Âm (P2.1c / P2.1i): `src/sounds/…`; fail = 3 buzz thấp rõ; tắt `sound.enabled=false`. Rebuild JAR sau khi đổi WAV.
 5. PIN Đăng ký (P2.1d): `enroll.pin` bắt buộc.
 6. **P4a auto-open:** `device.autoOpen=true` (mặc định) sau bootstrap.
 7. Backend + token khoa sẵn sàng.

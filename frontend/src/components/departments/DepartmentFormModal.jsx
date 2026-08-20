@@ -3,29 +3,18 @@ import { useState, useEffect } from 'react';
 import FormModal from '../shared/FormModal';
 import InlineErrorBanner from '../shared/InlineErrorBanner';
 
-import AvatarUpload from '../shared/AvatarUpload';
-
 import { ADMIN_UI } from '../../constants/admin';
 
 import { formatDeptCode } from '../../utils/formatters';
 
 import { adminApi } from '../../services/api';
 
-
-
 const labelClass = 'block text-xs font-bold text-content-muted uppercase tracking-wide mb-1.5';
 
-
-
 const inputClass =
-
   'w-full h-9 border border-gray-200 rounded-lg px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 bg-white';
 
-
-
 const readOnlyClass = `${inputClass} bg-primary-light/30 text-gray-700 cursor-not-allowed`;
-
-
 
 export default function DepartmentFormModal({
   initial,
@@ -35,14 +24,11 @@ export default function DepartmentFormModal({
   onSave,
   onClose,
 }) {
-
   const isEdit = Boolean(initial);
 
   const [loading, setLoading] = useState(false);
 
   const [error, setError] = useState('');
-
-  const [locationImageError, setLocationImageError] = useState('');
 
   const [nextCode, setNextCode] = useState(null);
 
@@ -57,18 +43,10 @@ export default function DepartmentFormModal({
         : defaultGroupCode != null
           ? String(defaultGroupCode)
           : '',
-    location: initial?.location || '',
-
     headEmpCode: initial?.headEmpCode != null ? String(initial.headEmpCode) : '',
-
-    locationImageUrl: initial?.locationImageUrl || null,
-
   });
 
-
-
   useEffect(() => {
-
     if (isEdit) return;
 
     let cancelled = false;
@@ -76,50 +54,26 @@ export default function DepartmentFormModal({
     setCodeLoading(true);
 
     adminApi
-
       .getNextDeptCode()
-
       .then((data) => {
-
         if (!cancelled) setNextCode(data);
-
       })
-
       .catch((err) => {
-
         if (!cancelled) setError(err.message);
-
       })
-
       .finally(() => {
-
         if (!cancelled) setCodeLoading(false);
-
       });
 
     return () => {
-
       cancelled = true;
-
     };
-
   }, [isEdit]);
 
-
-
   const handleSubmit = async (e) => {
-
     e.preventDefault();
 
     setError('');
-
-    if (locationImageError) {
-
-      setError(locationImageError);
-
-      return;
-
-    }
 
     if (!form.deptName.trim()) {
       setError('Tên Đơn vị là bắt buộc');
@@ -133,44 +87,28 @@ export default function DepartmentFormModal({
     setLoading(true);
 
     try {
-
       const payload = {
         deptName: form.deptName.trim(),
         unitCode: form.unitCode.trim() || null,
         groupCode: parseInt(form.groupCode, 10),
-        location: form.location.trim() || null,
-
+        location: isEdit ? initial?.location ?? null : null,
         headEmpCode: form.headEmpCode ? parseInt(form.headEmpCode, 10) : null,
-
-        locationImageUrl: form.locationImageUrl,
-
+        locationImageUrl: isEdit ? initial?.locationImageUrl ?? null : null,
       };
 
       await onSave(payload, isEdit ? initial.deptCode : null);
 
       onClose();
-
     } catch (err) {
-
       setError(err.message);
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
-
-
   const displayCode = isEdit
-
     ? formatDeptCode(initial.deptCode)
-
     : nextCode?.codeFormatted || (codeLoading ? ADMIN_UI.form.loadingCode : '—');
-
-
 
   const activeStaff = staffList.filter((staff) => staff.active !== false);
 
@@ -178,32 +116,18 @@ export default function DepartmentFormModal({
     ? activeStaff.filter((staff) => staff.deptCode === initial.deptCode)
     : [];
 
-
-
   return (
-
     <FormModal
-
       title={isEdit ? ADMIN_UI.departments.formTitleEdit : ADMIN_UI.departments.formTitleCreate}
-
       onClose={onClose}
-
       onSubmit={handleSubmit}
-
       loading={loading}
-
     >
-
       <InlineErrorBanner message={error} />
 
       <div>
-
         <label className={labelClass}>{ADMIN_UI.form.deptCode}</label>
-
         <input type="text" value={displayCode} readOnly disabled className={readOnlyClass} />
-
-
-
       </div>
 
       <div>
@@ -237,68 +161,14 @@ export default function DepartmentFormModal({
 
       <div>
         <label className={labelClass}>{ADMIN_UI.form.deptName}</label>
-
         <input
-
           type="text"
-
           value={form.deptName}
-
           onChange={(e) => setForm((f) => ({ ...f, deptName: e.target.value }))}
-
           className={inputClass}
-
           required
-
         />
-
       </div>
-
-      <div>
-
-        <label className={labelClass}>{ADMIN_UI.form.location}</label>
-
-        <input
-
-          type="text"
-
-          value={form.location}
-
-          onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-
-          className={inputClass}
-
-          placeholder={ADMIN_UI.form.locationPlaceholder}
-
-        />
-
-      </div>
-
-      <AvatarUpload
-
-        value={form.locationImageUrl}
-
-        onChange={(locationImageUrl) => setForm((f) => ({ ...f, locationImageUrl }))}
-
-        onError={setLocationImageError}
-
-        label={ADMIN_UI.form.locationImage}
-
-        selectedLabel={ADMIN_UI.form.locationImageSelected}
-
-        removeLabel={ADMIN_UI.form.locationImageRemove}
-
-        previewAlt="Sơ đồ vị trí"
-
-        previewClassName="w-20 h-14 rounded-lg object-cover ring-1 ring-gray-200 shadow-sm"
-
-      />
-
-      {locationImageError && (
-
-        <p className="text-sm text-danger-fg -mt-1">{locationImageError}</p>
-
-      )}
 
       <div>
         <label className={labelClass}>{ADMIN_UI.form.headName}</label>
@@ -320,10 +190,6 @@ export default function DepartmentFormModal({
           <p className="text-sm text-content-muted">{ADMIN_UI.form.headSelectHintCreate}</p>
         )}
       </div>
-
     </FormModal>
-
   );
-
 }
-

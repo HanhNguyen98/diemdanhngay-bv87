@@ -56,6 +56,19 @@ export function formatDeptCode(code) {
 }
 ```
 
+## Frontend display helpers (mandatory)
+
+| Field | Helper | Notes |
+|-------|--------|-------|
+| emp / dept code | `displayEmpCode` / `displayDeptCode` | fallback `formatEmpCode` / `formatDeptCode` |
+| Instant → HH:mm | `formatInstantHm` | attendance check-in/out columns, Excel export |
+| IP | `displayIp` | IPv6 loopback → `127.0.0.1` |
+| Kiosk machine | `formatKioskMachine(staff)` / `formatKioskMachineParts(label, hostname, ip)` in `utils/kioskMachine.js` | join ` · ` + `displayIp` on ip part |
+| Unchecked status | `UI.filterUnchecked` | from `constants/attendance.js` |
+| Status label | catalog `statusOptions` then `STATUS_BADGE` | no hardcoded status strings in components |
+| totalPages | `Math.max(1, n ?? 1)` | all paginated lists |
+| Admin log datetime | `formatLogDateTime` / `formatLogDateTimeOrDash` | `utils/reminderHistory.js`; no `toLocaleString` in pages |
+
 ## Enum checklist
 
 - [ ] Enum replaces magic strings

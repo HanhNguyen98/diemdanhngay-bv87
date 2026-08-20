@@ -21,6 +21,14 @@ public class StaffAttendanceDto {
     private final String status;
     private final String statusLabel;
     private final String note;
+    /** HEAD missing-punch explanation — SPEC P7 (not VE_SOM / clear reason). */
+    private final String missingPunchReason;
+    /** HALF_MORNING | HALF_AFTERNOON | NGHI_TRUC_FULL | EXPLAIN_ONLY */
+    private final String payrollIntent;
+    private final String payrollIntentLabel;
+    /** PENDING | APPROVED — P8 payroll auto-fill */
+    private final String payrollFillStatus;
+    private final String payrollFillStatusLabel;
     /** Effective check-in (rule C); null if not set. Alias of morningInAt. */
     private final Instant checkInAt;
     /** Effective check-out (MAX OUT); null if not set. Alias of afternoonOutAt or noonOutAt. */

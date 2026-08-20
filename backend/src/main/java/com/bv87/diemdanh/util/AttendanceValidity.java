@@ -2,6 +2,8 @@ package com.bv87.diemdanh.util;
 
 import com.bv87.diemdanh.entity.AttendanceRecord;
 import com.bv87.diemdanh.entity.AttendanceStatus;
+import com.bv87.diemdanh.enums.PayrollFillStatus;
+import com.bv87.diemdanh.enums.PayrollIntent;
 
 import java.time.LocalTime;
 import java.util.Set;
@@ -88,6 +90,37 @@ public final class AttendanceValidity {
         return record != null && (record.getAfternoonInAt() != null || record.getAfternoonOutAt() != null);
     }
 
+    /** Morning half-day nghỉ trực — SPEC P7-NghiTrucExplainGate. */
+    public static boolean isHalfMorningPattern(AttendanceRecord record) {
+        return record != null
+                && record.getMorningInAt() != null
+                && record.getNoonOutAt() != null
+                && !hasAfternoonPunch(record);
+    }
+
+    /** Afternoon half-day nghỉ trực — SPEC P7-NghiTrucExplainGate. */
+    public static boolean isHalfAfternoonPattern(AttendanceRecord record) {
+        return record != null
+                && record.getMorningInAt() == null
+                && record.getNoonOutAt() == null
+                && record.getAfternoonInAt() != null
+                && record.getAfternoonOutAt() != null;
+    }
+
+    public static boolean isNghiTrucStatus(String status) {
+        return NGHI_TRUC_FULL.equals(status) || NGHI_TRUC_HALF.equals(status);
+    }
+
+    public static boolean hasEmptyPunchSlot(AttendanceRecord record) {
+        if (record == null) {
+            return true;
+        }
+        return record.getMorningInAt() == null
+                || record.getNoonOutAt() == null
+                || record.getAfternoonInAt() == null
+                || record.getAfternoonOutAt() == null;
+    }
+
     /**
      * Day-record counts as marked for KPI / COMPLETED.
      */
@@ -103,10 +136,22 @@ public final class AttendanceValidity {
             return false;
         }
         if (NGHI_TRUC_HALF.equals(status)) {
-            return record != null
-                    && record.getMorningInAt() != null
-                    && record.getNoonOutAt() != null
-                    && !hasAfternoonPunch(record);
+            PayrollFillStatus fillStatus = PayrollFillStatus.fromCode(
+                    record != null ? record.getPayrollFillStatus() : null);
+            if (fillStatus == PayrollFillStatus.PENDING) {
+                return false;
+            }
+            if (fillStatus == PayrollFillStatus.APPROVED) {
+                return punchCount(record) == 4
+                        || isHalfMorningPattern(record)
+                        || isHalfAfternoonPattern(record);
+            }
+            return isHalfMorningPattern(record) || isHalfAfternoonPattern(record);
+        }
+        if (NGHI_TRUC_FULL.equals(status)) {
+            PayrollFillStatus fillStatus = PayrollFillStatus.fromCode(
+                    record != null ? record.getPayrollFillStatus() : null);
+            return fillStatus != PayrollFillStatus.PENDING;
         }
         if (VE_SOM.equals(status)) {
             return punchCount(record) == 4 && note != null && !note.isBlank();

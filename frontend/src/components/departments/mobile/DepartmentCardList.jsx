@@ -7,7 +7,6 @@ const DepartmentCardList = memo(function DepartmentCardList({
   showGroupName = false,
   onEdit,
   onDelete,
-  onViewLocation,
 }) {
   if (!items.length) {
     return (
@@ -26,7 +25,6 @@ const DepartmentCardList = memo(function DepartmentCardList({
           showGroupName={showGroupName}
           onEdit={onEdit}
           onDelete={onDelete}
-          onViewLocation={onViewLocation}
         />
       ))}
     </div>

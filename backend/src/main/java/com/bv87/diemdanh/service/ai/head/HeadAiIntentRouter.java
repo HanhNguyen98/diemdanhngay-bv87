@@ -14,6 +14,16 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HeadAiIntentRouter {
 
+    static final String UNKNOWN_REPLY =
+            "Xin lỗi, tôi chưa hiểu rõ yêu cầu này! "
+                    + "Bạn có thể bấm Thiếu dữ liệu hoặc Chấm công hàng loạt, "
+                    + "hoặc thử: \"Ai thiếu giờ ra?\", \"Chấm nghỉ phép cho nhân viên chưa chấm\".";
+
+    static final String VAGUE_BATCH_REPLY =
+            "Bạn muốn Chấm công hàng loạt trạng thái nào? "
+                    + "Hãy bấm Chấm công hàng loạt rồi chọn trạng thái, "
+                    + "hoặc nói rõ — ví dụ: \"Chấm nghỉ phép cho nhân viên chưa chấm\".";
+
     private final VietnamTimeService timeService;
 
     public HeadAiIntent route(String quickAction, String message, LocalDate selectedDate) {
@@ -58,7 +68,7 @@ public class HeadAiIntentRouter {
             return HeadAiIntent.builder()
                     .type(HeadAiIntent.Type.UNKNOWN)
                     .args(Map.of())
-                    .replyHint("Đi làm / Đi trễ chỉ ghi nhận qua vân tay.")
+                    .replyHint("Đi làm / Đi trễ chỉ ghi nhận qua vân tay — không thể Chấm công hàng loạt hai trạng thái này!")
                     .build();
         }
 
@@ -75,7 +85,25 @@ public class HeadAiIntentRouter {
                     .build();
         }
 
-        return HeadAiIntent.builder().type(HeadAiIntent.Type.UNKNOWN).args(Map.of()).build();
+        if (isBatchAttendanceQuery(q)) {
+            return unknown(VAGUE_BATCH_REPLY);
+        }
+
+        if (containsAny(q, "nộp báo cáo", "gửi báo cáo", "báo cáo cho admin")) {
+            return unknown(
+                    "Trưởng đơn vị không nộp báo cáo qua Trợ lý AI! "
+                            + "Tôi chỉ hỗ trợ xem thiếu dữ liệu chấm công và Chấm công hàng loạt (nghỉ phép, đi học, …).");
+        }
+
+        return unknown(UNKNOWN_REPLY);
+    }
+
+    private HeadAiIntent unknown(String reply) {
+        return HeadAiIntent.builder()
+                .type(HeadAiIntent.Type.UNKNOWN)
+                .args(Map.of())
+                .replyHint(reply)
+                .build();
     }
 
     private boolean isMissingPunchQuery(String q) {

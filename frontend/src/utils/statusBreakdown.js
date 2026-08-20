@@ -1,6 +1,14 @@
 import { isAttendanceUnchecked } from '../constants/attendance';
 import { STATUS_KPI_ICON_MAP as KPI_ICON_MAP } from './statusIcons.jsx';
 
+/** Default metric card surface (P3d). */
+export const KPI_METRIC_CARD_SURFACE = 'bg-surface-white border-line';
+/** “Tổng…” summary card surface (P3e). */
+export const KPI_TOTAL_CARD_SURFACE = 'bg-info-surface border-info-line';
+export const KPI_METRIC_CARD_BASE = 'border rounded-xl shadow-card';
+export const KPI_METRIC_CARD_SHELL = `${KPI_METRIC_CARD_SURFACE} ${KPI_METRIC_CARD_BASE}`;
+export const KPI_TOTAL_CARD_SHELL = `${KPI_TOTAL_CARD_SURFACE} ${KPI_METRIC_CARD_BASE}`;
+
 export const KPI_TILE_ICON_BG = {
   green: 'bg-emerald-500',
   red: 'bg-red-500',
@@ -47,7 +55,11 @@ export const KPI_STATUS_LABEL_CLASS_DEFAULT =
 
 /** Peek / dense mobile tile label size + P3c weight/color. */
 export const KPI_STATUS_LABEL_CLASS_PEEK =
-  `mt-1 text-[0.625rem] leading-snug tracking-tight ${KPI_STATUS_LABEL_CLASS}`;
+  `mt-1 text-[0.8rem] leading-snug tracking-tight ${KPI_STATUS_LABEL_CLASS}`;
+
+/** HEAD Chấm công desktop compact tile (P6-HeadKpiCompact). */
+export const KPI_STATUS_LABEL_CLASS_COMPACT_DESKTOP =
+  `mt-0.5 text-4xs leading-snug tracking-tight ${KPI_STATUS_LABEL_CLASS} line-clamp-1 whitespace-nowrap`;
 
 /** Admin/Statistics KpiMetricCard status label. */
 export const KPI_STATUS_LABEL_CLASS_METRIC =
@@ -55,6 +67,10 @@ export const KPI_STATUS_LABEL_CLASS_METRIC =
 
 export const KPI_STATUS_LABEL_CLASS_METRIC_COMPACT =
   `mt-1 text-3xs leading-snug tracking-wide ${KPI_STATUS_LABEL_CLASS} max-w-full`;
+
+/** Mobile 2-col stat pair under total card (P3f) — single line, full card width, no clip. */
+export const KPI_STAT_LABEL_CLASS_MOBILE_PAIR =
+  'text-4xs leading-snug tracking-tight font-bold uppercase text-black whitespace-nowrap w-full min-w-0';
 
 export const CHART_COLOR_BY_COLOR_KEY = {
   green: '#2563EB',
@@ -64,6 +80,8 @@ export const CHART_COLOR_BY_COLOR_KEY = {
   teal: '#0D9488',
   purple: '#7C3AED',
   amber: '#EA580C',
+  indigo: '#4F46E5',
+  cyan: '#0891B2',
 };
 
 export function getChartColor(colorKey, index = 0) {
@@ -163,10 +181,18 @@ export function mergeBreakdownWithCatalog(breakdown, catalogItems) {
     return normalizeStatusBreakdown(breakdown);
   }
 
+  // P6-KpiFlatten — flatten nested children (same as BE mergeBreakdowns)
   const counts = {};
   for (const item of breakdown ?? []) {
-    if (item?.code) {
-      counts[item.code] = item.count ?? 0;
+    if (!item?.code) continue;
+    if (item.children?.length) {
+      for (const child of item.children) {
+        if (child?.code) {
+          counts[child.code] = (counts[child.code] || 0) + (child.count ?? 0);
+        }
+      }
+    } else {
+      counts[item.code] = (counts[item.code] || 0) + (item.count ?? 0);
     }
   }
 

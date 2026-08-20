@@ -8,9 +8,8 @@ const DepartmentTable = memo(function DepartmentTable({
   showGroupColumn = false,
   onEdit,
   onDelete,
-  onViewLocation,
 }) {
-  const colSpan = showGroupColumn ? 8 : 7;
+  const colSpan = showGroupColumn ? 7 : 6;
 
   return (
     <table className="w-full text-sm">
@@ -22,7 +21,6 @@ const DepartmentTable = memo(function DepartmentTable({
             )}
             <th className="table-th-left max-lg:px-2 max-lg:py-1.5">{ADMIN_UI.departments.columns.unitCode}</th>
             <th className="table-th-left max-lg:px-2 max-lg:py-1.5">{ADMIN_UI.departments.columns.name}</th>
-            <th className="table-th-left max-lg:px-2 max-lg:py-1.5">{ADMIN_UI.departments.columns.location}</th>
             <th className="table-th-left max-lg:px-2 max-lg:py-1.5">{ADMIN_UI.departments.columns.head}</th>
             <th className="table-th-center max-lg:px-2 max-lg:py-1.5 w-36">{ADMIN_UI.departments.columns.staff}</th>
             <th className="table-th-right max-lg:px-2 max-lg:py-1.5">{ADMIN_UI.departments.columns.actions}</th>
@@ -39,7 +37,6 @@ const DepartmentTable = memo(function DepartmentTable({
                 showGroupColumn={showGroupColumn}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                onViewLocation={onViewLocation}
               />
             ))
           )}

@@ -132,7 +132,9 @@ Xem ngày khác hôm nay: **chỉ xem** (HistoryViewBanner). Không dùng LockBa
 | PUT | `/api/attendance/manual-range` | Body `empCode`, `status`, `fromDate`, `toDate`, `note?` — khoảng ngày; max 366; **skip** ngày `DI_LAM`/`DI_TRE` trừ khi `status` ∈ `NGHI_TRUC_*`; **cấm** `VE_SOM` trên range |
 | POST | `/api/attendance/report-submit` | **Deprecated (P5)** — không dùng |
 | GET | `/api/attendance/missing-punches?date=` | Hàng đợi thiếu dữ liệu chấm công khoa mình |
-| GET | `/api/attendance/summaries` | **Cấm** — chỉ Admin |
+| PUT | `/api/attendance/nghi-truc-assign` | Wizard nghỉ trực — giải trình + chấm khoảng ngày (P8 / P13 — §4.13.8). Mở khi `punchCount` 0–3. HEAD **không** skip `DI_LAM`/`DI_TRE`; skip `NGHI_TRUC_FULL` khi có giờ; **ngày quá khứ** skip nếu chưa unlock (P14) |
+| GET | `/api/attendance/audit-logs` | Nhật ký thao tác Web khoa mình (P14 — §4.7.1) |
+| POST | `/api/attendance/unlock-requests` | Gửi yêu cầu Admin mở khóa ngày ≤ hôm nay + lý do (P15 — §4.7.2). Không tự unlock. Chuông fail **không** hủy yêu cầu; lỗi trả `message` VN |
 | GET | `/api/attendance/scan-logs?empCode&date&page&pageSize` | Chỉ NV khoa mình — log quét ngày (append-only, lớp B) |
 
 Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGERPRINT`).
@@ -140,12 +142,25 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 ### 6.2 UI bắt buộc
 
 - Header: ngày, KPI, chuông, **hàng đợi thiếu dữ liệu chấm công** — **không** nút **Gửi báo cáo**; **không** UI khóa sổ theo nghĩa nộp báo cáo
+- **P15:** ngày ≤ hôm nay chưa unlock — nút **Gửi yêu cầu mở khóa** trên banner (không chỉ chữ “Liên hệ Admin”). `PENDING` → chờ xác nhận; chuông `UNLOCK_REQUEST_RESULT` khi Admin duyệt/từ chối — §4.7.2
 - Cột: nhân viên, cấp bậc, chức vụ, **4 mốc giờ** (2×2), **Máy** (luôn hiện hostname+IP), badge status (+ text đỏ `+ Đi trễ` nếu `lateFlag`), thao tác thủ công theo `manualAllowed` + chọn khoảng ngày + **Chi tiết quét** + ô lý do `VE_SOM` bắt buộc
+- **P9-RowHintDeclutter:** **không** hiện hint `Thiếu dữ liệu chấm công` dưới ô giờ trên từng dòng (`EmployeeRow` / `AttendanceStaffCard`) — trùng banner + 4 mốc trống. Thiếu dữ liệu chỉ ở `MissingPunchBanner` (§4.5.2).
 - Roster: full NV active + null
 - **Ẩn** quick-action gán tay ĐI LÀM / ĐI TRỄ
 - Status cha (`groupParent = true`) vẫn hiện quick-action nếu `manualAllowed = true`; khi bấm phải hiện lựa chọn status con trước khi lưu khoảng ngày
 - Search + filter status; Agent Online/Offline khi có kiosk
 - Theme/responsive theo mục 3
+- **KPI desktop compact (P6-HeadKpiCompact):** `KpiBar` + `AttendanceStatusTileGrid` — lưới **5 card/hàng** (`lg+`), tile compact (icon/số/nhãn nhỏ, `line-clamp-1`); card nhóm (`groupParent`) **không** expand `children` trên desktop — tooltip `title` gộp breakdown; banner tiến độ **slim** (không `min-h-[10rem]`); **ưu tiên chiều cao bảng roster** (`StaffTableCard flex-1`). Mobile (`< lg`) **không đổi** — scroll ngang status tiles.
+- **Desktop quick-action labels (P6-HeadQuickLabel):** `QuickActionGroup` — mỗi nút hiện **icon + nhãn rút gọn** (`text-4xs`, `truncate`); nhìn thấy chức năng **không** cần hover. `title` / `aria-label` = nhãn đầy đủ (hoặc message khóa vân tay). Map nhãn ngắn: `QUICK_ACTION_SHORT_LABEL` trong `constants/attendance.js` (fallback `action.label` / `statusBadge`). Nút `flex-col`, `min-w` đủ chứa chữ; hàng `flex-wrap justify-end`. Cột `actions` có thể rộng hơn nhẹ. Mobile `MobileQuickActionGrid` **giữ** nhãn đầy đủ (§6.4). Admin Chi tiết Đơn vị dùng chung component → cùng hành vi.
+- **Audit sync (P6-AuditFix):**
+  - **P6-KpiFlatten / P6-MissingBanner / P6-LockSync / P6-NghiTrucModal** — binding `SPEC_FINGERPRINT` §4.7 / §4.13.4 / §10.
+  - **P8-NghiTrucWizard** — wizard N.trực (giải trình + chấm); badge chờ duyệt; Admin duyệt giờ — §4.13.8.
+  - **P7-NghiTrucExplainGate** (deprecated FE) — thay bởi P8 wizard.
+  - **P6-QuickParentUx:** nút cha active nếu `staff.status` ∈ `statusOptions` con; mobile label dùng `action.label` / badge (không hiện raw code); AI `StatusPickerCard` = manual leaf **trừ** `VE_SOM` / presence.
+  - Banner thiếu dữ liệu chấm công trên HEAD Chấm công **bắt buộc hiện** khi API có items.
+  - **P8-ReassignNghiTruc:** nếu NV đang `NGHI_TRUC_*` và `punchCount` 0–3, HEAD bấm lại `N.trực` phải mở wizard để đổi `Loại nghỉ trực` sáng/chiều/cả ngày và sửa giải trình; **không** rơi về modal khoảng ngày catalog.
+  - **P13-NghiTrucWizardZeroPunch:** NV **chưa quét** (0 mốc) — HEAD vẫn mở wizard, chọn được **nửa buổi chiều** (không chỉ FULL / nửa sáng) — §4.13.8.
+  - **P10-NghiTrucWizardLayout:** wizard N.trực — desktop 2 cột ngang, không scroll dọc; mobile xếp dọc gọn — §4.13.8.
 
 ### 6.3 CompletionStatus / thiếu dữ liệu chấm công (P5)
 
@@ -171,7 +186,7 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 | Quick actions | Chỉ status `manualAllowed = true` (không `DI_LAM`/`DI_TRE`); status con có `parentCode` **không** hiện nút riêng, nút cha mở chọn status con; grid **`grid-cols-2`** (2×2), `gap-1.5`; nút `min-h` ≤ `3.75rem` |
 | Label nút | `text-4xs` + `leading-tight` + `line-clamp-2`; không phình ô |
 | Rank / chức vụ | Chip rank compact; chức vụ `truncate`; token `primary-light` / `content-muted` |
-| Hàng giờ + trạng thái | **Một hàng** `flex flex-wrap items-center`: 4 mốc rút gọn + `StatusBadge` (+ `+ Đi trễ` nếu `lateFlag`); máy 1 dòng phụ |
+| Hàng giờ + trạng thái | **Một hàng** `flex flex-wrap items-center`: 4 mốc rút gọn + `StatusBadge` (+ `+ Đi trễ` nếu `lateFlag`); máy 1 dòng phụ; **không** hint warning dưới giờ (P9) |
 | Border / surface | `border-line`, `bg-surface-white` — không `slate-*` / `blue-*` cứng trên card |
 | Footer | Link “Lịch thủ công” / “Chi tiết quét”; main đã `pb-24` tránh FAB che |
 
@@ -199,6 +214,7 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 - Mobile: `StatisticsMobileKpiCards` + history cards; scroll pattern hiện có
 - Empty: `Không có dữ liệu!`
 - KPI / chart / Excel: **mọi status catalog active** (gồm `VE_SOM`, `NGHI_TRUC_*`) — **cùng nguồn DB** với màn Chấm công (`SPEC_FINGERPRINT`)
+- **KPI status desktop (P6-StatusKpi5Col):** `StatisticsKpiCards` — `lg:grid-cols-5`, compact, bỏ `min-h-[9.5rem]`; đồng bộ §6.2 Chấm công + `SPEC_FINGERPRINT` §10.5. Mobile scroll **không đổi**.
 
 ---
 
@@ -229,7 +245,7 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 
 | API | Mục đích |
 |-----|----------|
-| GET `/api/notifications` | Danh sách (reminder từ Admin…) |
+| GET `/api/notifications` | Danh sách (reminder từ Admin, kết quả yêu cầu mở khóa…) |
 | GET `/api/notifications/unread-count` | Badge chuông |
 | POST `/api/auth/change-password` | Đổi MK; new password ≥ 6; confirm khớp |
 
@@ -344,13 +360,20 @@ Chi tiết: `docs/SPEC_FINGERPRINT.md`.
 - [ ] Không còn phụ thuộc khóa sổ 06:00–16:00 cho Chấm công/báo cáo  
 - [ ] Completion / báo cáo đúng SPEC  
 - [ ] Copy VN; theme/responsive; font **Montserrat** (`font-sans`); không invent ngoài SPEC  
-
----
+- [x] **P6-HeadKpiCompact:** HEAD Chấm công desktop — 5 status card/hàng, tile + banner slim, ưu tiên bảng roster
+- [x] **P6-StatusKpi5Col:** HEAD Thống kê desktop — status KPI `grid-cols-5` (đồng bộ Chấm công)
+- [x] **P6-HeadQuickLabel:** Desktop cột THAO TÁC — nút quick-action icon + nhãn rút gọn (không chỉ tooltip)
+- [x] **P6-AuditFix:** KPI flatten + MissingPunchBanner + Nghỉ trực modal + LockSync + QuickParentUx (đồng bộ `SPEC_FINGERPRINT`)
+- [x] **P8-WizardPresenceFix:** wizard `nghi-truc-assign` HEAD ghi được trên `DI_LAM`/`DI_TRE` + thiếu 1-3 mốc — §4.13.8
+- [x] **P13-NghiTrucWizardZeroPunch:** N.trực khi 0 mốc → wizard (đủ sáng/chiều/cả ngày) — §4.13.8
+- [x] **P14-PastUnlockAudit:** HEAD ghi ngày quá khứ chỉ khi Admin unlock đúng ngày; roster ngày khác không còn luôn read-only — §4.7
+- [x] **P15-HeadUnlockRequest:** nút gửi yêu cầu mở khóa ngày cũ; chờ Admin xác nhận — §4.7.2
+- [x] **P15-UnlockRequestNotifyType:** gửi yêu cầu không 500 vì ENUM chuông; luôn `message` VN — §4.7.2
 
 ## 16. Cải tiến / edge cases (đồng bộ SPEC_FINGERPRINT §16)
 
 - Sau **đã gửi báo cáo**: HEAD/kiosk **không** đổi summary ngày đó; **Admin** vẫn fill / clear / manual-range đè — clear **không** hủy bản ghi submit (`SPEC_FINGERPRINT` §4.11).
-- Khoảng ngày thủ công: cho phép hôm nay và ngày tương lai trong hạn (max 366); HEAD **không** ghi đè ngày đã có `DI_LAM`/`DI_TRE` (skip); ngày đã có **thủ công khác** → **ghi đè** bằng `applyManualStatus` (không từ chối / không bắt Admin). Đồng bộ `SPEC_FINGERPRINT` §3.2.1.
+- Khoảng ngày thủ công: cho phép hôm nay và ngày tương lai trong hạn (max 366); HEAD **không** ghi đè ngày đã có `DI_LAM`/`DI_TRE` (**skip**) — **trừ** `NGHI_TRUC_*` manual-range và wizard §4.13.8; ngày đã có **thủ công khác** → **ghi đè** bằng `applyManualStatus` (không từ chối / không bắt Admin). Đồng bộ `SPEC_FINGERPRINT` §3.2.1.
 - `DI_HOC` cùng cơ chế khoảng ngày như nghỉ phép / công tác / thai sản.
 - Nav fingerprints: chỉ thêm ID khi P1 được giao; cập nhật `HEAD_NAV_IDS` trong cùng PR.
 

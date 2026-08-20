@@ -1,5 +1,10 @@
 import { memo } from 'react';
-import { ATTENDANCE_STATUS, isAttendanceBlank, isPostScanOverrideAction } from '../../../constants/attendance';
+import {
+  ATTENDANCE_STATUS,
+  getQuickActionShortLabel,
+  isAttendanceBlank,
+  isPostScanOverrideAction,
+} from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
 import { resolveStatusQuickIcon } from '../../../utils/statusIcons';
 
@@ -11,6 +16,8 @@ const QUICK_BTN_ACTIVE = {
   purple: 'border-violet-600 bg-violet-600 text-white shadow-sm',
   teal: 'border-teal-600 bg-teal-600 text-white shadow-sm',
   amber: 'border-warning-fg bg-warning-fg text-white shadow-sm',
+  indigo: 'border-indigo-600 bg-indigo-600 text-white shadow-sm',
+  cyan: 'border-cyan-600 bg-cyan-600 text-white shadow-sm',
 };
 
 const QUICK_BTN_OUTLINE = {
@@ -21,10 +28,22 @@ const QUICK_BTN_OUTLINE = {
   purple: 'border-violet-200 bg-white text-violet-600 hover:border-violet-300 hover:bg-violet-50',
   teal: 'border-teal-200 bg-white text-teal-600 hover:border-teal-300 hover:bg-teal-50',
   amber: 'border-warning bg-white text-warning-fg hover:border-warning-fg hover:bg-warning',
+  indigo: 'border-indigo-200 bg-white text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50',
+  cyan: 'border-cyan-200 bg-white text-cyan-600 hover:border-cyan-300 hover:bg-cyan-50',
 };
 
+/** P6-HeadQuickLabel — icon + short label, visible without hover */
 const BTN_BASE =
-  'w-9 h-9 rounded-lg border flex items-center justify-center transition-colors shrink-0';
+  'min-w-[3.25rem] max-w-[4.25rem] px-1 py-1 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-colors shrink-0';
+
+const LABEL_CLASS = 'w-full truncate text-center text-4xs font-medium leading-none';
+
+/** P6-QuickParentUx — parent button active when child status assigned */
+function isQuickActionActive(staff, action) {
+  if (isAttendanceBlank(staff) || !staff.status) return false;
+  if (staff.status === action.value) return true;
+  return (action.statusOptions || []).some((opt) => opt.value === staff.status);
+}
 
 const QuickActionGroup = memo(function QuickActionGroup({
   staff,
@@ -55,15 +74,21 @@ const QuickActionGroup = memo(function QuickActionGroup({
 
   return (
     <div
-      className="inline-flex items-center justify-end gap-2 ml-auto"
+      className="inline-flex flex-wrap items-center justify-end gap-1.5 ml-auto"
       role="group"
       aria-label="Thao tác Chấm công nhanh"
     >
       {quickActions.map((action) => {
-        const { value, color, icon } = action;
+        const { value, color, icon, label } = action;
         const Icon = resolveStatusQuickIcon(icon);
-        const isActive = Boolean(!isAttendanceBlank(staff) && staff.status === value);
+        const isActive = isQuickActionActive(staff, action);
         const actionDisabled = disabled || (fingerprintLocked && !isPostScanOverrideAction(action));
+        const fullLabel = statusBadge[value]?.label || label || value;
+        const shortLabel = getQuickActionShortLabel(value, label || fullLabel);
+        const titleText =
+          actionDisabled && fingerprintLocked
+            ? 'Nhân viên đã Chấm công bằng vân tay. Không được gán trạng thái khác.'
+            : fullLabel;
 
         return (
           <button
@@ -72,14 +97,12 @@ const QuickActionGroup = memo(function QuickActionGroup({
             disabled={actionDisabled}
             onClick={() => onQuickAction(staff.empCode, action)}
             className={getButtonClass(color, isActive, actionDisabled)}
-            title={
-              actionDisabled && fingerprintLocked
-                ? 'Nhân viên đã Chấm công bằng vân tay. Không được gán trạng thái khác.'
-                : statusBadge[value]?.label || value
-            }
+            title={titleText}
+            aria-label={titleText}
             aria-pressed={isActive}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span className={LABEL_CLASS}>{shortLabel}</span>
           </button>
         );
       })}

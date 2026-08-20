@@ -29,7 +29,7 @@ export function useAiAssistant() {
   const [messages, setMessages] = useState([
     createMessage('assistant', {
       content:
-        'Chào Admin, tôi có thể giúp thống kê Chấm công, xem ĐƠN VỊ còn thiếu dữ liệu chấm công và gửi nhắc nhở (mặc định ngày hôm qua).',
+        'Chào Admin, tôi có thể giúp thống kê Chấm công, xem ĐƠN VỊ thiếu dữ liệu chấm công và gửi nhắc nhở (mặc định ngày hôm qua). Dùng các nút gợi ý bên dưới nhé!',
       streaming: false,
     }),
   ]);

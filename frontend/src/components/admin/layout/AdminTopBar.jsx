@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react';
 import { UI } from '../../../constants/attendance';
 import { ADMIN_TAB_IDS, ADMIN_UI, ADMIN_SUBMENU_GROUPS } from '../../../constants/admin';
 import SubmenuBreadcrumb from '../sections/SubmenuBreadcrumb';
+import NotificationBell from '../../shared/NotificationBell';
 
 function resolveSubmenuBreadcrumb(activeTab) {
   if (activeTab === ADMIN_TAB_IDS.PASSWORD) {
@@ -19,7 +20,7 @@ function resolveSubmenuBreadcrumb(activeTab) {
   return null;
 }
 
-const AdminTopBar = memo(function AdminTopBar({ activeTab }) {
+const AdminTopBar = memo(function AdminTopBar({ activeTab, onOpenUnlockRequests }) {
   const breadcrumb = useMemo(() => resolveSubmenuBreadcrumb(activeTab), [activeTab]);
 
   return (
@@ -30,6 +31,10 @@ const AdminTopBar = memo(function AdminTopBar({ activeTab }) {
             <SubmenuBreadcrumb parent={breadcrumb.parent} current={breadcrumb.current} />
           )}
         </div>
+        <NotificationBell
+          onUnlockRequestNavigate={onOpenUnlockRequests}
+          className="shrink-0"
+        />
       </div>
     </header>
   );

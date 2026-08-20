@@ -14,6 +14,7 @@ const DeptAttendanceMobileSection = memo(function DeptAttendanceMobileSection({
   onOpenScanLogs,
   onOpenManualSchedule,
   onFillTimes,
+  onApprovePayrollFill,
   onQuickAction,
   onClearAttendance,
   onSaveVeSomNote,
@@ -39,6 +40,7 @@ const DeptAttendanceMobileSection = memo(function DeptAttendanceMobileSection({
         onOpenScanLogs={onOpenScanLogs}
         onOpenManualSchedule={onOpenManualSchedule}
         onFillTimes={onFillTimes}
+        onApprovePayrollFill={onApprovePayrollFill}
         onQuickAction={onQuickAction}
         onSaveVeSomNote={onSaveVeSomNote}
         onClearAttendance={onClearAttendance}

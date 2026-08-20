@@ -29,7 +29,7 @@ const KPI_SKELETON_MOBILE = (
 
 const KPI_SKELETON_DESKTOP = (
   <div
-    className="hidden lg:block min-h-[9.5rem] rounded-xl border border-line bg-surface-white animate-pulse"
+    className="hidden lg:block min-h-[7.5rem] rounded-xl border border-line bg-surface-white animate-pulse"
     aria-hidden="true"
   />
 );
@@ -144,7 +144,7 @@ export default function StatisticsPage({ user, onLogout, activeNav, onNavChange 
           <StableDataZone
             initialLoading={showSpinner}
             skeleton={KPI_SKELETON_DESKTOP}
-            className="shrink-0 min-h-[9.5rem]"
+            className="shrink-0 min-h-[7.5rem]"
           >
             <StatisticsKpiCards statusBreakdown={displayStatusBreakdown} />
           </StableDataZone>

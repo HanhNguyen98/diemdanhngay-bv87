@@ -1,8 +1,9 @@
 import { memo } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { UI } from '../../constants/attendance';
 
 /**
- * SPEC §4.5.2 — missing check-out / unmarked queue banner (Vietnamese UI only).
+ * SPEC §4.5.2 / P6-MissingBanner — missing check-out / unmarked queue banner.
  */
 const MissingPunchBanner = memo(function MissingPunchBanner({ items, loading }) {
   if (loading || !items?.length) {
@@ -31,14 +32,26 @@ const MissingPunchBanner = memo(function MissingPunchBanner({ items, loading }) 
   }
 
   return (
-    <div className="rounded-xl border border-warning-fg/30 bg-warning px-3 py-2.5 space-y-1">
-      <p className="text-sm font-semibold text-navy">{UI.missingPunchTitle}</p>
-      <p className="text-xs text-content-muted">
-        {parts.join(' · ')}
-        {preview ? ` — ${preview}${more}` : ''}
-      </p>
-      <p className="text-xs text-content-muted">{UI.missingPunchHint}</p>
-    </div>
+    <aside
+      role="status"
+      aria-live="polite"
+      className="flex w-full flex-col gap-1.5 rounded-lg border border-warning-border bg-warning px-3 py-2"
+    >
+      <div className="flex min-w-0 items-start gap-2">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" aria-hidden="true" />
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-xs font-bold text-warning-text">
+            {UI.missingPunchTitle}
+            {parts.length > 0 ? ` — ${parts.join(' · ')}` : ` (${items.length})`}
+          </p>
+          <p className="text-3xs text-warning-text/90 truncate" title={`${preview}${more}`}>
+            {preview}
+            {more}
+          </p>
+          <p className="text-3xs text-warning-text/80">{UI.missingPunchHint}</p>
+        </div>
+      </div>
+    </aside>
   );
 });
 

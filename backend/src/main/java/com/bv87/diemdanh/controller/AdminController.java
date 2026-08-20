@@ -1,6 +1,7 @@
 package com.bv87.diemdanh.controller;
 
 import com.bv87.diemdanh.dto.*;
+import com.bv87.diemdanh.enums.UnlockRequestStatus;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.service.*;
 import jakarta.validation.Valid;
@@ -33,6 +34,8 @@ public class AdminController {
     private final StaffPositionCatalogService staffPositionCatalogService;
     private final AttendanceService attendanceService;
     private final FingerprintService fingerprintService;
+    private final AuditService auditService;
+    private final AttendanceUnlockRequestService unlockRequestService;
 
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
@@ -82,10 +85,52 @@ public class AdminController {
         return ResponseEntity.ok(attendanceService.fillAttendanceTimes(authService.getAuthUser(), request));
     }
 
+    @PostMapping("/attendance/payroll-fill/approve")
+    public ResponseEntity<StaffAttendanceDto> approvePayrollFill(
+            @Valid @RequestBody PayrollFillApproveRequest request) {
+        return ResponseEntity.ok(attendanceService.approvePayrollFill(authService.getAuthUser(), request));
+    }
+
     @PostMapping("/attendance/clear")
     public ResponseEntity<StaffAttendanceDto> clearAttendance(
             @Valid @RequestBody ClearAttendanceRequest request) {
         return ResponseEntity.ok(attendanceService.clearAttendanceDay(authService.getAuthUser(), request));
+    }
+
+    @GetMapping("/attendance/audit-logs")
+    public ResponseEntity<AttendanceAuditLogPageDto> listAttendanceAuditLogs(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Integer deptCode,
+            @RequestParam(required = false) String username,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ResponseEntity.ok(auditService.listAttendanceLogs(
+                authService.getAuthUser(), from, to, deptCode, username, page, pageSize));
+    }
+
+    @GetMapping("/attendance/unlock-requests/pending-count")
+    public ResponseEntity<Map<String, Long>> pendingUnlockRequestCount() {
+        return ResponseEntity.ok(Map.of("count", unlockRequestService.countPending(authService.getAuthUser())));
+    }
+
+    @GetMapping("/attendance/unlock-requests")
+    public ResponseEntity<List<UnlockRequestItemDto>> listUnlockRequests(
+            @RequestParam(required = false) UnlockRequestStatus status) {
+        return ResponseEntity.ok(unlockRequestService.list(authService.getAuthUser(), status));
+    }
+
+    @PostMapping("/attendance/unlock-requests/{id}/approve")
+    public ResponseEntity<UnlockRequestItemDto> approveUnlockRequest(@PathVariable Long id) {
+        return ResponseEntity.ok(unlockRequestService.approve(authService.getAuthUser(), id));
+    }
+
+    @PostMapping("/attendance/unlock-requests/{id}/reject")
+    public ResponseEntity<UnlockRequestItemDto> rejectUnlockRequest(
+            @PathVariable Long id,
+            @RequestBody(required = false) UnlockRequestRejectRequest request) {
+        String note = request != null ? request.getNote() : null;
+        return ResponseEntity.ok(unlockRequestService.reject(authService.getAuthUser(), id, note));
     }
 
     @GetMapping("/department-groups/next-code")

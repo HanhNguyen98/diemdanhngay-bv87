@@ -26,7 +26,7 @@ const KpiBar = memo(function KpiBar({ markedCount, total, statusBreakdown }) {
       </section>
 
       <section
-        className="hidden lg:flex lg:gap-3 lg:items-stretch w-full"
+        className="hidden lg:flex lg:gap-2.5 lg:items-center w-full"
         aria-label="Tổng hợp Chấm công"
       >
         <KpiProgressWideBanner
@@ -34,10 +34,12 @@ const KpiBar = memo(function KpiBar({ markedCount, total, statusBreakdown }) {
           total={total}
           percent={percent}
           rateLabel={rateLabel}
+          slim
         />
         <AttendanceStatusTileGrid
           statusBreakdown={statusBreakdown}
           columns={DESKTOP_STATUS_COLUMNS}
+          compactDesktop
         />
       </section>
     </>

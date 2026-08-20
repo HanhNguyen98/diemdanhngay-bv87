@@ -33,6 +33,7 @@ const StatusCatalogStatGrid = memo(function StatusCatalogStatGrid({ stats }) {
       <div className="lg:hidden flex flex-col gap-2">
         <StatCard
           compact
+          isTotal
           label={ADMIN_UI.statusCatalog.stats.total}
           value={stats.total}
           icon={List}
@@ -53,6 +54,7 @@ const StatusCatalogStatGrid = memo(function StatusCatalogStatGrid({ stats }) {
       <div className="hidden lg:grid grid-cols-3 gap-2.5">
         <StatCard
           compact
+          isTotal
           label={ADMIN_UI.statusCatalog.stats.total}
           value={stats.total}
           icon={List}

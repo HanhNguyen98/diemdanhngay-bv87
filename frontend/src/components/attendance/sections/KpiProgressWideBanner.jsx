@@ -70,14 +70,21 @@ const KpiProgressWideBanner = memo(function KpiProgressWideBanner({
   percent,
   rateLabel,
   compact = false,
+  slim = false,
 }) {
   const remaining = Math.max(0, total - markedCount);
-  const ringSize = compact ? 56 : 72;
+  const ringSize = compact ? 56 : slim ? 52 : 72;
+  const isShort = compact || slim;
 
   return (
     <article
-      className={`relative overflow-hidden rounded-xl bg-gradient-to-br from-[#2563EB] via-[#204FC2] to-[#1D4ED8] shadow-card flex items-center justify-between gap-4 shrink-0 ${compact ? 'px-4 py-3.5' : 'px-5 py-4 min-h-[10rem] w-[19rem] xl:w-[20rem]'
-        }`}
+      className={`relative overflow-hidden rounded-xl bg-gradient-to-br from-[#2563EB] via-[#204FC2] to-[#1D4ED8] shadow-card flex items-center justify-between gap-3 shrink-0 ${
+        compact
+          ? 'px-4 py-3.5'
+          : slim
+            ? 'px-4 py-3 w-[14rem] xl:w-[15rem]'
+            : 'px-5 py-4 min-h-[10rem] w-[19rem] xl:w-[20rem]'
+      }`}
     >
       <div
         className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"
@@ -88,19 +95,19 @@ const KpiProgressWideBanner = memo(function KpiProgressWideBanner({
         <h3 className="text-2xs font-semibold text-white/80 uppercase tracking-wider">
           {UI.kpiProgress}
         </h3>
-        <p className="mt-1.5 text-3xl font-bold text-white tabular-nums leading-none">
+        <p className={`mt-1 font-bold text-white tabular-nums leading-none ${slim ? 'text-2xl' : 'text-3xl'}`}>
           {markedCount}
           <span className="text-white/70 font-semibold"> / </span>
           {total}
         </p>
-        {!compact && (
+        {!isShort && (
           <p className="mt-1.5 text-2xs text-white/85">{UI.kpiProgressSubtitle}</p>
         )}
 
       </div>
 
       <div className="relative z-[1] flex shrink-0 items-center justify-center pr-1">
-        <ProgressRing percent={percent} size={ringSize} showGlow={!compact} />
+        <ProgressRing percent={percent} size={ringSize} showGlow={!isShort} />
       </div>
     </article>
   );

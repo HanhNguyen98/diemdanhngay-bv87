@@ -3,7 +3,10 @@ import { UI } from '../../../constants/attendance';
 import { formatDateDMY } from '../../../utils/formatters';
 import { IconHistory } from '../../icons/Icons';
 
-const HistoryViewBanner = memo(function HistoryViewBanner({ selectedDate }) {
+const HistoryViewBanner = memo(function HistoryViewBanner({
+  selectedDate,
+  readOnly = true,
+}) {
   return (
     <aside
       role="status"
@@ -18,13 +21,18 @@ const HistoryViewBanner = memo(function HistoryViewBanner({ selectedDate }) {
         <p className="text-xs leading-tight text-navy">
           <span className="font-bold">{UI.viewingHistoryPrefix} </span>
           <span className="font-semibold tabular-nums">{formatDateDMY(selectedDate)}</span>
-          <span className="font-normal"> {UI.viewingHistorySuffix}</span>
+          <span className="font-normal">
+            {' '}
+            {readOnly ? UI.viewingHistorySuffix : UI.viewingHistoryUnlockedSuffix}
+          </span>
         </p>
       </div>
 
-      <span className="shrink-0 self-start rounded px-2 py-0.5 text-4xs font-semibold uppercase tracking-wide text-primary bg-white/70 sm:self-center">
-        {UI.readOnly}
-      </span>
+      {readOnly && (
+        <span className="shrink-0 self-start rounded px-2 py-0.5 text-4xs font-semibold uppercase tracking-wide text-primary bg-white/70 sm:self-center">
+          {UI.readOnly}
+        </span>
+      )}
     </aside>
   );
 });

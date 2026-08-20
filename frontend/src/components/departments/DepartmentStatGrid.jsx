@@ -31,6 +31,7 @@ const DepartmentStatGrid = memo(function DepartmentStatGrid({ stats }) {
       <div className="lg:hidden flex flex-col gap-2">
         <StatCard
           compact
+          isTotal
           label={ADMIN_UI.departments.stats.totalDepts}
           value={stats?.totalDepartments ?? '—'}
           badge={stats?.newDepartmentsThisMonth ? `+${stats.newDepartmentsThisMonth} tháng này` : null}
@@ -42,7 +43,14 @@ const DepartmentStatGrid = memo(function DepartmentStatGrid({ stats }) {
           {secondaryCards.map((card) => {
             const { id, ...cardProps } = card;
             return (
-              <StatCard key={id} compact inlineLabel className="min-w-0" {...cardProps} />
+              <StatCard
+                key={id}
+                compact
+                isTotal={card.id === 'totalStaff'}
+                inlineLabel
+                className="min-w-0"
+                {...cardProps}
+              />
             );
           })}
         </div>
@@ -51,6 +59,7 @@ const DepartmentStatGrid = memo(function DepartmentStatGrid({ stats }) {
       <div className="hidden lg:grid grid-cols-3 gap-2.5">
         <StatCard
           compact
+          isTotal
           label={ADMIN_UI.departments.stats.totalDepts}
           value={stats?.totalDepartments ?? '—'}
           badge={stats?.newDepartmentsThisMonth ? `+${stats.newDepartmentsThisMonth} tháng này` : null}
@@ -63,6 +72,7 @@ const DepartmentStatGrid = memo(function DepartmentStatGrid({ stats }) {
             <StatCard
               key={id}
               compact
+              isTotal={card.id === 'totalStaff'}
               badge={card.id === 'totalStaff' && stats ? `${stats.activePercent}% hoạt động` : null}
               badgeClass="bg-success text-success-fg"
               {...cardProps}

@@ -76,7 +76,6 @@ export function useDepartmentPage() {
         (d.unitCode || '').toLowerCase().includes(q) ||
         d.deptCodeFormatted.includes(q) ||
         (d.groupName || '').toLowerCase().includes(q) ||
-        (d.location || '').toLowerCase().includes(q) ||
         (d.headName || '').toLowerCase().includes(q),
     );
   }, [items, search, groupFilter]);

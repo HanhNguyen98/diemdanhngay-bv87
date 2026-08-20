@@ -158,7 +158,7 @@ export function mapDepartmentImportRows(rows, staffList = [], groups = []) {
         payload: {
           groupCode: group.groupCode,
           deptName,
-          location: row[form.location]?.trim() || null,
+          location: null,
           headEmpCode: parseOptionalHeadName(row[form.headName], staffList, rowNumber),
           locationImageUrl: null,
         },
@@ -315,9 +315,13 @@ export function mapStatusCatalogImportRows(rows) {
           sortOrder:
             parseOptionalSortOrder(row[f.sortOrder], rowNumber, f.sortOrder) ?? 0,
           active: parseActiveStatus(row[f.active]),
-          manualAllowed: false,
-          groupParent: false,
-          parentCode: '',
+          manualAllowed: row[f.manualAllowed]
+            ? parseActiveStatus(row[f.manualAllowed])
+            : true,
+          groupParent: row[f.groupParent]
+            ? parseActiveStatus(row[f.groupParent])
+            : false,
+          parentCode: row[f.parentCode]?.trim() || '',
         },
       });
     } catch (err) {

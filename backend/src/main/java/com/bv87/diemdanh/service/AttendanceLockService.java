@@ -64,27 +64,33 @@ public class AttendanceLockService {
 
     /**
      * Whether the role may edit attendance for a department on a date.
-     * HEAD: today only, before soft-lock (unless Admin unlock), and not reportBlocked — SPEC §4.7 / §3.2 AI.
-     * Admin: always for today.
+     * HEAD today: before soft-lock (unless unlock) and not reportBlocked.
+     * HEAD past: only if Admin unlocked that exact date — SPEC P14.
+     * HEAD future: allowed (leave planning, no unlock).
+     * Admin: always.
      */
     public boolean isEditable(Integer deptCode, AccountRole role, LocalDate date) {
-        if (!date.equals(timeService.today())) {
-            return false;
-        }
         if (role == AccountRole.ADMIN) {
             return true;
         }
         if (role != AccountRole.HEAD) {
             return false;
         }
-        if (isReportBlocked(deptCode, date)) {
-            return false;
-        }
-        if (isManualLocked(deptCode, date)) {
-            return false;
-        }
-        if (!timeService.isAfterLockTime()) {
+        LocalDate today = timeService.today();
+        if (date.isAfter(today)) {
             return true;
+        }
+        if (date.equals(today) && isReportBlocked(deptCode, date)) {
+            return false;
+        }
+        if (date.equals(today)) {
+            if (isManualLocked(deptCode, date)) {
+                return false;
+            }
+            if (!timeService.isAfterLockTime()) {
+                return true;
+            }
+            return isUnlocked(deptCode, date);
         }
         return isUnlocked(deptCode, date);
     }
@@ -119,9 +125,6 @@ public class AttendanceLockService {
      * @throws BusinessException when soft-locked or report-blocked for HEAD
      */
     public void assertCanWrite(AuthUser authUser, Integer targetDeptCode, LocalDate date) {
-        if (!date.equals(timeService.today())) {
-            throw new AccessDeniedException("Chỉ được cập nhật Chấm công trong ngày hiện tại");
-        }
         if (authUser.isAdmin()) {
             return;
         }
@@ -133,11 +136,15 @@ public class AttendanceLockService {
                     "Trưởng ban chỉ được thao tác Đơn vị "
                             + String.format("%02d", authUser.getDeptCode()));
         }
-        if (isReportBlocked(targetDeptCode, date)) {
+        if (date.equals(timeService.today()) && isReportBlocked(targetDeptCode, date)) {
             throw new BusinessException(
                     "Admin đã khóa chỉnh sửa Chấm công cho Đơn vị hôm nay.");
         }
         if (!isEditable(targetDeptCode, AccountRole.HEAD, date)) {
+            if (date.isBefore(timeService.today())) {
+                throw new BusinessException(
+                        "Ngày quá khứ chưa được Admin mở khóa. Liên hệ Admin nếu cần chỉnh sửa.");
+            }
             throw new BusinessException(
                     "Đã qua giờ khóa mềm ngày công. Liên hệ Admin nếu cần chỉnh sửa.");
         }
@@ -160,7 +167,24 @@ public class AttendanceLockService {
     }
 
     /**
-     * Legacy UI message for Admin lock flags. HEAD Chấm công does not use time-lock banners (§4.9).
+     * @return true when HEAD cannot write today due to soft-lock / manual lock (not reportBlocked alone).
+     */
+    public boolean isSoftLockedForHead(Integer deptCode, LocalDate date) {
+        if (isReportBlocked(deptCode, date) && date.equals(timeService.today())) {
+            return false;
+        }
+        return !isEditable(deptCode, AccountRole.HEAD, date);
+    }
+
+    /**
+     * True when HEAD must skip this calendar day in a manual range (soft-lock, past not unlocked).
+     */
+    public boolean shouldSkipManualRangeDayForHead(Integer deptCode, LocalDate day) {
+        return !isEditable(deptCode, AccountRole.HEAD, day);
+    }
+
+    /**
+     * Legacy UI message for Admin lock flags.
      */
     public String getLockMessage(Integer deptCode, AccountRole role, LocalDate date) {
         if (role == AccountRole.ADMIN || role == AccountRole.HEAD) {

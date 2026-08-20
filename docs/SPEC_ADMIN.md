@@ -54,10 +54,11 @@
 
 1. **Bảng điều khiển** → overview, dept-detail  
 2. **Danh mục hành chính** → departments, staff, ranks, positions, status-catalog  
-3. **Tiện ích** → reminder-history  
+3. **Tiện ích** → reminder-history, **attendance-audit-log** (P14), **unlock-requests** (P15)  
 4. **Cài đặt** → system, users, **fingerprint-tokens** (ADMIN; token kiosk Agent)  
 
 Labels tiếng Việt: lấy từ `ADMIN_UI.nav` — **không** hardcode chuỗi mới trong JSX.
+- Mục nav con (và nhóm cha) dùng `truncate` + native `title` — hover hiện đủ nội dung khi label dài (vd. **Phân quyền người dùng**, **Quản lý token vân tay**).
 
 ---
 
@@ -65,7 +66,7 @@ Labels tiếng Việt: lấy từ `ADMIN_UI.nav` — **không** hardcode chuỗi
 
 ### 3.1 Shell
 
-- Desktop (`lg` ≥ 1024px): sidebar cố định + `AdminTopBar` + main + footer
+- Desktop (`lg` ≥ 1024px): sidebar cố định **`w-[272px]`** + `AdminTopBar` + main + footer
 - Mobile (`max-lg`): `AdminMobileTopBar` + drawer `AdminMobileSideMenu`; sidebar ẩn
 - Chiều cao: `h-[100dvh]` / `lg:h-svh`; root `admin-shell` **`overflow-hidden`** (không scroll cả trang)
 - **Một vùng scroll dọc** = `<main>`: class `.mobile-page-y` (`overflow-y: auto`) trên mọi breakpoint; desktop **`lg:overflow-y-auto`** — **cấm** `lg:overflow-hidden` trên `main` (sẽ cắt form dài, không có scrollbar)
@@ -119,7 +120,12 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 | Quy tắc | Chi tiết |
 |---------|----------|
 | `dept_code`, `emp_code` | `INT` trong DB/API; **không** lưu chuỗi pad |
-| Hiển thị | Backend `CodeFormatter` `%02d` / `%05d`; FE `padStart(2,'0')` / `padStart(5,'0')` |
+| Hiển thị mã | Backend `CodeFormatter` `%02d` / `%05d`; FE **chỉ** `formatDeptCode` / `formatEmpCode` / `displayDeptCode` / `displayEmpCode` (`utils/formatters.js`). **Cấm** `padStart` rải trong JSX/modal. Ưu tiên `*Formatted` từ API |
+| Label status | Catalog `statusOptions` (DB); fallback `STATUS_BADGE`. `status == null` → `UI.filterUnchecked` (**Chưa chấm**). **Cấm** literal `'Chưa chấm'` / `'ĐI LÀM'` / `'ĐI TRỄ'` trong component |
+| Giờ Instant | FE `formatInstantHm()` — gồm cột giờ, Excel Chi tiết ĐV. **Cấm** `toLocaleTimeString` duplicate |
+| Datetime log (Admin) | Cột thời gian bảng lịch sử / token: `formatLogDateTime()` hoặc `formatLogDateTimeOrDash()` (`utils/reminderHistory.js`) → `dd/mm/yyyy HH:mm`. Empty → `—`. **Cấm** `toLocaleString` / hàm format local trong page |
+| Hiển thị IP / Máy | `displayIp()` + `formatKioskMachine` / `formatKioskMachineParts` (`utils/kioskMachine.js`) — §4.7.1 / `SPEC_FINGERPRINT` §10.3 |
+| Pagination FE | `totalPages = Math.max(1, api.totalPages ?? 1)` — kể cả thống kê lịch sử |
 | Timezone | `Asia/Ho_Chi_Minh` qua `VietnamTimeService` |
 | Trạng thái Chấm công | Catalog active (`DI_LAM`, `DI_TRE`, `VE_SOM`, `NGHI_TRUC_*`, PHEP/HOC/CT/THAI_SAN, HSQ_BS…) — so sánh bằng code/catalog. **Nguồn DB chung** với HEAD (`SPEC_FINGERPRINT` §4.13) |
 | Message API / UI | **Tiếng Việt**; identifier / JavaDoc / comment method: **Tiếng Anh** |
@@ -143,11 +149,11 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 - `POST /api/admin/attendance/toggle-lock/{deptCode}`
 - Khi còn trong code: không dùng để khóa luồng vân tay Agent hoặc gửi báo cáo HEAD theo SPEC mới.
 
-### 5.2 Khóa gửi báo cáo (giữ)
+### 5.2 Khóa chỉnh sửa HEAD (giữ — P6-DashActions)
 
 - Block: `POST /api/admin/attendance/report-blocks`
 - Unblock: `DELETE /api/admin/attendance/report-blocks/{deptCode}`
-- Khi block: HEAD không gửi được báo cáo
+- Khi block: HEAD **không ghi** Chấm công ngày hiện tại (UI dashboard: **「Khóa chỉnh sửa HEAD」** — **không** gọi là gửi nhắc / gửi báo cáo)
 
 ---
 
@@ -166,9 +172,11 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 - KPI / donut / breakdown: **mọi** status catalog active (gồm `VE_SOM`, nhóm `NGHI_TRUC` / `HSQ_BS`) — `mergeBreakdowns` flatten children — **cùng nguồn DB** với Chấm công HEAD (`SPEC_FINGERPRINT` §4.13)
 - Thứ tự card: **Đi làm → Đi trễ (bên phải)** → … trên Tổng quan + Chi tiết Đơn vị (`SPEC_FINGERPRINT` §3.1 P3b)
 - Nhãn card trạng thái KPI: **font-weight 700 + chữ đen** — đồng bộ HEAD Chấm công (`SPEC_FINGERPRINT` §10.4 P3c)
+- Card nhãn **Tổng…** (Tổng quân số, Tổng Nhân viên, …): nền **`bg-info-surface`** + viền **`border-info-line`** — P3e `SPEC_FINGERPRINT` §10.5
 - Nhãn card KPI/stat tiếng Việt: **không cắt dấu**, không clip glyph trên chữ in hoa; shell/layout đồng bộ chuẩn `Chi tiết Đơn vị` (`SPEC_FINGERPRINT` §10.5 P3d)
-- Mỗi dòng Đơn vị: tiến độ %, hoàn thành / chưa xong (theo COMPLETED mới), trạng thái báo cáo, có tài khoản HEAD
-- Thao tác: gửi nhắc, block/unblock báo cáo; không phụ thuộc khóa sổ giờ HEAD
+- **KPI status desktop (P6-StatusKpi5Col / P6-StatusKpiSideTotal):** `DashboardKpiBar` — card **Tổng quân số** **bên trái** (`self-stretch` khớp 2 hàng status; layout dọc icon → số → nhãn TỔNG); status + **Chưa chấm** **bên phải** **`grid-cols-5`**; Chi tiết Đơn vị kế thừa. Mobile scroll **không đổi**. Chi tiết `SPEC_FINGERPRINT` §10.5.
+- Mỗi dòng Đơn vị: tiến độ %, hoàn thành / chưa xong (theo COMPLETED mới), có tài khoản HEAD
+- **Cột THAO TÁC (P6-DashActions):** dropdown **「Quản lý」** — **không** icon máy bay (tránh nhầm **Gửi nhắc nhở** toolbar). Mục menu: (1) **Khóa sổ / Mở khóa sổ** (`toggle-lock`); (2) **Khóa / Mở chỉnh sửa HEAD** (`report-blocks`). Portal + clamp viewport mobile. **Gửi nhắc nhở** chỉ qua toolbar + modal (§6.3).
 - **Không** thêm cột / KPI ngoài DTO đã review trừ khi cập nhật SPEC
 
 ### 6.3 Reminder (P5)
@@ -177,6 +185,7 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 - Chỉ gửi tới account `HEAD` active; thiếu HEAD → `SKIPPED_NO_HEAD`
 - Auto: `reminderTime`; tối đa 1 lần AUTO/ngày; target = **ngày hôm qua** còn item §4.5.2
 - History: `GET /api/admin/attendance/reminder-history?from=&to=`
+- **Thống kê theo ĐƠN VỊ (P-RemindChart):** donut/pie cố định chiều cao **≤ 240px** — **Top 10** đơn vị theo `sentCount` + 1 lát **Khác** (gom phần còn lại); **cấm** 32 lát riêng. Legend scroll `max-h-40`. Giữa donut: tổng lần nhắc. Tiêu đề card **một dòng** mobile (`whitespace-nowrap`; total xuống dòng dưới `< sm`). Chi tiết đầy đủ + Excel ở bảng phía dưới — không đổi API.
 - Missing punches: `GET /api/attendance/missing-punches`
 
 ### 6.4 Chi tiết Đơn vị
@@ -186,12 +195,26 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 - **Không** màn lịch sử ra vào riêng
 - Export Excel: bổ sung cột giờ vào/ra / DI_TRE / THAI_SAN khi phase P3 — theo `ADMIN_UI.dashboard.deptDetail*`
 - Phân trang desktop/mobile theo rule mục 3.4
+- **Mobile roster card (P6-DeptMobile):** `DeptAttendanceStaffCard` — cân đối chiều cao `< lg`:
+  - Header gọn: avatar + tên/mã/chức vụ; **4 mốc giờ + badge trạng thái cùng một hàng** (không cột phải badge riêng)
+  - Footer card: menu **Vân tay** + link **Lịch thủ công** một hàng; máy quét `truncate` phụ (1 dòng)
+  - Quick actions: prop `dense` trên `MobileQuickActionGrid` — **`grid-cols-3`** khi >4 nút; `min-h` ≤ `2.625rem`; nhãn **1 dòng** `truncate`; `gap-1`
+  - Card shell: `px-2 py-2`, list `gap-1.5` — không phình 3 hàng nút 2 cột như desktop
+  - Menu **Vân tay**: portal + clamp viewport (§10.6); **Duyệt bổ sung giờ** khi `payroll_fill_status = PENDING`; modal **Lịch thủ công** fit viewport + scroll body (§3.2.2)
+- **P12-AdminApproveUx:** desktop + mobile — **click badge `Chờ duyệt giờ`** mở `ApprovePayrollFillModal`; **cấm** nút **Duyệt giờ** trùng cột Thao tác; menu **Vân tay → Duyệt bổ sung giờ** vẫn giữ — §4.13.6.
+- **Desktop quick-action labels (P6-HeadQuickLabel):** `QuickActionGroup` dùng chung với HEAD — icon + nhãn rút gọn trên desktop; chi tiết `SPEC_HEAD` §6.2.
+- **P8-ReassignNghiTruc:** trong Chi tiết Đơn vị, quick-action `N.trực` khi `punchCount` 0–3 phải mở cùng wizard `NghiTrucAssignModal` như HEAD (`HALF_MORNING` / `HALF_AFTERNOON` / FULL), không dùng modal khoảng ngày catalog.
+- **P13-NghiTrucWizardZeroPunch:** NV chưa quét — Admin/HEAD vẫn chọn được **nửa buổi chiều** qua wizard — §4.13.8.
+- **P8-WizardPresenceFix:** wizard `nghi-truc-assign` — HEAD/Admin **không** skip presence; case `DI_TRE` + 1 mốc → HALF chiều phải lưu được (§4.13.8).
+- **P9-RowHintDeclutter:** **không** hint `Thiếu dữ liệu chấm công` dưới ô giờ (`DeptAttendanceRow` / `DeptAttendanceStaffCard`) — `SPEC_FINGERPRINT` §4.5.1.
 
 ---
 
 ## 7. Danh mục hành chính (CRUD Admin)
 
 Tất cả dưới `/api/admin/...`. Soft-delete / block xóa khi còn ràng buộc — message từ `ADMIN_UI.catalog` / flash.
+
+**StatGrid mobile (P3f):** card phụ 2 cột (Đang sử dụng / Ngưng sử dụng, Tỷ lệ hoạt động, …) — nhãn **một dòng** trên mobile; chi tiết `SPEC_FINGERPRINT` §10.5 P3f.
 
 ### 7.1 Nhóm Đơn vị
 
@@ -209,7 +232,14 @@ Xóa chỉ khi nhóm không còn Đơn vị.
 | GET/POST | `/departments`, `/departments/next-code` |
 | GET/PUT/DELETE | `/departments/{deptCode}` |
 
-Fields: mã (INT), tên, nhóm, unitCode, vị trí, head, sơ đồ vị trí (nếu có), active.
+**API / DB (giữ tương thích):** mã (INT), tên, nhóm, unitCode, `location`, `locationImageUrl`, head, active — BE có thể còn trường vị trí từ dữ liệu cũ; **UI không expose**.
+
+**UI danh mục Đơn vị (P6-DeptCatalog):**
+
+- **Không** cột **Vị trí** trên bảng desktop, card mobile, Excel export/import template, ô tìm kiếm, modal thêm/sửa, modal sơ đồ vị trí — loại bỏ hoàn toàn khỏi FE.
+- Khi **sửa** Đơn vị: FE **giữ nguyên** `location` / `locationImageUrl` hiện có trên BE (không ghi đè null) vì form không còn field.
+- **Cột Trưởng đơn vị (desktop + mobile card):** avatar + **tên** dòng trên (`font-semibold`); **cấp bậc** (`headRank`) dòng dưới, cỡ nhỏ (`text-2xs`), màu phụ — **không** xếp ngang cùng tên (giảm chiều rộng cột).
+- Tìm kiếm: tên, mã đơn vị, khối, tên trưởng đơn vị — **không** theo vị trí.
 
 ### 7.3 Nhân viên
 
@@ -250,6 +280,7 @@ Fields: mã (INT), tên, nhóm, unitCode, vị trí, head, sơ đồ vị trí (
   UI bảng: cột **Từ** · **Đến** · **Từ ngày** · **Đến ngày** · **Lý do** · **Người ghi** · **Thời điểm**. Mobile: card cùng field. Derive Từ/Đến từ chuỗi kỳ assignment (không bắt buộc cột DB mới).
 - Excel import/export/template: theo `ADMIN_UI.excel` — không đổi format cột ngoài mẫu hiện có
 - Mobile `StaffCard` badges: đồng bộ `SPEC_HEAD` §8.1 (compact, không uppercase bold; vân tay rút gọn + `title` đầy đủ)
+- Mobile `StaffCard` footer (P6-StaffMobile): **một hàng** `grid-cols-3` — cột 1 **Sửa + Xóa** ngang (`flex` + `divide-x`, cân đối với Chuyển đơn vị / Lịch sử); **cấm** Xóa rớt hàng dưới Sửa; có thêm Xóa vân tay → cột 4 riêng
 
 ### 7.4 Cấp bậc / Chức vụ / Trạng thái làm việc
 
@@ -335,6 +366,8 @@ Messages uniqueness HEAD: đúng chuỗi `HEAD_DEPT_TAKEN_MESSAGE` trong `AdminA
 
 Binding đầy đủ: **`SPEC_FINGERPRINT` §10.1–§10.2** (nav `settings-fingerprint-tokens`, API kiosk-tokens, workflow đổi `agent.properties`).  
 **P1.2d:** Đổi nhãn token đang dùng trên cùng màn — không phát hành lại; chi tiết §10.1.  
+**P1.2e:** Cột Thao tác gom dropdown (Đổi nhãn / Đặt PIN / Xoay / Thu hồi); header bảng một dòng — `SPEC_FINGERPRINT` §10.1.  
+**P1.2f:** Mobile card list thay bảng token — §10.1 P1.2f.  
 File này chỉ ghi nav/tab; **không** duplicate rule nghiệp vụ token.
 
 ---
@@ -367,7 +400,15 @@ Base: `/api/admin/ai` — chỉ ADMIN
 | GET | `/api/session/status` | Message admin fixed |
 | GET | `/api/attendance/status-types` | Active types (catalog đầy đủ P7) |
 | PUT/POST | `/api/attendance` | Admin quyền cao nhất; `VE_SOM` note 1 ngày; khoảng ngày thủ công (**cấm** `VE_SOM` range) |
-| PUT | `/api/admin/attendance/times` | Điền **4 ô trống** (§4.6) |
+| PUT | `/api/admin/attendance/times` | Điền **4 ô trống** (§4.6) — **cấm** khi `payroll_fill_status = PENDING` |
+| POST | `/api/admin/attendance/payroll-fill/approve` | Duyệt auto-fill giờ hành chính vào ô null (P8 — §4.13.8) |
+| POST | `/api/attendance/unlock` | Mở khóa HEAD ghi **một ngày** (`date` + `deptCode` + `reason`) — P14 §4.7; duyệt luôn yêu cầu HEAD `PENDING` cùng ngày nếu có |
+| DELETE | `/api/attendance/unlock/{deptCode}?date=` | Thu hồi unlock ngày đó |
+| GET | `/api/admin/attendance/audit-logs` | Nhật ký thao tác Chấm công Web (P14 §4.7.1) |
+| GET | `/api/admin/attendance/unlock-requests` | Hàng đợi yêu cầu mở khóa HEAD (P15 §4.7.2) |
+| GET | `/api/admin/attendance/unlock-requests/pending-count` | `{ count }` — số `PENDING` cho badge nav Tiện ích |
+| POST | `/api/admin/attendance/unlock-requests/{id}/approve` | Xác nhận → tạo unlock ngày đó |
+| POST | `/api/admin/attendance/unlock-requests/{id}/reject` | Từ chối (`note?`) |
 | POST | `/api/attendance/report-submit` | **Deprecated P5** |
 | GET | `/api/attendance/missing-punches` | Hàng đợi: `INCOMPLETE_PUNCHES` / `MISSING_EARLY_LEAVE_REASON` / `UNMARKED` |
 | GET | `/api/attendance/page?deptCode=&date=` | Chi tiết: status, **4 mốc giờ**, `lateFlag`, note, máy — cùng schema fingerprint |
@@ -433,6 +474,24 @@ Chương trình chạy đồng thời:
 - [x] **P6-Adminb:** `SearchableSelect` string \| `{ value, label }`; modal Chuyển đơn vị chọn Đơn vị đích không crash
 - [x] **P6-Adminc:** `POST /staff/{empCode}/transfer` body chỉ deptCode + lý do (+ revoke HEAD); modal không PUT hồ sơ
 - [x] **P6-Admind:** Lịch sử luân chuyển hiện **Từ → Đến** + ai / khi / lý do
+- [x] **P6-DeptCatalog:** Danh mục Đơn vị — bỏ Vị trí toàn FE; cột Trưởng đơn vị xếp dọc (tên + `headRank`)
+- [x] **P6-StatusKpi5Col:** Dashboard + Chi tiết ĐV — status KPI `grid-cols-5`; Tổng tách hàng riêng
+- [x] **P6-StatusKpiSideTotal:** Dashboard + Chi tiết ĐV — Tổng trái | status 5 cột phải
+- [x] **P6-HeadQuickLabel:** Chi tiết ĐV desktop — quick-action icon + nhãn rút gọn (shared `QuickActionGroup`)
+- [x] **P7-NghiTrucExplainGate:** Admin `canAdminFillTimes`; modal Điền giờ hiện giải trình HEAD; gate BE §4.13.8
+- [x] **P8-NghiTrucWizard:** Admin `canAdminApprovePayrollFill`; menu **Duyệt bổ sung giờ**; `ApprovePayrollFillModal`; gate fill tay khi PENDING §4.13.8
+- [x] **P8-WizardPresenceFix:** wizard HEAD ghi được trên presence + thiếu mốc (§4.13.8) — end-to-end với duyệt giờ
+- [x] **P8-ReassignNghiTruc:** quick-action `N.trực` `punchCount` 0–3 → wizard; Admin được `PUT /api/attendance/nghi-truc-assign`
+- [x] **P13-NghiTrucWizardZeroPunch:** NV chưa quét — wizard đủ sáng/chiều/cả ngày — §4.13.8
+- [x] **P14-PastUnlockAudit:** unlock theo ngày trên Chi tiết ĐV; Tiện ích **Lịch sử Chấm công** — §4.7 / §4.7.1
+- [x] **P15-HeadUnlockRequest:** Tiện ích **Yêu cầu mở khóa**; chuông Admin; xác nhận/từ chối — §4.7.2
+- [x] **P15-UnlockRequestNotifyType:** `notifications.type` VARCHAR(40) (V23) — chuông `UNLOCK_REQUEST*` — §4.7.2
+- [x] **P15-UnlockRequestsAdminUi:** Tiện ích **Yêu cầu mở khóa** — table/filter chuẩn; badge nav PENDING — §4.7.2
+- [x] **P15-UnlockRequestsAdminUiPolish:** sidebar 272px; badge nav đỏ; dropdown THAO TÁC — §4.7.2
+- [x] **P15-UnlockRequestsTablePolish:** nhãn Trạng thái filter; header một dòng; LÝ DO truncate — §4.7.2
+- [x] **P9-RowHintDeclutter:** Chi tiết ĐV — bỏ hint dòng dưới ô giờ; giữ 4 mốc + badge + banner KPI
+- [x] **P10-NghiTrucWizardLayout:** wizard N.trực layout ngang desktop — §4.13.8
+- [x] **P11b-PendingBadgeCompact / P12-AdminApproveUx:** badge pending một dòng; click badge duyệt giờ (không nút trùng Thao tác) — §4.13.6
 
 ---
 

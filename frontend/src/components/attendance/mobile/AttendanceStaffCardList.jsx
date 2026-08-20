@@ -5,6 +5,7 @@ import AttendanceStaffCard from './AttendanceStaffCard';
 const AttendanceStaffCardList = memo(function AttendanceStaffCardList({
   staffList,
   disabled,
+  todayWriteDisabled = false,
   onQuickAction,
   onSaveVeSomNote,
   onOpenScanLogs,
@@ -25,6 +26,7 @@ const AttendanceStaffCardList = memo(function AttendanceStaffCardList({
           key={staff.empCode}
           staff={staff}
           disabled={disabled}
+          todayWriteDisabled={todayWriteDisabled}
           onQuickAction={onQuickAction}
           onSaveVeSomNote={onSaveVeSomNote}
           onOpenScanLogs={onOpenScanLogs}

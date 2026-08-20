@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ADMIN_UI } from '../constants/admin';
+import { STATUS_BADGE, UI } from '../constants/attendance';
 import { useResponsivePageSize } from './useResponsivePageSize';
 import { useAttendanceStatusConfig } from '../context/AttendanceStatusContext';
 import { api } from '../api/client';
 import { adminApi } from '../services/api';
 import { downloadExcel } from '../utils/exportExcel';
-import { formatDeptFilterLabel, todayISO } from '../utils/formatters';
+import { formatDeptFilterLabel, formatInstantHm, todayISO } from '../utils/formatters';
+import { formatKioskMachineParts } from '../utils/kioskMachine';
 import { getDeptAttendanceDetailFilterDefaults } from '../utils/filterResetDefaults';
 import { buildBreakdownFromStaff } from '../utils/statusBreakdown';
 import { useCommittedSnapshot } from './useCommittedSnapshot';
@@ -44,8 +46,10 @@ export function useDeptAttendanceDetail() {
 
   const statusLabel = useCallback(
     (status) => {
-      if (!status) return 'Chưa chấm';
-      return statusOptions.find((o) => o.value === status)?.label || status;
+      if (!status) return UI.filterUnchecked;
+      return statusOptions.find((o) => o.value === status)?.label
+        || STATUS_BADGE[status]?.label
+        || status;
     },
     [statusOptions],
   );
@@ -222,9 +226,7 @@ export function useDeptAttendanceDetail() {
         'Máy',
         'Ghi chú',
       ];
-      const hm = (value) => (value
-        ? new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
-        : '');
+      const hm = (value) => formatInstantHm(value) || '';
       const rows = staff.map((s) => [
         s.fullname,
         s.empCodeFormatted,
@@ -236,7 +238,7 @@ export function useDeptAttendanceDetail() {
         hm(s.afternoonOutAt || s.checkOutAt),
         statusLabel(s.status),
         s.lateFlag ? '+ Đi trễ' : '',
-        [s.lastKioskLabel, s.lastKioskHostname, s.lastKioskIp].filter(Boolean).join(' · '),
+        formatKioskMachineParts(s.lastKioskLabel, s.lastKioskHostname, s.lastKioskIp) || '',
         s.note || '',
       ]);
       downloadExcel({
@@ -297,6 +299,56 @@ export function useDeptAttendanceDetail() {
     [appliedDate, appliedDeptCode, departments, loadData],
   );
 
+  const assignNghiTrucWizard = useCallback(
+    async ({ empCode, fromDate, toDate, reason, payrollIntent, note }) => {
+      const result = await api.assignNghiTrucWizard({
+        empCode,
+        fromDate,
+        toDate,
+        reason,
+        payrollIntent,
+        note,
+      });
+      await loadData(appliedDeptCode, appliedDate, departments, undefined);
+      return result;
+    },
+    [appliedDate, appliedDeptCode, departments, loadData],
+  );
+
+  const approvePayrollFill = useCallback(
+    async (body) => {
+      const updated = await adminApi.approvePayrollFill(body);
+      setStaff((prev) =>
+        prev.map((row) => (row.empCode === updated.empCode ? { ...row, ...updated } : row)),
+      );
+      await loadData(appliedDeptCode, appliedDate, departments, undefined);
+      return updated;
+    },
+    [appliedDate, appliedDeptCode, departments, loadData],
+  );
+
+  const unlockDepartment = useCallback(
+    async (reason) => {
+      if (appliedDeptCode == null) return;
+      await api.unlockDepartment(appliedDeptCode, reason, appliedDate);
+      await loadData(appliedDeptCode, appliedDate, departments, undefined);
+    },
+    [appliedDate, appliedDeptCode, departments, loadData],
+  );
+
+  const relockDepartment = useCallback(async () => {
+    if (appliedDeptCode == null) return;
+    await api.relockDepartment(appliedDeptCode, appliedDate);
+    await loadData(appliedDeptCode, appliedDate, departments, undefined);
+  }, [appliedDate, appliedDeptCode, departments, loadData]);
+
+  const approveUnlockRequest = useCallback(async () => {
+    const id = summary?.unlockRequestId;
+    if (id == null) return;
+    await adminApi.approveUnlockRequest(id);
+    await loadData(appliedDeptCode, appliedDate, departments, undefined);
+  }, [summary?.unlockRequestId, appliedDate, appliedDeptCode, departments, loadData]);
+
   return {
     departments,
     draftDeptCode,
@@ -322,11 +374,17 @@ export function useDeptAttendanceDetail() {
     filteredCount: staff.length,
     selectedDept,
     appliedDate,
+    appliedDeptCode,
     exporting,
     handleExport,
     fillAttendanceTimes,
     clearAttendanceDay,
     saveManualRange,
+    assignNghiTrucWizard,
     saveVeSomNote,
+    approvePayrollFill,
+    unlockDepartment,
+    relockDepartment,
+    approveUnlockRequest,
   };
 }

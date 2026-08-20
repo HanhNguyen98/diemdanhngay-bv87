@@ -282,7 +282,7 @@ export function useStatisticsPage(user) {
     historyItems: historyData?.items ?? [],
     historyPage,
     setHistoryPage,
-    historyTotalPages: historyData?.totalPages ?? 1,
+    historyTotalPages: Math.max(1, historyData?.totalPages ?? 1),
     historyTotalItems: historyData?.totalItems ?? 0,
     historyPageSize,
     historyInitialLoading,

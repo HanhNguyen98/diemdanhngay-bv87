@@ -9,18 +9,24 @@ import DeptAttendanceMobileFilter from './DeptAttendanceMobileFilter';
 import DeptAttendanceMobileSection from './DeptAttendanceMobileSection';
 import DeptAttendanceTable from './DeptAttendanceTable';
 import FillAttendanceTimesModal from './FillAttendanceTimesModal';
+import ApprovePayrollFillModal from './ApprovePayrollFillModal';
 import ClearAttendanceModal from './ClearAttendanceModal';
 import ScanLogModal from '../../../attendance/ScanLogModal';
 import ManualScheduleModal from '../../../attendance/ManualScheduleModal';
 import ManualStatusRangeModal from '../../../attendance/ManualStatusRangeModal';
+import NghiTrucAssignModal from '../../../attendance/NghiTrucAssignModal';
+import UnlockModal from '../../../UnlockModal';
 import { ADMIN_UI } from '../../../../constants/admin';
+import { UI, isPostScanOverrideAction, needsNghiTrucWizard } from '../../../../constants/attendance';
 import { useDeptAttendanceDetail } from '../../../../hooks/useDeptAttendanceDetail';
+import { useAdminUnlockRequestCount } from '../../../../context/AdminUnlockRequestCountContext';
 import { useAttendanceStatusConfig } from '../../../../context/AttendanceStatusContext';
 import { useFlashMessage } from '../../../../hooks/useFlashMessage';
+import { formatDeptCode, todayISO } from '../../../../utils/formatters';
 
 const KPI_SKELETON = (
   <div
-    className="min-h-[9.5rem] rounded-xl border border-line bg-surface-white animate-pulse"
+    className="min-h-[8.5rem] lg:min-h-[8rem] rounded-xl border border-line bg-surface-white animate-pulse"
     aria-hidden="true"
   />
 );
@@ -46,28 +52,45 @@ function DeptAttendanceDetailContent() {
     pageSize,
     goToPage,
     filteredCount,
+    selectedDept,
     appliedDate,
     exporting,
     handleExport,
     fillAttendanceTimes,
     clearAttendanceDay,
     saveManualRange,
+    assignNghiTrucWizard,
     saveVeSomNote,
+    approvePayrollFill,
     summary,
+    appliedDeptCode,
+    unlockDepartment,
+    relockDepartment,
+    approveUnlockRequest,
   } = useDeptAttendanceDetail();
 
   const { statusBadge } = useAttendanceStatusConfig();
   const { flash, showSuccess, showError, clearFlash } = useFlashMessage();
+  const { refreshPendingCount } = useAdminUnlockRequestCount();
 
   const reportSubmitted = Boolean(summary?.reportSubmitted);
 
   const [scanLogStaff, setScanLogStaff] = useState(null);
   const [manualScheduleStaff, setManualScheduleStaff] = useState(null);
   const [fillTimesStaff, setFillTimesStaff] = useState(null);
+  const [approvePayrollStaff, setApprovePayrollStaff] = useState(null);
   const [clearStaff, setClearStaff] = useState(null);
   const [clearSaving, setClearSaving] = useState(false);
   const [manualRangeTarget, setManualRangeTarget] = useState(null);
   const [manualRangeSaving, setManualRangeSaving] = useState(false);
+  const [nghiTrucTarget, setNghiTrucTarget] = useState(null);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+
+  const canUnlockDate = Boolean(appliedDeptCode) && appliedDate <= todayISO();
+  const canUnlock = canUnlockDate && !summary?.unlocked;
+  const canRelock = canUnlockDate && Boolean(summary?.unlocked);
+  const canApproveUnlockRequest =
+    canUnlockDate && summary?.unlockRequestStatus === 'PENDING' && summary?.unlockRequestId != null;
 
   const mobileBreadcrumb = useMemo(
     () => [
@@ -80,12 +103,21 @@ function DeptAttendanceDetailContent() {
   const handleQuickAction = (empCode, action) => {
     const full = paginated.find((s) => s.empCode === empCode);
     if (!full) return;
+    if (isPostScanOverrideAction(action) && needsNghiTrucWizard(full)) {
+      setNghiTrucTarget({ staff: full });
+      return;
+    }
     setManualRangeTarget({
       staff: full,
       status: action.value,
       statusLabel: statusBadge[action.value]?.label || action.label || action.value,
       statusOptions: action.statusOptions || [],
     });
+  };
+
+  const handleNghiTrucWizardSaved = async (result) => {
+    showSuccess(result?.message || UI.nghiTrucWizardSuccess);
+    setNghiTrucTarget(null);
   };
 
   const handleManualRangeConfirm = async ({ status, fromDate, toDate, note }) => {
@@ -119,6 +151,31 @@ function DeptAttendanceDetailContent() {
     }
   };
 
+  const handleUnlockConfirm = async (reason) => {
+    await unlockDepartment(reason);
+    showSuccess(UI.unlockSuccess(formatDeptCode(appliedDeptCode), appliedDate));
+    setUnlockOpen(false);
+  };
+
+  const handleRelock = async () => {
+    try {
+      await relockDepartment();
+      showSuccess(UI.relockSuccess(formatDeptCode(appliedDeptCode), appliedDate));
+    } catch (err) {
+      showError(err.message);
+    }
+  };
+
+  const handleApproveUnlockRequest = async () => {
+    try {
+      await approveUnlockRequest();
+      await refreshPendingCount();
+      showSuccess(ADMIN_UI.dashboard.unlockRequestsApproveSuccess);
+    } catch (err) {
+      showError(err.message);
+    }
+  };
+
   const filterProps = {
     departments,
     deptCode: draftDeptCode,
@@ -128,6 +185,12 @@ function DeptAttendanceDetailContent() {
     onApply: applyFilter,
     onReset: resetFilters,
     onExport: handleExport,
+    onUnlock: () => setUnlockOpen(true),
+    onRelock: handleRelock,
+    onApproveUnlockRequest: handleApproveUnlockRequest,
+    canUnlock,
+    canRelock,
+    canApproveUnlockRequest,
     initialLoading,
     exporting,
     canExport: filteredCount > 0,
@@ -145,6 +208,7 @@ function DeptAttendanceDetailContent() {
     onOpenScanLogs: setScanLogStaff,
     onOpenManualSchedule: setManualScheduleStaff,
     onFillTimes: setFillTimesStaff,
+    onApprovePayrollFill: setApprovePayrollStaff,
     onQuickAction: handleQuickAction,
     onClearAttendance: setClearStaff,
     onSaveVeSomNote: async (empCode, note) => {
@@ -170,7 +234,7 @@ function DeptAttendanceDetailContent() {
         <StableDataZone
           initialLoading={showKpiSpinner}
           skeleton={KPI_SKELETON}
-          className="shrink-0 min-h-[9.5rem]"
+          className="shrink-0 min-h-[8.5rem]"
         >
           {kpiBar}
         </StableDataZone>
@@ -183,7 +247,7 @@ function DeptAttendanceDetailContent() {
           <StableDataZone
             initialLoading={showKpiSpinner}
             skeleton={KPI_SKELETON}
-            className="min-h-[9.5rem]"
+            className="min-h-[8rem]"
           >
             {kpiBar}
           </StableDataZone>
@@ -220,6 +284,18 @@ function DeptAttendanceDetailContent() {
         />
       )}
 
+      {approvePayrollStaff && (
+        <ApprovePayrollFillModal
+          staff={approvePayrollStaff}
+          date={appliedDate}
+          onClose={() => setApprovePayrollStaff(null)}
+          onConfirm={async (body) => {
+            await approvePayrollFill(body);
+            showSuccess(UI.payrollFillApproveSuccess);
+          }}
+        />
+      )}
+
       {clearStaff && (
         <ClearAttendanceModal
           staff={clearStaff}
@@ -241,6 +317,26 @@ function DeptAttendanceDetailContent() {
           loading={manualRangeSaving}
           onConfirm={handleManualRangeConfirm}
           onClose={() => !manualRangeSaving && setManualRangeTarget(null)}
+        />
+      )}
+
+      {nghiTrucTarget && (
+        <NghiTrucAssignModal
+          staff={nghiTrucTarget.staff}
+          defaultDate={appliedDate}
+          onAssign={assignNghiTrucWizard}
+          onClose={() => setNghiTrucTarget(null)}
+          onSaved={handleNghiTrucWizardSaved}
+        />
+      )}
+
+      {unlockOpen && appliedDeptCode != null && (
+        <UnlockModal
+          deptCode={appliedDeptCode}
+          deptName={selectedDept?.deptName || ''}
+          date={appliedDate}
+          onConfirm={handleUnlockConfirm}
+          onClose={() => setUnlockOpen(false)}
         />
       )}
     </>

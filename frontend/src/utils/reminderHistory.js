@@ -14,6 +14,11 @@ export function formatLogDateTime(iso) {
   return `${d}/${m}/${y}${time ? ` ${time}` : ''}`;
 }
 
+/** Admin log columns: dd/mm/yyyy HH:mm or em-dash when empty. */
+export function formatLogDateTimeOrDash(iso) {
+  return formatLogDateTime(iso) || '—';
+}
+
 /** Time portion only (HH:mm) for mobile reminder cards. */
 export function formatLogTimeHM(iso) {
   if (!iso) return '';

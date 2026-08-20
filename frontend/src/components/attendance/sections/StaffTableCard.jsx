@@ -73,6 +73,7 @@ const StaffTableCard = memo(function StaffTableCard({
   staffList,
   mobileStaffList,
   disabled,
+  todayWriteDisabled = false,
   onQuickAction,
   onSaveVeSomNote,
   onOpenScanLogs,
@@ -185,6 +186,7 @@ const StaffTableCard = memo(function StaffTableCard({
         <AttendanceStaffCardList
           staffList={mobileList}
           disabled={disabled}
+          todayWriteDisabled={todayWriteDisabled}
           onQuickAction={onQuickAction}
           onSaveVeSomNote={onSaveVeSomNote}
           onOpenScanLogs={onOpenScanLogs}
@@ -205,6 +207,7 @@ const StaffTableCard = memo(function StaffTableCard({
         <AttendanceTable
           staffList={staffList}
           disabled={disabled}
+          todayWriteDisabled={todayWriteDisabled}
           onQuickAction={onQuickAction}
           onSaveVeSomNote={onSaveVeSomNote}
           onOpenScanLogs={onOpenScanLogs}

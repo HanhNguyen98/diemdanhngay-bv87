@@ -63,6 +63,11 @@ export function getReminderHistoryFilterDefaults(refDate = todayISO()) {
   };
 }
 
+/** Admin attendance audit log — same month-to-today default as reminder history. */
+export function getAttendanceAuditFilterDefaults(refDate = todayISO()) {
+  return getReminderHistoryFilterDefaults(refDate);
+}
+
 /**
  * HEAD statistics — preset THIS_MONTH with its computed range (not today-only).
  */

@@ -265,10 +265,10 @@ export function useAdminDashboard({ enabled = true } = {}) {
       try {
         if (dept.reportBlocked) {
           await adminApi.unblockReport(dept.deptCode);
-          showSuccess('Đã mở khóa gửi báo cáo cho ĐƠN VỊ');
+          showSuccess('Đã mở chỉnh sửa HEAD cho ĐƠN VỊ');
         } else {
           await adminApi.blockReport(dept.deptCode, ADMIN_UI.dashboard.blockReportReason);
-          showSuccess('Đã khóa gửi báo cáo cho ĐƠN VỊ');
+          showSuccess('Đã khóa chỉnh sửa HEAD cho ĐƠN VỊ');
         }
         setDashboard((prev) => {
           if (!prev) return prev;

@@ -83,6 +83,19 @@ function MetaRow({ icon: Icon, label, value }) {
   );
 }
 
+function FooterActionButton({ onClick, icon: Icon, label, className }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-1 min-w-0 flex-col items-center justify-center gap-1 px-1 py-0 text-4xs font-bold tracking-wide transition-colors ${className}`}
+    >
+      <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+      <span className="truncate max-w-full">{label}</span>
+    </button>
+  );
+}
+
 const StaffCard = memo(function StaffCard({
   staff,
   onEdit,
@@ -97,13 +110,18 @@ const StaffCard = memo(function StaffCard({
   const registered = Boolean(staff.fingerprintRegistered);
   const deptDisplay = `[${staff.deptCodeFormatted}] ${staff.deptName}`;
   const showFpDelete = registered && onDeleteFingerprint;
-  const footerActions = [
-    !avatarOnly,
-    !avatarOnly && onTransfer,
-    !avatarOnly && onHistory,
-    showFpDelete,
-    !avatarOnly && onDelete,
-  ].filter(Boolean).length;
+  const showEditDelete = !avatarOnly;
+  const showTransfer = !avatarOnly && onTransfer;
+  const showHistory = !avatarOnly && onHistory;
+  const footerColumns = [showEditDelete, showTransfer, showHistory, showFpDelete].filter(Boolean).length;
+  const footerGridClass =
+    footerColumns >= 4
+      ? 'grid-cols-4'
+      : footerColumns === 3
+        ? 'grid-cols-3'
+        : footerColumns === 2
+          ? 'grid-cols-2'
+          : 'grid-cols-1';
 
   return (
     <article className="flex flex-col divide-y divide-line border border-line rounded-2xl bg-surface-white shadow-card overflow-hidden">
@@ -141,61 +159,49 @@ const StaffCard = memo(function StaffCard({
         <MetaRow icon={Award} label={s.mobile.rankLabel} value={staff.rankName || '—'} />
       </div>
 
-      {footerActions > 0 && (
-        <div
-          className={`grid ${
-            footerActions >= 3 ? 'grid-cols-3' : footerActions === 2 ? 'grid-cols-2' : 'grid-cols-1'
-          } divide-x divide-line py-3`}
-        >
-          {!avatarOnly && (
-            <button
-              type="button"
-              onClick={() => onEdit(staff)}
-              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <Pencil className="w-4 h-4" />
-              {s.mobile.edit}
-            </button>
+      {footerColumns > 0 && (
+        <div className={`grid ${footerGridClass} divide-x divide-line py-3`}>
+          {showEditDelete && (
+            <div className="flex min-w-0 divide-x divide-line">
+              <FooterActionButton
+                onClick={() => onEdit(staff)}
+                icon={Pencil}
+                label={s.mobile.edit}
+                className="text-gray-600 hover:text-gray-800"
+              />
+              {onDelete && (
+                <FooterActionButton
+                  onClick={() => onDelete(staff)}
+                  icon={Trash2}
+                  label={s.mobile.delete}
+                  className="text-danger-fg hover:text-danger-dark"
+                />
+              )}
+            </div>
           )}
-          {!avatarOnly && onTransfer && (
-            <button
-              type="button"
+          {showTransfer && (
+            <FooterActionButton
               onClick={() => onTransfer(staff)}
-              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-primary hover:text-primary-hover transition-colors"
-            >
-              <ArrowRightLeft className="w-4 h-4" />
-              {s.transferDeptAction}
-            </button>
+              icon={ArrowRightLeft}
+              label={s.transferDeptAction}
+              className="text-primary hover:text-primary-hover"
+            />
           )}
-          {!avatarOnly && onHistory && (
-            <button
-              type="button"
+          {showHistory && (
+            <FooterActionButton
               onClick={() => onHistory(staff)}
-              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-info-fg hover:text-primary transition-colors"
-            >
-              <History className="w-4 h-4" />
-              {s.transferHistoryView}
-            </button>
+              icon={History}
+              label={s.transferHistoryView}
+              className="text-info-fg hover:text-primary"
+            />
           )}
           {showFpDelete && (
-            <button
-              type="button"
+            <FooterActionButton
               onClick={() => onDeleteFingerprint(staff)}
-              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-warning-fg hover:text-navy transition-colors"
-            >
-              <Fingerprint className="w-4 h-4" />
-              {s.fingerprintDeleteLabel}
-            </button>
-          )}
-          {!avatarOnly && onDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(staff)}
-              className="flex flex-col items-center gap-1 text-4xs font-bold tracking-wide text-danger-fg hover:text-danger-dark transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              {s.mobile.delete}
-            </button>
+              icon={Fingerprint}
+              label={s.fingerprintDeleteLabel}
+              className="text-warning-fg hover:text-navy"
+            />
           )}
         </div>
       )}

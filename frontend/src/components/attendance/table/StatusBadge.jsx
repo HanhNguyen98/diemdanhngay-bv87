@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { UI, isAttendanceBlank } from '../../../constants/attendance';
+import { UI, isAttendanceBlank, isNghiTrucStatus } from '../../../constants/attendance';
 import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusContext';
 import { resolveStatusKpiIcon } from '../../../utils/statusIcons';
 
@@ -23,12 +23,18 @@ function resolveCardLabel(staff, badgeMeta) {
   return staff.statusLabel || badgeMeta.label;
 }
 
-const StatusBadge = memo(function StatusBadge({ staff, variant }) {
+const StatusBadge = memo(function StatusBadge({ staff, variant, compactNghiTruc = false }) {
   const { statusBadge } = useAttendanceStatusConfig();
   const badgeMeta = getBadgeMeta(staff, statusBadge);
   const { className, icon } = badgeMeta;
   const isCard = variant === 'card';
-  const label = isCard ? resolveCardLabel(staff, badgeMeta) : badgeMeta.label;
+  let label = isCard ? resolveCardLabel(staff, badgeMeta) : badgeMeta.label;
+  if (compactNghiTruc && isNghiTrucStatus(staff?.status)) {
+    label =
+      statusBadge.NGHI_TRUC?.label
+      || statusBadge.NGHI_TRUC_HALF?.label?.split('·')[0]?.trim()
+      || 'NGHỈ TRỰC';
+  }
   const Icon = resolveStatusKpiIcon(icon);
 
   return (

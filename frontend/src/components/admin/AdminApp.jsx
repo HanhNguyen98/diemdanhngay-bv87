@@ -10,6 +10,7 @@ import { AiAssistantProvider } from '../../context/AiAssistantContext';
 import { AttendanceStatusProvider } from '../../context/AttendanceStatusContext';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 import { useAdminTabRouting } from '../../hooks/useAdminTabRouting';
+import { AdminUnlockRequestCountProvider } from '../../context/AdminUnlockRequestCountContext';
 
 const DepartmentsPage = lazy(() => import('../departments/DepartmentsPage'));
 const StaffPage = lazy(() => import('../staff/StaffPage'));
@@ -22,6 +23,8 @@ const SystemSettingsPage = lazy(() => import('../settings/SystemSettingsPage'));
 const UserPermissionsPage = lazy(() => import('../settings/UserPermissionsPage'));
 const FingerprintKioskTokensPage = lazy(() => import('../settings/FingerprintKioskTokensPage'));
 const ReminderHistoryPage = lazy(() => import('./utilities/ReminderHistoryPage'));
+const AttendanceAuditLogPage = lazy(() => import('./utilities/attendance-audit/AttendanceAuditLogPage'));
+const UnlockRequestsPage = lazy(() => import('./utilities/unlock-requests/UnlockRequestsPage'));
 const ChangePasswordForm = lazy(() => import('../account/ChangePasswordForm'));
 const ClinicalFlowPanel = lazy(() => import('../ai/ClinicalFlowPanel'));
 
@@ -37,6 +40,8 @@ const TAB_COMPONENTS = {
   [ADMIN_TAB_IDS.SETTINGS_USERS]: UserPermissionsPage,
   [ADMIN_TAB_IDS.SETTINGS_FINGERPRINT_TOKENS]: FingerprintKioskTokensPage,
   [ADMIN_TAB_IDS.UTILITIES_REMINDER_HISTORY]: ReminderHistoryPage,
+  [ADMIN_TAB_IDS.UTILITIES_ATTENDANCE_AUDIT]: AttendanceAuditLogPage,
+  [ADMIN_TAB_IDS.UTILITIES_UNLOCK_REQUESTS]: UnlockRequestsPage,
 };
 
 function AdminContent({ activeTab }) {
@@ -90,6 +95,7 @@ export default function AdminApp({ user, onLogout }) {
     <AttendanceStatusProvider>
     <AdminDashboardProvider value={isDashboard ? dashboardState : null}>
       <AiAssistantProvider>
+        <AdminUnlockRequestCountProvider>
         <AdminShell
           activeTab={activeTab}
           onTabChange={changeTab}
@@ -122,6 +128,7 @@ export default function AdminApp({ user, onLogout }) {
         <Suspense fallback={null}>
           <ClinicalFlowPanel />
         </Suspense>
+        </AdminUnlockRequestCountProvider>
       </AiAssistantProvider>
     </AdminDashboardProvider>
     </AttendanceStatusProvider>

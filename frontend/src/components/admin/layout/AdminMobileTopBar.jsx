@@ -3,8 +3,9 @@ import { Menu } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 import { useAppBranding } from '../../../context/AppBrandingContext';
 import AppLogo from '../../shared/AppLogo';
+import NotificationBell from '../../shared/NotificationBell';
 
-const AdminMobileTopBar = memo(function AdminMobileTopBar({ onMenuOpen }) {
+const AdminMobileTopBar = memo(function AdminMobileTopBar({ onMenuOpen, onOpenUnlockRequests }) {
   const { branding } = useAppBranding();
 
   return (
@@ -36,6 +37,11 @@ const AdminMobileTopBar = memo(function AdminMobileTopBar({ onMenuOpen }) {
             <p className="text-4xs text-content-muted truncate">{ADMIN_UI.portalSubtitle}</p>
           </div>
         </button>
+        <NotificationBell
+          onUnlockRequestNavigate={onOpenUnlockRequests}
+          variant="attendance"
+          className="shrink-0"
+        />
       </div>
     </header>
   );

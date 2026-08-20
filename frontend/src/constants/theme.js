@@ -41,4 +41,6 @@ export const COLORS = {
   kpiPresent: '#DEFBE8',
   kpiDuty: '#FDF2C9',
   kpiAbsent: '#FCE2E2',
+  /** Summary “Tổng…” metric cards (P3e) — synced with info.surface / info.line */
+  kpiTotal: { bg: '#E7F1FF', border: '#B6D4FE' },
 };

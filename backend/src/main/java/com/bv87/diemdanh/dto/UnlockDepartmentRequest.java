@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 public class UnlockDepartmentRequest {
@@ -12,4 +14,6 @@ public class UnlockDepartmentRequest {
     private Integer deptCode;
     @NotBlank(message = "Lý do mở khóa không được để trống")
     private String reason;
+    /** Attendance date to unlock; omit = today. Must not be in the future. */
+    private LocalDate date;
 }

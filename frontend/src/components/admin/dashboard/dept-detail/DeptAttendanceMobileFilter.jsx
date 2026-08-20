@@ -17,6 +17,12 @@ const DeptAttendanceMobileFilter = memo(function DeptAttendanceMobileFilter({
   onApply,
   onReset,
   onExport,
+  onUnlock,
+  onRelock,
+  onApproveUnlockRequest,
+  canUnlock,
+  canRelock,
+  canApproveUnlockRequest,
   initialLoading,
   exporting,
   canExport,
@@ -49,6 +55,36 @@ const DeptAttendanceMobileFilter = memo(function DeptAttendanceMobileFilter({
         </MobileFilterInputRow>
       </div>
 
+      {canApproveUnlockRequest && (
+        <button
+          type="button"
+          onClick={onApproveUnlockRequest}
+          disabled={initialLoading}
+          className="w-full h-9 px-3 rounded-lg bg-primary text-white text-3xs font-medium hover:bg-primary-hover transition-colors disabled:opacity-60"
+        >
+          {d.deptDetailApproveUnlockRequest}
+        </button>
+      )}
+      {canUnlock && (
+        <button
+          type="button"
+          onClick={onUnlock}
+          disabled={initialLoading}
+          className="w-full h-9 px-3 rounded-lg border border-line text-navy text-3xs font-medium hover:bg-neutral transition-colors disabled:opacity-60"
+        >
+          {d.deptDetailUnlock}
+        </button>
+      )}
+      {canRelock && (
+        <button
+          type="button"
+          onClick={onRelock}
+          disabled={initialLoading}
+          className="w-full h-9 px-3 rounded-lg border border-line text-content-muted text-3xs font-medium hover:bg-neutral transition-colors disabled:opacity-60"
+        >
+          {d.deptDetailRelock}
+        </button>
+      )}
       <button
         type="button"
         onClick={onExport}

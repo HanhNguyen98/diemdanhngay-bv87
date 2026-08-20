@@ -1,86 +1,78 @@
-import { memo, useMemo } from 'react';
-import { Ban, Check, Lock, LockOpen, Send } from 'lucide-react';
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronDown, Lock, LockOpen, ShieldOff, ShieldCheck } from 'lucide-react';
 import { ADMIN_UI } from '../../../constants/admin';
 
-const LOCKED_CLASS =
-  'text-content-muted bg-neutral border-line hover:bg-line/60';
-const OPEN_CLASS =
-  'text-success-dark bg-success border-success-fg/25 hover:bg-success/80';
-const DISABLED_CLASS =
-  'text-content-muted bg-neutral border-line opacity-60 cursor-wait';
+const MENU_MIN_WIDTH = 200;
+const MENU_EST_HEIGHT = 88;
+const VIEWPORT_PAD = 8;
 
-const REPORT_OPEN_CLASS =
-  'text-content-muted bg-surface-white border-line hover:bg-neutral';
-const REPORT_BLOCKED_CLASS =
-  'text-warning-dark bg-warning border-warning-fg/25 hover:bg-warning/80';
-const REPORT_SUBMITTED_CLASS =
-  'text-content-muted bg-neutral border-line opacity-50 cursor-not-allowed';
-
-function resolveLockState(dept, labels, lockLoading) {
+function resolveLockMenuItem(dept, labels, lockLoading) {
   const isLocked = dept.locked && !dept.unlocked;
 
   if (lockLoading) {
     return {
-      Icon: isLocked ? Lock : LockOpen,
       label: labels.lockStatusProcessing,
-      buttonClass: DISABLED_CLASS,
-      canToggle: false,
+      disabled: true,
+      icon: isLocked ? Lock : LockOpen,
     };
   }
 
   if (isLocked) {
     return {
-      Icon: Lock,
-      label: dept.manualLocked ? labels.lockStatusManualLocked : labels.lockStatusLocked,
-      buttonClass: LOCKED_CLASS,
-      canToggle: true,
+      label: labels.menuActionUnlockDept,
+      disabled: false,
+      icon: LockOpen,
+      hint: dept.manualLocked ? labels.lockStatusManualLocked : labels.lockStatusLocked,
     };
   }
 
   return {
-    Icon: LockOpen,
-    label: dept.unlocked ? labels.lockStatusUnlocked : labels.lockStatusOpen,
-    buttonClass: OPEN_CLASS,
-    canToggle: true,
+    label: labels.menuActionLockDept,
+    disabled: false,
+    icon: Lock,
+    hint: dept.unlocked ? labels.lockStatusUnlocked : labels.lockStatusOpen,
   };
 }
 
-function resolveReportState(dept, labels, reportLoading) {
+function resolveHeadEditMenuItem(dept, labels, reportLoading) {
   if (dept.reportSubmitted) {
     return {
-      Icon: Check,
-      label: labels.reportStatusSubmitted,
-      buttonClass: REPORT_SUBMITTED_CLASS,
-      canToggle: false,
+      label: labels.menuActionLegacyReport,
+      disabled: true,
+      icon: ShieldCheck,
+      hint: labels.reportStatusSubmitted,
     };
   }
 
   if (reportLoading) {
     return {
-      Icon: dept.reportBlocked ? Ban : Send,
       label: labels.reportStatusProcessing,
-      buttonClass: DISABLED_CLASS,
-      canToggle: false,
+      disabled: true,
+      icon: dept.reportBlocked ? ShieldOff : ShieldCheck,
     };
   }
 
   if (dept.reportBlocked) {
     return {
-      Icon: Ban,
-      label: labels.reportStatusBlocked,
-      buttonClass: REPORT_BLOCKED_CLASS,
-      canToggle: true,
+      label: labels.menuActionUnblockHeadEdit,
+      disabled: false,
+      icon: ShieldCheck,
+      hint: labels.reportStatusBlocked,
+      danger: false,
     };
   }
 
   return {
-    Icon: Send,
-    label: labels.reportStatusOpen,
-    buttonClass: REPORT_OPEN_CLASS,
-    canToggle: true,
+    label: labels.menuActionBlockHeadEdit,
+    disabled: false,
+    icon: ShieldOff,
+    hint: labels.reportStatusOpen,
+    danger: true,
   };
 }
 
+/** Dashboard row actions — SPEC_ADMIN §6.2 P6-DashActions. */
 const DeptRowActions = memo(function DeptRowActions({
   dept,
   onToggleLock,
@@ -90,52 +82,193 @@ const DeptRowActions = memo(function DeptRowActions({
   compact = false,
 }) {
   const { dashboard: d } = ADMIN_UI;
-  const lockState = useMemo(
-    () => resolveLockState(dept, d, lockLoading),
+  const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const menuId = useId();
+
+  const lockItem = useMemo(
+    () => resolveLockMenuItem(dept, d, lockLoading),
     [dept, d, lockLoading],
   );
-  const reportState = useMemo(
-    () => resolveReportState(dept, d, reportLoading),
+  const headEditItem = useMemo(
+    () => resolveHeadEditMenuItem(dept, d, reportLoading),
     [dept, d, reportLoading],
   );
 
-  const iconSize = compact ? 'w-3.5 h-3.5' : 'w-4 h-4';
-  const buttonSize = compact ? 'w-7 h-7' : 'w-8 h-8';
-  const actionButtonClass = (buttonClass, canToggle) =>
-    `rounded-lg border flex items-center justify-center transition-colors shrink-0 ${buttonSize} ${buttonClass} disabled:cursor-not-allowed`;
+  const close = useCallback(() => {
+    setOpen(false);
+    setMenuStyle(null);
+  }, []);
 
-  const { Icon: LockIcon, label: lockLabel, buttonClass: lockButtonClass, canToggle: canToggleLock } =
-    lockState;
-  const {
-    Icon: ReportIcon,
-    label: reportLabel,
-    buttonClass: reportButtonClass,
-    canToggle: canToggleReport,
-  } = reportState;
+  const updateMenuPosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const menuHeight = menuRef.current?.offsetHeight ?? MENU_EST_HEIGHT;
+    const menuWidth = menuRef.current?.offsetWidth ?? MENU_MIN_WIDTH;
+    const gap = 4;
+
+    let top = rect.bottom + gap;
+    if (top + menuHeight > window.innerHeight - VIEWPORT_PAD) {
+      top = Math.max(VIEWPORT_PAD, rect.top - menuHeight - gap);
+    }
+
+    let left = rect.right - menuWidth;
+    left = Math.max(VIEWPORT_PAD, Math.min(left, window.innerWidth - menuWidth - VIEWPORT_PAD));
+
+    setMenuStyle({ top, left, minWidth: MENU_MIN_WIDTH });
+  }, []);
+
+  const openMenu = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    setMenuStyle({
+      top: rect.bottom + 4,
+      left: Math.max(VIEWPORT_PAD, rect.right - MENU_MIN_WIDTH),
+      minWidth: MENU_MIN_WIDTH,
+    });
+    setOpen(true);
+  }, []);
+
+  const toggleMenu = useCallback(() => {
+    if (open) {
+      close();
+    } else {
+      openMenu();
+    }
+  }, [open, close, openMenu]);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    updateMenuPosition();
+    const menu = menuRef.current;
+    if (!menu) return undefined;
+    const ro = new ResizeObserver(() => updateMenuPosition());
+    ro.observe(menu);
+    return () => ro.disconnect();
+  }, [open, updateMenuPosition, lockItem.label, headEditItem.label]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onScrollOrResize = () => updateMenuPosition();
+    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    return () => {
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+    };
+  }, [open, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointer = (e) => {
+      const target = e.target;
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+      close();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, close]);
+
+  const runLock = () => {
+    if (lockItem.disabled) return;
+    close();
+    onToggleLock(dept);
+  };
+
+  const runHeadEdit = () => {
+    if (headEditItem.disabled) return;
+    close();
+    onToggleReportBlock(dept);
+  };
+
+  const btnClass = compact
+    ? 'inline-flex items-center justify-center gap-0.5 whitespace-nowrap rounded-md border border-line bg-surface-white px-1.5 py-0.5 text-3xs font-semibold text-primary hover:bg-primary-light'
+    : 'inline-flex items-center justify-center gap-1 whitespace-nowrap min-w-[5.25rem] rounded-lg border border-line bg-surface-white px-2 py-1 text-xs font-semibold text-primary hover:bg-primary-light';
+
+  const itemClass =
+    'flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-navy hover:bg-primary-light transition-colors disabled:opacity-50 disabled:pointer-events-none';
+  const dangerItemClass =
+    'flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-danger-fg hover:bg-danger transition-colors disabled:opacity-50 disabled:pointer-events-none';
+
+  const LockIcon = lockItem.icon;
+  const HeadEditIcon = headEditItem.icon;
+  const iconSize = compact ? 'w-3 h-3' : 'w-3.5 h-3.5';
+
+  const menuPanel =
+    open && menuStyle ? (
+      <div
+        id={menuId}
+        ref={menuRef}
+        role="menu"
+        style={{
+          position: 'fixed',
+          top: menuStyle.top,
+          left: menuStyle.left,
+          minWidth: menuStyle.minWidth,
+          zIndex: 60,
+        }}
+        className="rounded-lg border border-line bg-surface-white py-1 shadow-card"
+      >
+        <button
+          type="button"
+          role="menuitem"
+          className={itemClass}
+          disabled={lockItem.disabled}
+          title={lockItem.hint}
+          onClick={runLock}
+        >
+          <LockIcon className={`${iconSize} shrink-0`} aria-hidden="true" />
+          <span>{lockItem.label}</span>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          className={headEditItem.danger ? dangerItemClass : itemClass}
+          disabled={headEditItem.disabled}
+          title={headEditItem.hint}
+          onClick={runHeadEdit}
+        >
+          <HeadEditIcon className={`${iconSize} shrink-0`} aria-hidden="true" />
+          <span>{headEditItem.label}</span>
+        </button>
+      </div>
+    ) : null;
 
   return (
-    <div className="flex items-center justify-center gap-1">
-      <button
-        type="button"
-        disabled={lockLoading || !canToggleLock}
-        onClick={() => onToggleLock(dept)}
-        title={lockLabel}
-        className={actionButtonClass(lockButtonClass, canToggleLock)}
-        aria-label={lockLabel}
-      >
-        <LockIcon className={iconSize} aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        disabled={reportLoading || !canToggleReport}
-        onClick={() => onToggleReportBlock(dept)}
-        title={reportLabel}
-        className={actionButtonClass(reportButtonClass, canToggleReport)}
-        aria-label={reportLabel}
-      >
-        <ReportIcon className={iconSize} aria-hidden="true" />
-      </button>
-    </div>
+    <>
+      <div ref={triggerRef}>
+        <button
+          type="button"
+          className={btnClass}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          aria-label={d.progressActionsMenuAria}
+          onClick={toggleMenu}
+        >
+          <span>{d.progressActionsMenu}</span>
+          <ChevronDown
+            className={`${iconSize} transition-transform ${open ? 'rotate-180' : ''}`}
+            aria-hidden
+          />
+        </button>
+      </div>
+      {menuPanel ? createPortal(menuPanel, document.body) : null}
+    </>
   );
 });
 

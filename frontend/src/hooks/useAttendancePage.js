@@ -5,6 +5,8 @@ import {
   ATTENDANCE_STATUS,
   UI,
   isAttendanceUnchecked,
+  isPostScanOverrideAction,
+  needsNghiTrucWizard,
 } from '../constants/attendance';
 import { useAttendanceStatusConfig } from '../context/AttendanceStatusContext';
 import { formatDeptCode, getRecentDates, todayISO } from '../utils/formatters';
@@ -34,11 +36,13 @@ export function useAttendancePage(user) {
   const [fetching, setFetching] = useState(false);
   const { flash, showSuccess, showWarning, showError, clearFlash } = useFlashMessage();
   const [unlockTarget, setUnlockTarget] = useState(null);
+  const [requestUnlockOpen, setRequestUnlockOpen] = useState(false);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [manualRangeTarget, setManualRangeTarget] = useState(null);
+  const [nghiTrucTarget, setNghiTrucTarget] = useState(null);
   const [manualRangeSaving, setManualRangeSaving] = useState(false);
   const [missingPunches, setMissingPunches] = useState([]);
   const [missingLoading, setMissingLoading] = useState(false);
@@ -149,14 +153,28 @@ export function useAttendancePage(user) {
     (empCode, action) => {
       const staff = staffListRef.current.find((s) => s.empCode === empCode);
       if (!staff) return;
+      if (isPostScanOverrideAction(action) && needsNghiTrucWizard(staff)) {
+        setNghiTrucTarget({ staff });
+        return;
+      }
       setManualRangeTarget({
         staff,
         status: action.value,
         statusLabel: statusBadge[action.value]?.label || action.label || action.value,
         statusOptions: action.statusOptions || [],
+        isNghiTruc: isPostScanOverrideAction(action),
       });
     },
     [statusBadge],
+  );
+
+  const handleNghiTrucWizardSaved = useCallback(
+    async (result) => {
+      showSuccess(result?.message || UI.nghiTrucWizardSuccess);
+      cache.invalidate(selectedDept, selectedDate);
+      await fetchAttendance(selectedDept, selectedDate, { force: true, silent: true });
+    },
+    [cache, selectedDate, selectedDept, fetchAttendance, showSuccess],
   );
 
   const handleManualRangeConfirm = useCallback(
@@ -210,11 +228,32 @@ export function useAttendancePage(user) {
   );
 
   const handleUnlockConfirm = async (reason) => {
-    await api.unlockDepartment(unlockTarget.deptCode, reason);
-    showSuccess(`Đã cấp quyền mở khóa cho Đơn vị ${formatDeptCode(unlockTarget.deptCode)}`);
+    await api.unlockDepartment(unlockTarget.deptCode, reason, selectedDate);
+    showSuccess(
+      UI.unlockSuccess(formatDeptCode(unlockTarget.deptCode), selectedDate),
+    );
     cache.invalidate(selectedDept, selectedDate);
     await fetchAttendance(selectedDept, selectedDate, { force: true });
     setUnlockTarget(null);
+  };
+
+  const handleRelock = useCallback(async () => {
+    try {
+      await api.relockDepartment(selectedDept, selectedDate);
+      showSuccess(UI.relockSuccess(formatDeptCode(selectedDept), selectedDate));
+      cache.invalidate(selectedDept, selectedDate);
+      await fetchAttendance(selectedDept, selectedDate, { force: true });
+    } catch (err) {
+      showError(err.message);
+    }
+  }, [selectedDept, selectedDate, cache, fetchAttendance, showSuccess, showError]);
+
+  const handleUnlockRequestConfirm = async (reason) => {
+    await api.requestUnlockDepartment(selectedDate, reason);
+    showSuccess(UI.unlockRequestSuccess);
+    cache.invalidate(selectedDept, selectedDate);
+    await fetchAttendance(selectedDept, selectedDate, { force: true });
+    setRequestUnlockOpen(false);
   };
 
   useEffect(() => {
@@ -249,10 +288,30 @@ export function useAttendancePage(user) {
   const selectedDeptInfo = departments.find((d) => d.deptCode === selectedDept);
   const selectedDeptName = selectedDeptInfo?.deptName || summary?.deptName || '';
   const locked = summary?.locked ?? false;
-  const editable = (summary?.editable ?? false) && isToday;
-  // P5 — soft-lock via summary.editable; reportBlocked still locks HEAD
+  const editable = summary?.editable ?? false;
+  // P5 / P6 / P14 — reportBlocked = full roster lock; soft-lock = today writes only
   const reportBlocked = Boolean(summary?.reportBlocked);
-  const tableDisabled = !editable || (!isAdmin && reportBlocked) || manualRangeSaving;
+  const selectedDateWriteDisabled = !isAdmin && !editable;
+  const softLocked = isToday && selectedDateWriteDisabled && !reportBlocked;
+  const pastDateLocked = !isToday && selectedDateWriteDisabled && !reportBlocked;
+  const tableDisabled =
+    (!isAdmin && reportBlocked) ||
+    manualRangeSaving ||
+    (!isToday && selectedDateWriteDisabled);
+  const todayWriteDisabled = isToday && selectedDateWriteDisabled;
+  /** AI batch / write tools — blocked by soft-lock, past lock, or reportBlocked */
+  const aiWriteDisabled =
+    selectedDateWriteDisabled || (!isAdmin && reportBlocked) || manualRangeSaving;
+  const unlocked = summary?.unlocked;
+  const unlockRequestStatus = summary?.unlockRequestStatus ?? null;
+  const unlockRequestPending = unlockRequestStatus === 'PENDING';
+  const unlockRequestRejected = unlockRequestStatus === 'REJECTED' && !unlocked;
+  const canRequestUnlock =
+    !isAdmin &&
+    !unlocked &&
+    selectedDate <= todayISO() &&
+    !unlockRequestPending &&
+    (pastDateLocked || softLocked);
 
   const statusBreakdown = useMemo(() => {
     if (staffList.length > 0 && statusCatalogItems.length > 0) {
@@ -315,16 +374,28 @@ export function useAttendancePage(user) {
     handleDateChange,
     locked,
     lockMessage: summary?.lockMessage,
-    unlocked: summary?.unlocked,
+    unlocked,
     editable,
+    softLocked,
+    pastDateLocked,
     tableDisabled,
+    todayWriteDisabled,
+    aiWriteDisabled,
     unlockTarget,
     setUnlockTarget,
     handleUnlockConfirm,
+    handleRelock,
+    requestUnlockOpen,
+    setRequestUnlockOpen,
+    handleUnlockRequestConfirm,
+    canRequestUnlock,
+    unlockRequestPending,
+    unlockRequestRejected,
     statusBreakdown,
     total: summary?.total || staffList.length,
     pageSize,
     reportBlocked: summary?.reportBlocked ?? false,
+    lockTime: summary?.lockTime ?? null,
     missingPunches,
     missingLoading,
     search,
@@ -339,6 +410,9 @@ export function useAttendancePage(user) {
     filteredCount: filteredStaff.length,
     handleQuickAction,
     handleVeSomNoteSave,
+    nghiTrucTarget,
+    setNghiTrucTarget,
+    handleNghiTrucWizardSaved,
     manualRangeTarget,
     setManualRangeTarget,
     manualRangeSaving,

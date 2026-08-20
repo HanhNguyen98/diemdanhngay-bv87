@@ -3,8 +3,8 @@ import { normalizeStatusBreakdown } from '../../../utils/statusBreakdown';
 import AttendanceStatusTile from './AttendanceStatusTile';
 import MobileHorizontalScroll from '../../shared/MobileHorizontalScroll';
 
-export const DESKTOP_STATUS_COLUMNS = 4;
-export const DESKTOP_STATUS_ROWS = 2;
+/** HEAD Chấm công desktop — SPEC §6.2 P6-HeadKpiCompact */
+export const DESKTOP_STATUS_COLUMNS = 5;
 
 const SCROLL_INNER_CLASS = 'gap-2 snap-x snap-mandatory pb-0.5 pr-1 w-full';
 
@@ -41,6 +41,7 @@ const AttendanceStatusTileGrid = memo(function AttendanceStatusTileGrid({
   className = '',
   fluid = false,
   columns = null,
+  compactDesktop = false,
   scroll = false,
 }) {
   const items = normalizeStatusBreakdown(statusBreakdown);
@@ -53,7 +54,7 @@ const AttendanceStatusTileGrid = memo(function AttendanceStatusTileGrid({
   if (columns === DESKTOP_STATUS_COLUMNS) {
     return (
       <div
-        className={`grid grid-cols-4 grid-rows-2 gap-2 flex-1 min-w-0 min-h-[10rem] ${className}`}
+        className={`grid grid-cols-5 gap-1.5 flex-1 min-w-0 auto-rows-fr ${className}`}
         aria-label="Thống kê theo trạng thái"
       >
         {items.map((item) => (
@@ -64,7 +65,8 @@ const AttendanceStatusTileGrid = memo(function AttendanceStatusTileGrid({
             colorKey={item.colorKey}
             iconKey={item.iconKey}
             children={item.children}
-            fluid
+            compactDesktop={compactDesktop}
+            fluid={!compactDesktop}
           />
         ))}
       </div>

@@ -79,6 +79,24 @@ CREATE TABLE IF NOT EXISTS attendance_unlocks (
     CONSTRAINT fk_unlock_dept FOREIGN KEY (dept_code) REFERENCES departments (dept_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS attendance_unlock_requests (
+    id                      BIGINT       NOT NULL AUTO_INCREMENT,
+    attendance_date         DATE         NOT NULL,
+    dept_code               INT          NOT NULL,
+    reason                  VARCHAR(255) NOT NULL,
+    status                  VARCHAR(20)  NOT NULL,
+    requested_by            VARCHAR(50)  NOT NULL,
+    requested_by_account_id BIGINT       NOT NULL,
+    requested_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_by             VARCHAR(50)  NULL,
+    reviewed_at             DATETIME     NULL,
+    review_note             VARCHAR(255) NULL,
+    PRIMARY KEY (id),
+    KEY idx_unlock_req_status (status, requested_at),
+    KEY idx_unlock_req_dept_date (dept_code, attendance_date),
+    CONSTRAINT fk_unlock_req_dept FOREIGN KEY (dept_code) REFERENCES departments (dept_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Bảng phụ: tài khoản đăng nhập (Admin / Trưởng ban) — cần cho phân quyền
 CREATE TABLE IF NOT EXISTS accounts (
     id            BIGINT       NOT NULL AUTO_INCREMENT,
@@ -121,6 +139,9 @@ CREATE TABLE IF NOT EXISTS notifications (
     KEY idx_notif_recipient (recipient_id, is_read, created_at),
     CONSTRAINT fk_notif_recipient FOREIGN KEY (recipient_id) REFERENCES accounts (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Hibernate ddl-auto may create MySQL ENUM from Java constants; P15 adds UNLOCK_REQUEST*.
+ALTER TABLE notifications MODIFY COLUMN type VARCHAR(40) NOT NULL;
 
 CREATE TABLE IF NOT EXISTS attendance_reminder_logs (
     id               BIGINT       NOT NULL AUTO_INCREMENT,

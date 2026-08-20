@@ -4,6 +4,10 @@ import { useAttendanceStatusConfig } from '../../../context/AttendanceStatusCont
 import { mergeBreakdownWithCatalog } from '../../../utils/statusBreakdown';
 import StatusBreakdownKpiGrid from '../../shared/StatusBreakdownKpiGrid';
 
+/** Desktop status KPI — P6-StatusKpi5Col (SPEC_HEAD §7.2 / SPEC_FINGERPRINT §10.5). */
+const DESKTOP_STATUS_GRID_CLASS =
+  'hidden lg:grid lg:grid-cols-5 gap-1.5';
+
 const StatisticsKpiCards = memo(function StatisticsKpiCards({ statusBreakdown }) {
   const { items: catalogItems } = useAttendanceStatusConfig();
 
@@ -15,8 +19,9 @@ const StatisticsKpiCards = memo(function StatisticsKpiCards({ statusBreakdown })
   return (
     <StatusBreakdownKpiGrid
       statusBreakdown={items}
-      className="hidden lg:grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 min-h-[9.5rem]"
+      className={DESKTOP_STATUS_GRID_CLASS}
       unit={STATISTICS_UI.kpiUnit}
+      compact
     />
   );
 });

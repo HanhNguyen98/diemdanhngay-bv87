@@ -11,7 +11,6 @@ import InlineErrorBanner from '../shared/InlineErrorBanner';
 import DepartmentStatGrid from './DepartmentStatGrid';
 import DepartmentTable from './DepartmentTable';
 import DepartmentCardList from './mobile/DepartmentCardList';
-import DepartmentLocationMapModal from './DepartmentLocationMapModal';
 import DepartmentFilterBar from './DepartmentFilterBar';
 
 const DepartmentFormModal = lazy(() => import('./DepartmentFormModal'));
@@ -19,7 +18,6 @@ const DepartmentGroupManageModal = lazy(() => import('./DepartmentGroupManageMod
 const DeleteModal = lazy(() => import('../shared/DeleteModal'));
 
 export default function DepartmentsPage() {
-  const [locationMapDept, setLocationMapDept] = useState(null);
   const [groupsModalOpen, setGroupsModalOpen] = useState(false);
 
   const {
@@ -135,7 +133,6 @@ export default function DepartmentsPage() {
               showGroupName={showGroupColumn}
               onEdit={setFormDept}
               onDelete={setDeleteDept}
-              onViewLocation={setLocationMapDept}
             />
           </div>
           <div className="hidden lg:block">
@@ -144,12 +141,9 @@ export default function DepartmentsPage() {
               showGroupColumn={showGroupColumn}
               onEdit={setFormDept}
               onDelete={setDeleteDept}
-              onViewLocation={setLocationMapDept}
             />
           </div>
         </RegistryTableShell>
-
-        <DepartmentLocationMapModal dept={locationMapDept} onClose={() => setLocationMapDept(null)} />
 
         <Suspense fallback={null}>
           {groupsModalOpen && (

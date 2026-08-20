@@ -8,10 +8,13 @@ import DeleteModal from '../shared/DeleteModal';
 import FlashBanner from '../shared/FlashBanner';
 import FormModal from '../shared/FormModal';
 import InlineErrorBanner from '../shared/InlineErrorBanner';
+import KioskTokenActionsMenu from './KioskTokenActionsMenu';
 import KioskTokenStatGrid from './KioskTokenStatGrid';
+import KioskTokenMobileSection from './mobile/KioskTokenMobileSection';
 import { ADMIN_UI } from '../../constants/admin';
 import { adminApi } from '../../services/api';
 import { useResponsivePageSize } from '../../hooks/useResponsivePageSize';
+import { formatLogDateTimeOrDash } from '../../utils/reminderHistory';
 
 const t = ADMIN_UI.fingerprintTokens;
 const COL_SPAN = 8;
@@ -19,15 +22,6 @@ const COL_SPAN = 8;
 const labelClass = 'block text-xs font-bold text-content-muted uppercase tracking-wide mb-1.5';
 const inputClass =
   'w-full h-9 border border-gray-200 rounded-lg px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30 bg-white';
-
-function formatDateTime(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('vi-VN', { hour12: false });
-  } catch {
-    return '—';
-  }
-}
 
 /**
  * Admin Settings — manage kiosk tokens + enroll PIN + rename label (SPEC_FINGERPRINT §10.1).
@@ -263,8 +257,27 @@ export default function FingerprintKioskTokensPage() {
           <KioskTokenStatGrid stats={stats} />
         </div>
 
+        <KioskTokenMobileSection
+          totalCount={rows.length}
+          items={paginated}
+          loading={loading}
+          initialLoading={initialLoading}
+          refreshing={loading && !initialLoading}
+          page={safePage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          busyId={busyId}
+          copiedKey={copiedKey}
+          onCopy={copyText}
+          onIssue={openIssue}
+          onRenameLabel={openRenameLabel}
+          onSetPin={openSetPin}
+          onRotate={setRotateRow}
+          onRevoke={setRevokeRow}
+        />
+
         <RegistryTableShell
-          className="flex-1 min-h-0"
+          className="hidden lg:flex flex-1 min-h-0"
           toolbar={
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
               <h2 className="admin-section-title truncate">{t.listTitle}</h2>
@@ -295,14 +308,14 @@ export default function FingerprintKioskTokensPage() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="table-header-row">
-                <th className="table-th-left">{t.colDept}</th>
-                <th className="table-th-left">{t.colLabel}</th>
-                <th className="table-th-left">{t.colToken}</th>
-                <th className="table-th-left">{t.colEnrollPin}</th>
-                <th className="table-th-left">{t.colAgent}</th>
-                <th className="table-th-left">{t.colStatus}</th>
-                <th className="table-th-left">{t.colCreated}</th>
-                <th className="table-th-right">{t.colActions}</th>
+                <th className="table-th-left whitespace-nowrap">{t.colDept}</th>
+                <th className="table-th-left whitespace-nowrap">{t.colLabel}</th>
+                <th className="table-th-left whitespace-nowrap">{t.colToken}</th>
+                <th className="table-th-left whitespace-nowrap">{t.colEnrollPin}</th>
+                <th className="table-th-left whitespace-nowrap">{t.colAgent}</th>
+                <th className="table-th-left whitespace-nowrap">{t.colStatus}</th>
+                <th className="table-th-left whitespace-nowrap">{t.colCreated}</th>
+                <th className="table-th-right whitespace-nowrap w-24">{t.colActions}</th>
               </tr>
             </thead>
             <tbody>
@@ -394,44 +407,17 @@ export default function FingerprintKioskTokensPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-content-muted whitespace-nowrap">
-                      {formatDateTime(row.createdAt)}
+                      {formatLogDateTimeOrDash(row.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       {row.active ? (
-                        <>
-                          <button
-                            type="button"
-                            className="text-primary font-semibold text-xs mr-3 disabled:opacity-50"
-                            disabled={busyId === row.id}
-                            onClick={() => openRenameLabel(row)}
-                          >
-                            {t.renameLabel}
-                          </button>
-                          <button
-                            type="button"
-                            className="text-primary font-semibold text-xs mr-3 disabled:opacity-50"
-                            disabled={busyId === row.id}
-                            onClick={() => openSetPin(row)}
-                          >
-                            {t.setPin}
-                          </button>
-                          <button
-                            type="button"
-                            className="text-primary font-semibold text-xs mr-3 disabled:opacity-50"
-                            disabled={busyId === row.id}
-                            onClick={() => setRotateRow(row)}
-                          >
-                            {t.rotate}
-                          </button>
-                          <button
-                            type="button"
-                            className="text-danger-fg font-semibold text-xs disabled:opacity-50"
-                            disabled={busyId === row.id}
-                            onClick={() => setRevokeRow(row)}
-                          >
-                            {t.revoke}
-                          </button>
-                        </>
+                        <KioskTokenActionsMenu
+                          disabled={busyId === row.id}
+                          onRenameLabel={() => openRenameLabel(row)}
+                          onSetPin={() => openSetPin(row)}
+                          onRotate={() => setRotateRow(row)}
+                          onRevoke={() => setRevokeRow(row)}
+                        />
                       ) : (
                         <span className="text-content-muted text-xs">—</span>
                       )}

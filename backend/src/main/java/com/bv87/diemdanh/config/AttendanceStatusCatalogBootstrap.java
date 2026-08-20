@@ -88,7 +88,11 @@ public class AttendanceStatusCatalogBootstrap implements ApplicationRunner {
             boolean manualAllowed,
             boolean groupParent,
             String parentCode) {
-        AttendanceStatusType type = repository.findByCode(code).orElseGet(AttendanceStatusType::new);
+        // P6-CatalogSeed — insert-if-absent; do not overwrite Admin catalog edits
+        if (repository.findByCode(code).isPresent()) {
+            return;
+        }
+        AttendanceStatusType type = new AttendanceStatusType();
         type.setCode(code);
         type.setLabel(label);
         type.setBadgeLabel(badgeLabel);

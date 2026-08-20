@@ -8,6 +8,7 @@ import com.bv87.diemdanh.repository.NotificationRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -56,6 +57,15 @@ public class NotificationService {
 
     Notification save(Notification notification) {
         return notificationRepository.save(notification);
+    }
+
+    /**
+     * Persist a bell notification in its own transaction so a DB error
+     * (e.g. stale MySQL ENUM on type) does not roll back the caller.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveIsolated(Notification notification) {
+        notificationRepository.save(notification);
     }
 
     private NotificationDto toDto(Notification n) {

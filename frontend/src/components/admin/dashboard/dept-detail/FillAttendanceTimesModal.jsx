@@ -10,7 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { ADMIN_UI } from '../../../../constants/admin';
-import { ATTENDANCE_STATUS } from '../../../../constants/attendance';
+import { ATTENDANCE_STATUS, STATUS_BADGE } from '../../../../constants/attendance';
 import { useAppBranding } from '../../../../context/AppBrandingContext';
 import { formatInstantHm } from '../../../../utils/formatters';
 import biometricsImg from '../../../../assets/branding/biometrics.png';
@@ -37,10 +37,9 @@ function statusFromCheckInHm(hm, cutoffHm) {
   return mins <= cut ? ATTENDANCE_STATUS.DI_LAM : ATTENDANCE_STATUS.DI_TRE;
 }
 
-function statusLabelVi(code) {
-  if (code === ATTENDANCE_STATUS.DI_LAM) return 'ĐI LÀM';
-  if (code === ATTENDANCE_STATUS.DI_TRE) return 'ĐI TRỄ';
-  return code || '';
+function statusBadgeLabel(code) {
+  if (!code) return '';
+  return STATUS_BADGE[code]?.label || code;
 }
 
 /** Progress 0–100 for rule-C bar (how late vs cutoff; capped). */
@@ -98,8 +97,8 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
       existing === ATTENDANCE_STATUS.DI_TRE
     ) {
       return {
-        statusText: statusLabelVi(existing),
-        detail: d.fillTimesPreviewKeep(statusLabelVi(existing)),
+        statusText: statusBadgeLabel(existing),
+        detail: d.fillTimesPreviewKeep(statusBadgeLabel(existing)),
         tone: existing === ATTENDANCE_STATUS.DI_TRE ? 'late' : 'ok',
         bar: existing === ATTENDANCE_STATUS.DI_TRE
           ? lateProgressPercent(effectiveInHm || lateCutoffHm, lateCutoffHm)
@@ -109,7 +108,7 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
     if (effectiveInHm) {
       const code = statusFromCheckInHm(effectiveInHm, lateCutoffHm);
       return {
-        statusText: statusLabelVi(code),
+        statusText: statusBadgeLabel(code),
         detail: d.fillTimesPreviewRuleC(effectiveInHm.slice(0, 5), lateCutoffHm),
         tone: code === ATTENDANCE_STATUS.DI_TRE ? 'late' : 'ok',
         bar: lateProgressPercent(effectiveInHm, lateCutoffHm),
@@ -195,6 +194,22 @@ const FillAttendanceTimesModal = memo(function FillAttendanceTimesModal({
                 {error}
               </p>
             ) : null}
+
+            {staff?.missingPunchReason ? (
+              <div className="rounded-xl border border-line bg-neutral/60 px-3.5 py-3 space-y-1">
+                <p className="text-3xs font-bold uppercase tracking-wide text-content-muted">
+                  {d.fillTimesHeadReasonTitle}
+                </p>
+                {staff.payrollIntentLabel ? (
+                  <p className="text-xs text-info-fg font-semibold">{staff.payrollIntentLabel}</p>
+                ) : null}
+                <p className="text-xs text-content-heading leading-snug">{staff.missingPunchReason}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-danger-fg bg-danger/30 rounded-lg px-2.5 py-1.5">
+                {d.fillTimesHeadReasonMissing}
+              </p>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TimeField

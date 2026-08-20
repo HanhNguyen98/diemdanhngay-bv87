@@ -33,7 +33,7 @@ const DeptProgressTable = memo(function DeptProgressTable({
               <th className="table-th-center">{d.colProgress}</th>
               <th className="table-th-center">{d.colRate}</th>
               <th className="table-th-center">{d.colStatus}</th>
-              <th className="table-th-center min-w-[4.5rem] px-2">{d.colActions}</th>
+              <th className="table-th-center w-[6.25rem] min-w-[6.25rem] px-2">{d.colActions}</th>
             </tr>
           </thead>
           <tbody>
@@ -59,14 +59,16 @@ const DeptProgressTable = memo(function DeptProgressTable({
                       {completed ? d.completed : d.incomplete}
                     </span>
                   </td>
-                  <td className="py-3 px-2">
-                    <DeptRowActions
-                      dept={dept}
-                      onToggleLock={onToggleLock}
-                      onToggleReportBlock={onToggleReportBlock}
-                      lockLoading={isActionPending(dept.deptCode, 'lock')}
-                      reportLoading={isActionPending(dept.deptCode, 'report')}
-                    />
+                  <td className="w-[6.25rem] min-w-[6.25rem] py-3 px-2 text-center align-middle">
+                    <div className="flex justify-center">
+                      <DeptRowActions
+                        dept={dept}
+                        onToggleLock={onToggleLock}
+                        onToggleReportBlock={onToggleReportBlock}
+                        lockLoading={isActionPending(dept.deptCode, 'lock')}
+                        reportLoading={isActionPending(dept.deptCode, 'report')}
+                      />
+                    </div>
                   </td>
                 </tr>
               );

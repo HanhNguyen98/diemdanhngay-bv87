@@ -2,6 +2,7 @@ import { memo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import FormModal from '../../../shared/FormModal';
 import { ADMIN_UI } from '../../../../constants/admin';
+import { displayEmpCode } from '../../../../utils/formatters';
 
 /**
  * Admin soft-clear day attendance — SPEC §4.11.
@@ -18,9 +19,7 @@ const ClearAttendanceModal = memo(function ClearAttendanceModal({
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
 
-  const code =
-    staff?.empCodeFormatted ||
-    (staff?.empCode != null ? String(staff.empCode).padStart(5, '0') : '—');
+  const code = displayEmpCode(staff) || '—';
   const name = staff?.fullname || '—';
   const subtitle = `${code} - ${name}`;
 

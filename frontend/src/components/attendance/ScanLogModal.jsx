@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { SCAN_DIRECTION_LABEL, SCAN_LOG_UI } from '../../constants/attendance';
 import { api } from '../../api/client';
 import { formatInstantHm } from '../../utils/formatters';
+import { formatKioskMachineParts } from '../../utils/kioskMachine';
 
 /**
  * Read-only modal: fingerprint scan logs for one employee on one day (SPEC §10.3 lớp B).
@@ -89,9 +90,9 @@ const ScanLogModal = memo(function ScanLogModal({ staff, date, onClose }) {
                       {row.score != null ? `${row.score}%` : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-content-muted text-xs whitespace-nowrap max-w-[14rem] truncate"
-                      title={[row.kioskLabel, row.clientHostname, row.clientIp].filter(Boolean).join(' · ')}
+                      title={formatKioskMachineParts(row.kioskLabel, row.clientHostname, row.clientIp) || undefined}
                     >
-                      {[row.kioskLabel, row.clientHostname, row.clientIp].filter(Boolean).join(' · ') || '—'}
+                      {formatKioskMachineParts(row.kioskLabel, row.clientHostname, row.clientIp) || '—'}
                     </td>
                     <td className="px-4 py-2.5 text-content-muted text-xs whitespace-nowrap">
                       {row.message || '—'}

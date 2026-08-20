@@ -34,6 +34,9 @@ public class AttendanceSummaryDto {
     private final boolean manualLocked;
     /** Active HEAD login account exists for this department (required for reminders). */
     private final boolean hasActiveHeadAccount;
+    private final Long unlockRequestId;
+    private final String unlockRequestStatus;
+    private final String unlockRequestReason;
 
     public static String formatDept(Integer deptCode) {
         return CodeFormatter.formatDeptCode(deptCode);

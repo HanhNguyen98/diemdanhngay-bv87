@@ -10,9 +10,8 @@ function FingerprintBadge({ registered, fingerLabel }) {
     : ADMIN_UI.staff.fingerprintMissing;
   return (
     <span
-      className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
-        registered ? 'badge-success' : 'badge-neutral'
-      }`}
+      className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${registered ? 'badge-success' : 'badge-neutral'
+        }`}
       title={registered && fingerLabel?.trim() ? fingerLabel.trim() : undefined}
     >
       {registered && fingerLabel?.trim()
@@ -36,15 +35,17 @@ const StaffRow = memo(function StaffRow({
 
   return (
     <tr className="border-b border-gray-100 hover:bg-surface-page/80 transition-colors">
-      <td className="py-4 px-4 text-sm text-primary font-medium tabular-nums">
-        {staff.empCodeFormatted}
-      </td>
+
       {!hideDeptColumn && (
         <td className="py-4 px-4 text-sm text-content-muted">
           <span className="text-xs text-primary tabular-nums mr-1">[{staff.deptCodeFormatted}]</span>
           {staff.deptName}
         </td>
       )}
+      <td className="py-4 px-4 text-sm text-primary font-medium tabular-nums">
+        {staff.empCodeFormatted}
+      </td>
+
       <td className="py-4 px-4">
         <div className="flex items-center gap-3">
           {staff.avatarUrl ? (
@@ -69,9 +70,8 @@ const StaffRow = memo(function StaffRow({
       </td>
       <td className="py-4 px-4">
         <span
-          className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
-            staff.active ? 'badge-success' : 'badge-neutral'
-          }`}
+          className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${staff.active ? 'badge-success' : 'badge-neutral'
+            }`}
         >
           {staff.active ? ADMIN_UI.staff.active : ADMIN_UI.staff.inactive}
         </span>

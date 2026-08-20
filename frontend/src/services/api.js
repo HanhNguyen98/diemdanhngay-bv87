@@ -21,6 +21,36 @@ export const adminApi = {
     return apiRequest(`/admin/attendance/reminder-history${q ? `?${q}` : ''}`);
   },
 
+  getAttendanceAuditLogs: ({ from, to, deptCode, username, page = 1, pageSize = 20 } = {}) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (deptCode != null) params.set('deptCode', String(deptCode));
+    if (username) params.set('username', username);
+    params.set('page', String(page));
+    params.set('pageSize', String(pageSize));
+    return apiRequest(`/admin/attendance/audit-logs?${params.toString()}`);
+  },
+
+  listUnlockRequests: (status) => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    const q = params.toString();
+    return apiRequest(`/admin/attendance/unlock-requests${q ? `?${q}` : ''}`);
+  },
+
+  getUnlockRequestPendingCount: () =>
+    apiRequest('/admin/attendance/unlock-requests/pending-count'),
+
+  approveUnlockRequest: (id) =>
+    apiRequest(`/admin/attendance/unlock-requests/${id}/approve`, { method: 'POST' }),
+
+  rejectUnlockRequest: (id, note) =>
+    apiRequest(`/admin/attendance/unlock-requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ note: note || '' }),
+    }),
+
   blockReport: (deptCode, reason) =>
     apiRequest('/admin/attendance/report-blocks', {
       method: 'POST',
@@ -36,6 +66,12 @@ export const adminApi = {
   fillAttendanceTimes: (body) =>
     apiRequest('/admin/attendance/times', {
       method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  approvePayrollFill: (body) =>
+    apiRequest('/admin/attendance/payroll-fill/approve', {
+      method: 'POST',
       body: JSON.stringify(body),
     }),
 

@@ -3,14 +3,14 @@ import {
   ATTENDANCE_STATUS,
   MANUAL_SCHEDULE_UI,
   UI,
-  hasEmptyFourPunchSlot,
-  isMissingCheckout,
+  canAdminApprovePayrollFill,
+  canAdminFillTimes,
 } from '../../../../constants/attendance';
 import { formatKioskMachine } from '../../../../utils/kioskMachine';
 import PunchTimesCell from '../../../attendance/table/PunchTimesCell';
 import QuickActionGroup from '../../../attendance/table/QuickActionGroup';
 import StaffAvatar from '../../../attendance/table/StaffAvatar';
-import StatusBadge from '../../../attendance/table/StatusBadge';
+import StatusCell from '../../../attendance/table/StatusCell';
 import VeSomNoteField from '../../../attendance/table/VeSomNoteField';
 import DeptFingerprintActionsMenu from './DeptFingerprintActionsMenu';
 
@@ -19,18 +19,15 @@ const DeptAttendanceRow = memo(function DeptAttendanceRow({
   onOpenScanLogs,
   onOpenManualSchedule,
   onFillTimes,
+  onApprovePayrollFill,
   onQuickAction,
   onClearAttendance,
   onSaveVeSomNote,
 }) {
-  const isManualLeave =
-    staff.status != null &&
-    staff.status !== ATTENDANCE_STATUS.DI_LAM &&
-    staff.status !== ATTENDANCE_STATUS.DI_TRE;
-  const canFillTimes = !isManualLeave && hasEmptyFourPunchSlot(staff);
+  const canFillTimes = canAdminFillTimes(staff);
+  const canApprovePayrollFill = canAdminApprovePayrollFill(staff);
   const canClear =
     staff.status != null || staff.checkInAt != null || staff.checkOutAt != null;
-  const missingOut = isMissingCheckout(staff);
 
   return (
     <tr className="transition-colors hover:bg-slate-50/60">
@@ -50,20 +47,22 @@ const DeptAttendanceRow = memo(function DeptAttendanceRow({
       </td>
       <td className="py-3 px-4 align-middle">
         <PunchTimesCell staff={staff} />
-        {missingOut ? (
-          <p className="text-3xs font-medium text-warning-fg mt-0.5">{UI.missingCheckoutHint}</p>
-        ) : null}
       </td>
       <td className="py-3 px-4 align-middle text-3xs text-content-muted max-w-[9rem]">
         <span className="block truncate" title={formatKioskMachine(staff)}>{formatKioskMachine(staff)}</span>
       </td>
-      <td className="py-3 px-4 align-middle">
-        <StatusBadge staff={staff} />
+      <td className="py-3 px-4 align-middle min-w-0 max-w-[8.5rem]">
+        <StatusCell
+          staff={staff}
+          onPendingClick={
+            canApprovePayrollFill ? () => onApprovePayrollFill?.(staff) : undefined
+          }
+        />
       </td>
       <td className="py-3 px-4 align-middle text-sm text-content-muted max-w-[12rem]">
         {staff.status === ATTENDANCE_STATUS.VE_SOM ? (
           <VeSomNoteField staff={staff} onSave={onSaveVeSomNote} />
-        ) : staff.note ? (
+        ) : staff.note && !staff.missingPunchReason ? (
           <span className="block truncate" title={staff.note}>{staff.note}</span>
         ) : (
           <span className="text-line">—</span>
@@ -79,9 +78,11 @@ const DeptAttendanceRow = memo(function DeptAttendanceRow({
           <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
             <DeptFingerprintActionsMenu
               canFillTimes={canFillTimes}
+              canApprovePayrollFill={canApprovePayrollFill}
               canClear={canClear}
               onOpenScanLogs={() => onOpenScanLogs?.(staff)}
               onFillTimes={() => onFillTimes?.(staff)}
+              onApprovePayrollFill={() => onApprovePayrollFill?.(staff)}
               onClearAttendance={() => onClearAttendance?.(staff)}
             />
             <button
