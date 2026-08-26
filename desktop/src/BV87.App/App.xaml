@@ -1,0 +1,12 @@
+﻿<Application x:Class="BV87.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB"/>
+        <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#1D4ED8"/>
+        <SolidColorBrush x:Key="NavyBrush" Color="#001A4D"/>
+        <SolidColorBrush x:Key="SurfacePageBrush" Color="#F8F9FA"/>
+        <SolidColorBrush x:Key="LineBrush" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="ContentMutedBrush" Color="#6C757D"/>
+    </Application.Resources>
+</Application>

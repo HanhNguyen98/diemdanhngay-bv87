@@ -1,5 +1,8 @@
 # SPEC — Role ADMIN (Quản trị viên)
 
+> **UI Web DEPRECATED.** Client binding chuyển sang **`docs/SPEC_DESKTOP.md`** (mode `admin`).  
+> File này giữ **logic nghiệp vụ + API** làm tham chiếu port WPF.
+
 > **Binding contract.** Mọi thay đổi code liên quan role `ADMIN` phải tuân thủ file này.  
 > **Không** thêm / sửa / suy diễn chức năng ngoài phạm vi đã ghi.  
 > **Không tự ý sinh code ngoài yêu cầu / ngoài SPEC đã review.**  
@@ -177,6 +180,7 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 - **KPI status desktop (P6-StatusKpi5Col / P6-StatusKpiSideTotal):** `DashboardKpiBar` — card **Tổng quân số** **bên trái** (`self-stretch` khớp 2 hàng status; layout dọc icon → số → nhãn TỔNG); status + **Chưa chấm** **bên phải** **`grid-cols-5`**; Chi tiết Đơn vị kế thừa. Mobile scroll **không đổi**. Chi tiết `SPEC_FINGERPRINT` §10.5.
 - Mỗi dòng Đơn vị: tiến độ %, hoàn thành / chưa xong (theo COMPLETED mới), có tài khoản HEAD
 - **Cột THAO TÁC (P6-DashActions):** dropdown **「Quản lý」** — **không** icon máy bay (tránh nhầm **Gửi nhắc nhở** toolbar). Mục menu: (1) **Khóa sổ / Mở khóa sổ** (`toggle-lock`); (2) **Khóa / Mở chỉnh sửa HEAD** (`report-blocks`). Portal + clamp viewport mobile. **Gửi nhắc nhở** chỉ qua toolbar + modal (§6.3).
+- **Toolbar Tiến độ Chấm công (P16-DashboardRefreshDup):** card **Tiến độ Chấm công** trên **Tổng quan chung** — toolbar chỉ **một** nút **Làm mới** (`DashboardToolbar` → `refresh` / `GET /api/admin/dashboard`). Bộ lọc đơn vị: dropdown + nút **Tìm kiếm** (icon kính lúp); **cấm** thêm nút icon vòng (`RotateCcw`) cạnh **Làm mới** — xóa lọc bằng chọn lại «Tất cả đơn vị» trên dropdown.
 - **Không** thêm cột / KPI ngoài DTO đã review trừ khi cập nhật SPEC
 
 ### 6.3 Reminder (P5)
@@ -492,6 +496,7 @@ Chương trình chạy đồng thời:
 - [x] **P9-RowHintDeclutter:** Chi tiết ĐV — bỏ hint dòng dưới ô giờ; giữ 4 mốc + badge + banner KPI
 - [x] **P10-NghiTrucWizardLayout:** wizard N.trực layout ngang desktop — §4.13.8
 - [x] **P11b-PendingBadgeCompact / P12-AdminApproveUx:** badge pending một dòng; click badge duyệt giờ (không nút trùng Thao tác) — §4.13.6
+- [x] **P16-DashboardRefreshDup:** Tổng quan chung — bỏ nút làm mới thừa trên toolbar Tiến độ Chấm công; giữ một **Làm mới** — §6.2
 
 ---
 

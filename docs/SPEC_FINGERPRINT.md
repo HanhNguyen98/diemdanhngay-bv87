@@ -37,14 +37,16 @@
     → [Java Agent PC khoa — JDK 17 + ZKFingerReader.jar]
          → HTTP API (LAN + token kiosk khoa)
               → [Spring Boot + MySQL — nguồn dữ liệu DUY NHẤT]
-                   → [React Web: GET / hiển thị / thủ công HEAD / báo cáo]
+                   → [WPF Desktop BV87.exe — kiosk / head / admin — SPEC_DESKTOP.md]
+                   → [React Web DEPRECATED — tham chiếu port]
 ```
 
 | Cổng | Ai | Việc được làm | Không gắn với |
 |------|-----|----------------|---------------|
 | **Agent (kiosk)** | Máy khoa + token kiosk | Enroll trên Agent; Identify Chấm công; POST API | Session HEAD trên web; khung 06:00–16:00 |
-| **Web HEAD** | User HEAD đăng nhập | Xem trạng thái ĐK vân tay (+ `fingerLabel`); thủ công; báo cáo — **không** enroll/xóa template | Quét USB / enroll / xóa mẫu trên browser |
-| **Web ADMIN** | User ADMIN | Lịch sử; catalog; **Quản lý token vân tay** (Cài đặt — §10.1); can thiệp Chấm công (§4.6/§4.11) — **không** enroll/xóa template trên Web | Quét USB / enroll / xóa mẫu trên browser |
+| **Web HEAD** | User HEAD đăng nhập | **DEPRECATED UI** — port sang WPF mode `head` (`SPEC_DESKTOP.md`); JWT Bearer | Quét USB / enroll |
+| **Web ADMIN** | User ADMIN | **DEPRECATED UI** — port sang WPF mode `admin`; JWT Bearer | Quét USB / enroll |
+| **Desktop HEAD/ADMIN** | WPF `BV87.exe` | JWT `POST /api/auth/desktop/login` — SPEC_DESKTOP §2 | Enroll USB |
 
 **Đã bỏ** logic “cửa sổ ghi HEAD 06:00 → lockTime ~16:00” cho Chấm công / gửi báo cáo / quyền sửa thủ công theo giờ.  
 Thay bằng: quét = Chấm công **ngày hiện tại** → dữ liệu vào DB **realtime** (Admin/HEAD xem ngay). HEAD chỉ gán **ngoại lệ** (khoảng ngày). **Không** còn nút / bắt buộc **Gửi báo cáo** từng khoa từng ngày.

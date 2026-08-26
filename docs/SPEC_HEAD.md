@@ -1,5 +1,8 @@
 # SPEC — Role HEAD (Trưởng đơn vị / Trưởng khoa phòng ban)
 
+> **UI Web DEPRECATED.** Client binding chuyển sang **`docs/SPEC_DESKTOP.md`** (mode `head`).  
+> File này giữ **logic nghiệp vụ + API** làm tham chiếu port WPF.
+
 > **Binding contract.** Mọi thay đổi code liên quan role `HEAD` phải tuân thủ file này.  
 > **Không** thêm / sửa / suy diễn chức năng ngoài phạm vi đã ghi.  
 > **Không tự ý sinh code ngoài yêu cầu / ngoài SPEC đã review.**  

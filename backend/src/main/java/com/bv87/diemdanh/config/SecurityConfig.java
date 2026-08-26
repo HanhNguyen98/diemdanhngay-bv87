@@ -3,6 +3,7 @@ package com.bv87.diemdanh.config;
 import com.bv87.diemdanh.security.AiRateLimitFilter;
 import com.bv87.diemdanh.security.CustomUserDetailsService;
 import com.bv87.diemdanh.security.JsonSecurityHandlers;
+import com.bv87.diemdanh.security.JwtAuthFilter;
 import com.bv87.diemdanh.security.KioskLanGateFilter;
 import com.bv87.diemdanh.security.KioskTokenFilter;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class SecurityConfig {
     private final AiRateLimitFilter aiRateLimitFilter;
     private final KioskTokenFilter kioskTokenFilter;
     private final KioskLanGateFilter kioskLanGateFilter;
+    private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -50,6 +52,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/desktop/login").permitAll()
+                        .requestMatchers("/api/auth/desktop/refresh").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -57,6 +61,7 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(kioskLanGateFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(kioskTokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(aiRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jsonSecurityHandlers)

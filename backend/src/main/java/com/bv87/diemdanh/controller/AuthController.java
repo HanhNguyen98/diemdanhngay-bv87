@@ -1,6 +1,8 @@
 package com.bv87.diemdanh.controller;
 
 import com.bv87.diemdanh.dto.ChangePasswordRequest;
+import com.bv87.diemdanh.dto.DesktopLoginResponse;
+import com.bv87.diemdanh.dto.DesktopRefreshRequest;
 import com.bv87.diemdanh.dto.LoginRequest;
 import com.bv87.diemdanh.dto.LoginResponse;
 import com.bv87.diemdanh.service.AuthService;
@@ -25,6 +27,19 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
         return ResponseEntity.ok(authService.login(request, httpRequest));
+    }
+
+    @PostMapping("/desktop/login")
+    public ResponseEntity<DesktopLoginResponse> desktopLogin(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.desktopLogin(request, httpRequest));
+    }
+
+    @PostMapping("/desktop/refresh")
+    public ResponseEntity<DesktopLoginResponse> desktopRefresh(
+            @Valid @RequestBody DesktopRefreshRequest request) {
+        return ResponseEntity.ok(authService.refreshDesktopToken(request.getRefreshToken()));
     }
 
     @GetMapping("/me")

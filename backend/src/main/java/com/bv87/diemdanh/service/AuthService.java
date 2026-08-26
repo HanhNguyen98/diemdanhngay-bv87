@@ -1,6 +1,7 @@
 package com.bv87.diemdanh.service;
 
 import com.bv87.diemdanh.dto.ChangePasswordRequest;
+import com.bv87.diemdanh.dto.DesktopLoginResponse;
 import com.bv87.diemdanh.dto.LoginRequest;
 import com.bv87.diemdanh.dto.LoginResponse;
 import com.bv87.diemdanh.entity.Account;
@@ -9,6 +10,7 @@ import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AccountRepository;
 import com.bv87.diemdanh.security.AuthUser;
+import com.bv87.diemdanh.security.JwtService;
 import com.bv87.diemdanh.security.LoginRateLimitService;
 import com.bv87.diemdanh.util.VietnamTimeService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class AuthService {
     private final LoginRateLimitService loginRateLimitService;
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         loginRateLimitService.assertNotBlocked(httpRequest, request.getUsername());
@@ -57,6 +60,40 @@ public class AuthService {
             loginRateLimitService.recordFailure(httpRequest, request.getUsername());
             throw ex;
         }
+    }
+
+    /**
+     * Desktop JWT login — no HTTP session (SPEC_DESKTOP §2).
+     *
+     * @param request credentials
+     * @param httpRequest used for login rate limiting
+     * @return access/refresh tokens and user profile
+     */
+    public DesktopLoginResponse desktopLogin(LoginRequest request, HttpServletRequest httpRequest) {
+        loginRateLimitService.assertNotBlocked(httpRequest, request.getUsername());
+
+        try {
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+            loginRateLimitService.clearFailures(httpRequest, request.getUsername());
+            AuthUser authUser = (AuthUser) auth.getPrincipal();
+            return buildDesktopResponse(authUser);
+        } catch (BadCredentialsException ex) {
+            loginRateLimitService.recordFailure(httpRequest, request.getUsername());
+            throw ex;
+        }
+    }
+
+    /**
+     * @param refreshToken signed refresh JWT
+     * @return new token pair and user profile
+     */
+    public DesktopLoginResponse refreshDesktopToken(String refreshToken) {
+        String username = jwtService.validateRefreshToken(refreshToken);
+        AuthUser authUser = accountRepository.findActiveByUsername(username)
+                .map(AuthUser::new)
+                .orElseThrow(() -> new BadCredentialsException("Tài khoản không tồn tại"));
+        return buildDesktopResponse(authUser);
     }
 
     public LoginResponse getCurrentUser() {
@@ -103,5 +140,15 @@ public class AuthService {
         String lockMessage = lockService.getLockMessage(deptCode, role, today);
 
         return LoginResponse.from(account, editable, locked, lockMessage);
+    }
+
+    private DesktopLoginResponse buildDesktopResponse(AuthUser authUser) {
+        return DesktopLoginResponse.builder()
+                .accessToken(jwtService.generateAccessToken(authUser))
+                .refreshToken(jwtService.generateRefreshToken(authUser))
+                .tokenType("Bearer")
+                .expiresInSeconds(jwtService.accessTtlSeconds())
+                .user(buildResponse(authUser))
+                .build();
     }
 }

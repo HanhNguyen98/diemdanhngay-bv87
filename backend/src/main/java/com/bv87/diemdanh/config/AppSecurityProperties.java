@@ -18,6 +18,8 @@ public class AppSecurityProperties {
     private LoginRateLimit loginRateLimit = new LoginRateLimit();
     /** P4b — kiosk LAN gate (SPEC_FINGERPRINT §8.1). */
     private Kiosk kiosk = new Kiosk();
+    /** Desktop JWT auth (SPEC_DESKTOP §2). */
+    private Jwt jwt = new Jwt();
 
     @Getter
     @Setter
@@ -47,5 +49,13 @@ public class AppSecurityProperties {
                 "172.16.0.0/12",
                 "192.168.0.0/16"
         ));
+    }
+
+    @Getter
+    @Setter
+    public static class Jwt {
+        private String secret = "local-dev-jwt-secret-change-in-production-min-32-chars";
+        private int accessTokenMinutes = 60;
+        private int refreshTokenDays = 7;
     }
 }
