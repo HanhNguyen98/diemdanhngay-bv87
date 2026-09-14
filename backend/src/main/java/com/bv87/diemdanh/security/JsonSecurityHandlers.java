@@ -31,7 +31,7 @@ public class JsonSecurityHandlers implements AuthenticationEntryPoint, AccessDen
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
         String message = accessDeniedException.getMessage();
-        if (message == null || message.isBlank()) {
+        if (message == null || message.isBlank() || "Access Denied".equalsIgnoreCase(message.trim())) {
             message = "Không có quyền truy cập";
         }
         writeJson(response, HttpServletResponse.SC_FORBIDDEN, message);

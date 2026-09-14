@@ -2,11 +2,67 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB"/>
-        <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#1D4ED8"/>
-        <SolidColorBrush x:Key="NavyBrush" Color="#001A4D"/>
-        <SolidColorBrush x:Key="SurfacePageBrush" Color="#F8F9FA"/>
-        <SolidColorBrush x:Key="LineBrush" Color="#E0E0E0"/>
-        <SolidColorBrush x:Key="ContentMutedBrush" Color="#6C757D"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/ThemeResources.xaml"/>
+                <ResourceDictionary Source="Resources/ControlStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <!-- Global typography (D1.1u) -->
+            <Style TargetType="{x:Type Control}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBase}"/>
+            </Style>
+            <Style TargetType="{x:Type TextBlock}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBase}"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            </Style>
+            <Style TargetType="{x:Type TextBox}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBase}"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            </Style>
+            <Style TargetType="{x:Type Label}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBase}"/>
+            </Style>
+            <Style TargetType="{x:Type ComboBox}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeMd}"/>
+            </Style>
+            <Style TargetType="{x:Type CheckBox}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type RadioButton}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type DataGrid}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBase}"/>
+                <Setter Property="SelectionUnit" Value="FullRow"/>
+                <Setter Property="RowStyle" Value="{StaticResource AdminDataGridRowStyle}"/>
+                <Setter Property="CellStyle" Value="{StaticResource AdminDataGridCellStyle}"/>
+            </Style>
+            <Style TargetType="{x:Type ListBox}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBase}"/>
+            </Style>
+            <Style TargetType="{x:Type Button}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeMd}"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            </Style>
+            <Style TargetType="{x:Type DatePicker}" BasedOn="{StaticResource FilterDatePickerStyle}"/>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" xmlns:converters="clr-namespace:BV87.App.Converters"/>
+            <converters:InverseBoolConverter x:Key="InverseBool" xmlns:converters="clr-namespace:BV87.App.Converters"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" xmlns:converters="clr-namespace:BV87.App.Converters"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisibility" xmlns:converters="clr-namespace:BV87.App.Converters"/>
+            <converters:NonEmptyStringToVisibilityConverter x:Key="NonEmptyStringToVisibility" xmlns:converters="clr-namespace:BV87.App.Converters"/>
+            <converters:DataUrlToImageSourceConverter x:Key="DataUrlToImageSource" xmlns:converters="clr-namespace:BV87.App.Converters"/>
+            <converters:BannerToneBrushConverter x:Key="BannerToneBrush" xmlns:converters="clr-namespace:BV87.App.Converters"/>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

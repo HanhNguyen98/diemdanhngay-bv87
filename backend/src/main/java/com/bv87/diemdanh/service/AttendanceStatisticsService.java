@@ -7,8 +7,8 @@ import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AttendanceRecordRepository;
 import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.security.AuthUser;
-import com.bv87.diemdanh.util.AttendanceValidity;
 import com.bv87.diemdanh.util.CodeFormatter;
+import com.bv87.diemdanh.util.StatisticsHistoryTally;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,10 +20,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -55,18 +53,9 @@ public class AttendanceStatisticsService {
 
         String q = normalizeSearch(search);
         List<AttendanceRecord> records = attendanceRepository
-                .findByDeptCodeAndDateBetween(deptCode, from, to).stream()
-                .filter(r -> matchesSearch(r, q))
-                .toList();
+                .findHistoryAll(deptCode, from, to, q);
 
-        Map<String, Long> counts = new HashMap<>();
-        for (AttendanceRecord record : records) {
-            if (!AttendanceValidity.isComplete(record)) {
-                continue;
-            }
-            counts.merge(record.getStatus(), 1L, Long::sum);
-        }
-        List<StatusBreakdownItemDto> breakdown = statusCatalogService.buildBreakdown(counts);
+        List<StatusBreakdownItemDto> breakdown = toStatisticsBreakdown(records);
 
         AttendanceStatisticsSummaryDto summary = AttendanceStatisticsSummaryDto.builder()
                 .statusBreakdown(breakdown)
@@ -198,16 +187,12 @@ public class AttendanceStatisticsService {
         return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
     }
 
-    private boolean matchesSearch(AttendanceRecord record, String q) {
-        if (q == null) {
-            return true;
-        }
-        String fullname = record.getEmployee().getFullname();
-        if (fullname != null && fullname.toLowerCase(Locale.ROOT).contains(q)) {
-            return true;
-        }
-        String empFormatted = CodeFormatter.formatEmpCode(record.getEmpCode());
-        return empFormatted.contains(q) || String.valueOf(record.getEmpCode()).contains(q);
+    /** D-STAT.1 — every history row; no {@code isComplete} filter. */
+    private List<StatusBreakdownItemDto> toStatisticsBreakdown(List<AttendanceRecord> records) {
+        StatisticsHistoryTally.Result tally = StatisticsHistoryTally.tally(records);
+        return StatisticsHistoryTally.withUnchecked(
+                statusCatalogService.buildBreakdown(tally.statusCounts()),
+                tally.uncheckedCount());
     }
 
     private List<AttendanceTrendPointDto> buildTrend(LocalDate from, LocalDate to, List<AttendanceRecord> records) {
@@ -215,20 +200,15 @@ public class AttendanceStatisticsService {
         List<AttendanceTrendPointDto> trend = new ArrayList<>();
 
         for (DateBucket bucket : buckets) {
-            Map<String, Long> counts = new HashMap<>();
-            for (AttendanceRecord record : records) {
-                LocalDate d = record.getAttendanceDate();
-                if (d.isBefore(bucket.from()) || d.isAfter(bucket.to())) {
-                    continue;
-                }
-                if (!AttendanceValidity.isComplete(record)) {
-                    continue;
-                }
-                counts.merge(record.getStatus(), 1L, Long::sum);
-            }
+            List<AttendanceRecord> inBucket = records.stream()
+                    .filter(record -> {
+                        LocalDate d = record.getAttendanceDate();
+                        return !d.isBefore(bucket.from()) && !d.isAfter(bucket.to());
+                    })
+                    .toList();
             trend.add(AttendanceTrendPointDto.builder()
                     .label(bucket.label())
-                    .statusBreakdown(statusCatalogService.buildBreakdown(counts))
+                    .statusBreakdown(toStatisticsBreakdown(inBucket))
                     .build());
         }
         return trend;

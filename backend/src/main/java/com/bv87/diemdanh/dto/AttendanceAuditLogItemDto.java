@@ -15,6 +15,8 @@ public class AttendanceAuditLogItemDto {
     private final String username;
     private final Integer deptCode;
     private final String deptCodeFormatted;
+    private final String deptName;
+    private final String unitCode;
     private final Integer empCode;
     private final String empCodeFormatted;
     private final LocalDate attendanceDate;

@@ -1,12 +1,14 @@
 package com.bv87.diemdanh.service;
 
 import com.bv87.diemdanh.entity.AccountRole;
+import com.bv87.diemdanh.entity.AttendanceRecord;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AttendanceManualLockRepository;
 import com.bv87.diemdanh.repository.AttendanceReportBlockRepository;
 import com.bv87.diemdanh.repository.AttendanceUnlockRepository;
 import com.bv87.diemdanh.security.AuthUser;
+import com.bv87.diemdanh.util.AttendanceValidity;
 import com.bv87.diemdanh.util.VietnamTimeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -62,12 +64,22 @@ public class AttendanceLockService {
         return !isUnlocked(deptCode, date);
     }
 
+    public static final String MSG_EXPLAIN_REQUIRED =
+            "Vui lòng nhập lý do giải trình thiếu dữ liệu chấm công.";
+    public static final String MSG_COMPLETE_LOCKED =
+            "Nhân viên đã đủ dữ liệu chấm công. Liên hệ Admin nếu cần chỉnh sửa.";
+    public static final String MSG_PAST_LOCKED =
+            "Ngày quá khứ chưa được Admin mở khóa. Liên hệ Admin nếu cần chỉnh sửa.";
+    public static final String MSG_SOFT_LOCKED =
+            "Đã qua giờ khóa mềm ngày công. Liên hệ Admin nếu cần chỉnh sửa.";
+
     /**
      * Whether the role may edit attendance for a department on a date.
      * HEAD today: before soft-lock (unless unlock) and not reportBlocked.
      * HEAD past: only if Admin unlocked that exact date — SPEC P14.
      * HEAD future: allowed (leave planning, no unlock).
      * Admin: always.
+     * Incomplete staff after lock: P17 {@link #isIncompleteExplainAllowed}.
      */
     public boolean isEditable(Integer deptCode, AccountRole role, LocalDate date) {
         if (role == AccountRole.ADMIN) {
@@ -142,12 +154,93 @@ public class AttendanceLockService {
         }
         if (!isEditable(targetDeptCode, AccountRole.HEAD, date)) {
             if (date.isBefore(timeService.today())) {
-                throw new BusinessException(
-                        "Ngày quá khứ chưa được Admin mở khóa. Liên hệ Admin nếu cần chỉnh sửa.");
+                throw new BusinessException(MSG_PAST_LOCKED);
             }
-            throw new BusinessException(
-                    "Đã qua giờ khóa mềm ngày công. Liên hệ Admin nếu cần chỉnh sửa.");
+            throw new BusinessException(MSG_SOFT_LOCKED);
         }
+    }
+
+    /**
+     * HEAD may write incomplete staff with a required explanation when the date
+     * is past or today-after-lockTime, without Admin unlock — SPEC P17 §4.7.2a.
+     */
+    public boolean isIncompleteExplainAllowed(Integer deptCode, AccountRole role, LocalDate date) {
+        if (role != AccountRole.HEAD || deptCode == null || date == null) {
+            return false;
+        }
+        LocalDate today = timeService.today();
+        if (date.isAfter(today)) {
+            return false;
+        }
+        if (isReportBlocked(deptCode, date)) {
+            return false;
+        }
+        if (date.equals(today) && isManualLocked(deptCode, date)) {
+            return false;
+        }
+        if (isEditable(deptCode, role, date)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Per-staff write gate — SPEC P14 + P17.
+     *
+     * @param existingRecord current day record; {@code null} = incomplete
+     * @param note           explanation / VE_SOM note / wizard reason
+     */
+    public void assertCanWriteStaff(
+            AuthUser authUser,
+            Integer targetDeptCode,
+            LocalDate date,
+            AttendanceRecord existingRecord,
+            String note) {
+        if (authUser.isAdmin()) {
+            return;
+        }
+        if (!authUser.isHead()) {
+            throw new AccessDeniedException("Bạn không có quyền cập nhật Chấm công");
+        }
+        if (!targetDeptCode.equals(authUser.getDeptCode())) {
+            throw new AccessDeniedException(
+                    "Trưởng ban chỉ được thao tác Đơn vị "
+                            + String.format("%02d", authUser.getDeptCode()));
+        }
+        if (date.equals(timeService.today()) && isReportBlocked(targetDeptCode, date)) {
+            throw new BusinessException(
+                    "Admin đã khóa chỉnh sửa Chấm công cho Đơn vị hôm nay.");
+        }
+        if (isEditable(targetDeptCode, AccountRole.HEAD, date)) {
+            return;
+        }
+        if (isIncompleteExplainAllowed(targetDeptCode, AccountRole.HEAD, date)) {
+            if (AttendanceValidity.isComplete(existingRecord)) {
+                throw new BusinessException(MSG_COMPLETE_LOCKED);
+            }
+            if (note == null || note.isBlank()) {
+                throw new BusinessException(MSG_EXPLAIN_REQUIRED);
+            }
+            return;
+        }
+        if (date.isBefore(timeService.today())) {
+            throw new BusinessException(MSG_PAST_LOCKED);
+        }
+        throw new BusinessException(MSG_SOFT_LOCKED);
+    }
+
+    /** True when HEAD must skip this calendar day in a manual range (P14 + P17). */
+    public boolean shouldSkipManualRangeDayForHead(
+            Integer deptCode,
+            LocalDate day,
+            AttendanceRecord record) {
+        if (isEditable(deptCode, AccountRole.HEAD, day)) {
+            return false;
+        }
+        if (isIncompleteExplainAllowed(deptCode, AccountRole.HEAD, day)) {
+            return AttendanceValidity.isComplete(record);
+        }
+        return true;
     }
 
     /**
@@ -177,10 +270,17 @@ public class AttendanceLockService {
     }
 
     /**
-     * True when HEAD must skip this calendar day in a manual range (soft-lock, past not unlocked).
+     * Banner copy for HEAD when the selected date is locked but P17 applies.
      */
-    public boolean shouldSkipManualRangeDayForHead(Integer deptCode, LocalDate day) {
-        return !isEditable(deptCode, AccountRole.HEAD, day);
+    public String getHeadIncompleteExplainBanner(LocalDate date) {
+        if (date != null && date.equals(timeService.today())) {
+            return "Đã qua giờ khóa mềm ngày công ("
+                    + timeService.formatLockTime()
+                    + "). Có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do giải trình khi lưu. "
+                    + "Nhân viên đã đủ dữ liệu chỉ sửa khi Admin mở khóa.";
+        }
+        return "Ngày quá khứ: có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do giải trình khi lưu. "
+                + "Nhân viên đã đủ dữ liệu chỉ sửa khi Admin mở khóa.";
     }
 
     /**

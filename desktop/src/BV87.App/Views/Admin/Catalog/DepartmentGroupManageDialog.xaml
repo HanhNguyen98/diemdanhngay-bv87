@@ -1,0 +1,96 @@
+<shell:AppDialogWindow x:Class="BV87.App.Views.Admin.Catalog.DepartmentGroupManageDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:BV87.App.Shell"
+        Title="Quản lý nhóm đơn vị"
+        Width="720"
+        Height="480"
+        MinWidth="600"
+        MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource SurfacePageBrush}">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Quản lý nhóm đơn vị" FontSize="16" FontWeight="SemiBold"
+                   Foreground="{StaticResource NavyBrush}" Margin="0,0,0,12"/>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <Button Style="{StaticResource PrimaryButtonStyle}" Padding="12,8" Click="AddGroup_Click">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE710;" FontSize="14"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="Thêm nhóm" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+            <DataGrid x:Name="GroupsGrid"
+                      Style="{StaticResource AdminDataGridStyle}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      VerticalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="MÃ NHÓM" Binding="{Binding GroupCodeFormatted}" Width="90">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="TÊN NHÓM" Binding="{Binding GroupName}" Width="*" MinWidth="160">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="THỨ TỰ" Binding="{Binding SortOrder}" Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="SỐ ĐƠN VỊ" Binding="{Binding DeptCount}" Width="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="THAO TÁC" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Sửa" Style="{StaticResource SecondaryButtonStyle}"
+                                            Padding="8,4" Margin="0,0,6,0"
+                                            Tag="{Binding}" Click="EditGroup_Click"/>
+                                    <Button Content="Xóa" Padding="8,4" Tag="{Binding}" Click="DeleteGroup_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                                                <Setter Property="Foreground" Value="{StaticResource DangerFgBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CanDelete}" Value="False">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                        <Setter Property="Opacity" Value="0.45"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Đóng" Padding="16,8" Click="Close_Click"/>
+        </StackPanel>
+    </Grid>
+</shell:AppDialogWindow>

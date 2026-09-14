@@ -90,7 +90,10 @@ public final class AttendanceValidity {
         return record != null && (record.getAfternoonInAt() != null || record.getAfternoonOutAt() != null);
     }
 
-    /** Morning half-day nghỉ trực — SPEC P7-NghiTrucExplainGate. */
+    /**
+     * Worked morning / rest afternoon — {@code HALF_AFTERNOON} intent (P16).
+     * Name is punch-pattern (morning slots filled), not the rest period.
+     */
     public static boolean isHalfMorningPattern(AttendanceRecord record) {
         return record != null
                 && record.getMorningInAt() != null
@@ -98,7 +101,7 @@ public final class AttendanceValidity {
                 && !hasAfternoonPunch(record);
     }
 
-    /** Afternoon half-day nghỉ trực — SPEC P7-NghiTrucExplainGate. */
+    /** Legacy rest-morning / work-afternoon pattern — {@code HALF_MORNING} records only. */
     public static boolean isHalfAfternoonPattern(AttendanceRecord record) {
         return record != null
                 && record.getMorningInAt() == null

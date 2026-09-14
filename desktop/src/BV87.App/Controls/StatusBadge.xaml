@@ -1,0 +1,8 @@
+<UserControl x:Class="BV87.App.Controls.StatusBadge"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <Border x:Name="BadgeRoot" CornerRadius="6" Padding="10,5" HorizontalAlignment="Left">
+        <TextBlock x:Name="LabelText" FontSize="{StaticResource FontSizeSm}" FontWeight="Bold"/>
+    </Border>
+</UserControl>

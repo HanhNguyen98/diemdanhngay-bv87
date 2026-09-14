@@ -34,6 +34,8 @@ public class AttendanceSummaryDto {
     private final boolean manualLocked;
     /** Active HEAD login account exists for this department (required for reminders). */
     private final boolean hasActiveHeadAccount;
+    /** P17 — HEAD may write incomplete staff with required explanation when date is locked. */
+    private final boolean incompleteExplainAllowed;
     private final Long unlockRequestId;
     private final String unlockRequestStatus;
     private final String unlockRequestReason;

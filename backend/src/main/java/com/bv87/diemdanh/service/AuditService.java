@@ -3,8 +3,10 @@ package com.bv87.diemdanh.service;
 import com.bv87.diemdanh.dto.AttendanceAuditLogItemDto;
 import com.bv87.diemdanh.dto.AttendanceAuditLogPageDto;
 import com.bv87.diemdanh.entity.AuditLog;
+import com.bv87.diemdanh.entity.Department;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.repository.AuditLogRepository;
+import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.util.CodeFormatter;
 import com.bv87.diemdanh.util.RequestClientInfo;
@@ -20,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ import java.util.Map;
 public class AuditService {
 
     private final AuditLogRepository repository;
+    private final DepartmentRepository departmentRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -96,8 +101,10 @@ public class AuditService {
                 scopedDept,
                 scopedUser,
                 PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        Map<Integer, Department> depts = departmentRepository.findAll().stream()
+                .collect(Collectors.toMap(Department::getDeptCode, Function.identity(), (a, b) -> a));
         return AttendanceAuditLogPageDto.builder()
-                .items(result.getContent().stream().map(this::toItem).toList())
+                .items(result.getContent().stream().map(row -> toItem(row, depts)).toList())
                 .page(pageIndex + 1)
                 .pageSize(size)
                 .totalItems(result.getTotalElements())
@@ -105,13 +112,16 @@ public class AuditService {
                 .build();
     }
 
-    private AttendanceAuditLogItemDto toItem(AuditLog row) {
+    private AttendanceAuditLogItemDto toItem(AuditLog row, Map<Integer, Department> depts) {
+        Department dept = row.getDeptCode() != null ? depts.get(row.getDeptCode()) : null;
         return AttendanceAuditLogItemDto.builder()
                 .id(row.getId())
                 .createdAt(row.getCreatedAt())
                 .username(row.getUsername())
                 .deptCode(row.getDeptCode())
                 .deptCodeFormatted(row.getDeptCode() != null ? CodeFormatter.formatDeptCode(row.getDeptCode()) : null)
+                .deptName(dept != null ? dept.getDeptName() : null)
+                .unitCode(dept != null ? dept.getUnitCode() : null)
                 .empCode(row.getEmpCode())
                 .empCodeFormatted(row.getEmpCode() != null ? CodeFormatter.formatEmpCode(row.getEmpCode()) : null)
                 .attendanceDate(row.getAttendanceDate())

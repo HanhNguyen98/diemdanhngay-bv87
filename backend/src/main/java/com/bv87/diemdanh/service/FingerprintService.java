@@ -2,9 +2,11 @@ package com.bv87.diemdanh.service;
 
 import com.bv87.diemdanh.config.FingerprintProperties;
 import com.bv87.diemdanh.dto.*;
+import com.bv87.diemdanh.entity.Department;
 import com.bv87.diemdanh.entity.Employee;
 import com.bv87.diemdanh.entity.EmployeeFingerprint;
 import com.bv87.diemdanh.entity.FingerprintKioskToken;
+import com.bv87.diemdanh.enums.FingerprintTemplateAuditAction;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.DepartmentRepository;
@@ -33,7 +35,7 @@ import java.util.Set;
 
 /**
  * P1 fingerprint enrollment: store templates from kiosk Agent; list status for HEAD/ADMIN web.
- * Template delete/enroll is Agent (kiosk) only — SPEC P2.3.
+ * Template delete/enroll: Agent (kiosk), HEAD (own dept delete), ADMIN (full hospital) — SPEC P-HeadFpReset.
  */
 @Service
 @RequiredArgsConstructor
@@ -44,6 +46,7 @@ public class FingerprintService implements ApplicationRunner {
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;
     private final FingerprintProperties fingerprintProperties;
+    private final FingerprintTemplateAuditService templateAuditService;
 
     @Override
     @Transactional
@@ -138,7 +141,19 @@ public class FingerprintService implements ApplicationRunner {
     @Transactional
     public FingerprintStatusDto enrollFromKiosk(KioskAuthentication kiosk, FingerprintEnrollRequest request) {
         Employee emp = requireEmployeeInDept(request.getEmpCode(), kiosk.getDeptCode());
-        return saveTemplate(emp, request, "kiosk:" + kiosk.getLabel(), "KIOSK");
+        boolean hadActive = hasActiveTemplate(emp.getEmpCode());
+        FingerprintStatusDto result = saveTemplate(emp, request, "kiosk:" + kiosk.getLabel(), "KIOSK");
+        templateAuditService.log(
+                hadActive ? FingerprintTemplateAuditAction.ENROLL_KIOSK : FingerprintTemplateAuditAction.ENROLL_KIOSK,
+                emp.getEmpCode(),
+                emp.getDepartment().getDeptCode(),
+                emp.getFullname(),
+                kiosk.getLabel(),
+                "KIOSK",
+                kiosk.getLabel(),
+                request.getFingerLabel(),
+                hadActive ? "Ghi đè đăng ký cũ" : null);
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -165,17 +180,106 @@ public class FingerprintService implements ApplicationRunner {
 
     /**
      * Soft-deletes the active template for an employee in the kiosk token department (P2.2).
-     * Web HEAD/ADMIN must not delete templates (P2.3) — only this kiosk path.
-     *
-     * @param kiosk   authenticated department kiosk
-     * @param empCode employee code in that department
      */
     @Transactional
     public void deleteForKiosk(KioskAuthentication kiosk, Integer empCode) {
         Employee emp = requireEmployeeInDept(empCode, kiosk.getDeptCode());
-        if (!deactivateActive(emp.getEmpCode())) {
-            throw new BusinessException("Nhân viên chưa đăng ký vân tay");
+        deleteTemplateWithAudit(
+                emp,
+                FingerprintTemplateAuditAction.DELETE_KIOSK,
+                kiosk.getLabel(),
+                "KIOSK",
+                kiosk.getLabel(),
+                null);
+    }
+
+    /**
+     * HEAD deletes fingerprint for re-registration — own department only (P-HeadFpReset).
+     */
+    @Transactional
+    public void deleteForHead(AuthUser authUser, Integer empCode) {
+        if (!authUser.isHead() || authUser.getDeptCode() == null) {
+            throw new AccessDeniedException("Chỉ Trưởng đơn vị được xóa vân tay khoa mình");
         }
+        Employee emp = requireEmployeeInDept(empCode, authUser.getDeptCode());
+        deleteTemplateWithAudit(
+                emp,
+                FingerprintTemplateAuditAction.DELETE_HEAD,
+                authUser.getUsername(),
+                "HEAD",
+                null,
+                "Xóa để đăng ký lại trên Agent");
+    }
+
+    /**
+     * ADMIN deletes fingerprint for any employee hospital-wide (P-HeadFpReset).
+     */
+    @Transactional
+    public void deleteForAdmin(AuthUser authUser, Integer empCode) {
+        requireAdmin(authUser);
+        Employee emp = requireActiveEmployee(empCode);
+        deleteTemplateWithAudit(
+                emp,
+                FingerprintTemplateAuditAction.DELETE_ADMIN,
+                authUser.getUsername(),
+                "ADMIN",
+                null,
+                null);
+    }
+
+    /**
+     * ADMIN enrolls/re-enrolls template for any active employee (P-HeadFpReset).
+     * Physical scan typically via Agent; API supports full admin CRUD.
+     */
+    @Transactional
+    public FingerprintStatusDto enrollFromAdmin(AuthUser authUser, FingerprintEnrollRequest request) {
+        requireAdmin(authUser);
+        Employee emp = requireActiveEmployee(request.getEmpCode());
+        boolean hadActive = hasActiveTemplate(emp.getEmpCode());
+        FingerprintStatusDto result = saveTemplate(
+                emp,
+                request,
+                authUser.getUsername(),
+                "ADMIN");
+        templateAuditService.log(
+                FingerprintTemplateAuditAction.ENROLL_ADMIN,
+                emp.getEmpCode(),
+                emp.getDepartment().getDeptCode(),
+                emp.getFullname(),
+                authUser.getUsername(),
+                "ADMIN",
+                null,
+                request.getFingerLabel(),
+                hadActive ? "Ghi đè đăng ký cũ" : null);
+        return result;
+    }
+
+    /**
+     * HEAD enrolls/re-enrolls template for employee in own department (D1.1).
+     */
+    @Transactional
+    public FingerprintStatusDto enrollFromHead(AuthUser authUser, FingerprintEnrollRequest request) {
+        if (!authUser.isHead() || authUser.getDeptCode() == null) {
+            throw new AccessDeniedException("Chỉ Trưởng đơn vị được đăng ký vân tay khoa mình");
+        }
+        Employee emp = requireEmployeeInDept(request.getEmpCode(), authUser.getDeptCode());
+        boolean hadActive = hasActiveTemplate(emp.getEmpCode());
+        FingerprintStatusDto result = saveTemplate(
+                emp,
+                request,
+                authUser.getUsername(),
+                "HEAD");
+        templateAuditService.log(
+                FingerprintTemplateAuditAction.ENROLL_HEAD,
+                emp.getEmpCode(),
+                emp.getDepartment().getDeptCode(),
+                emp.getFullname(),
+                authUser.getUsername(),
+                "HEAD",
+                null,
+                request.getFingerLabel(),
+                hadActive ? "Ghi đè đăng ký cũ" : null);
+        return result;
     }
 
     // --- P1.2 Admin kiosk token management (SPEC §10.1) ---
@@ -183,9 +287,9 @@ public class FingerprintService implements ApplicationRunner {
     @Transactional(readOnly = true)
     public List<KioskTokenDto> listKioskTokensForAdmin(AuthUser authUser) {
         requireAdmin(authUser);
-        Map<Integer, String> deptNames = loadDeptNameMap();
+        Map<Integer, Department> depts = loadDeptMap();
         return kioskTokenRepository.findAllByOrderByDeptCodeAscCreatedAtDesc().stream()
-                .map(row -> toKioskTokenDto(row, deptNames.get(row.getDeptCode())))
+                .map(row -> toKioskTokenDto(row, depts.get(row.getDeptCode())))
                 .toList();
     }
 
@@ -222,7 +326,6 @@ public class FingerprintService implements ApplicationRunner {
         if (!row.isActive()) {
             throw new BusinessException("Không xoay được token đã thu hồi — hãy phát hành token mới");
         }
-        String keepPin = row.getEnrollPin();
         row.setActive(false);
         row.setTokenPlaintext(null);
         row.setEnrollPin(null);
@@ -230,27 +333,7 @@ public class FingerprintService implements ApplicationRunner {
         String label = StringUtils.hasText(row.getLabel())
                 ? row.getLabel()
                 : "Kiosk Đơn vị " + CodeFormatter.formatDeptCode(row.getDeptCode());
-        return issueToken(row.getDeptCode(), label, keepPin);
-    }
-
-    @Transactional
-    public KioskTokenDto setEnrollPinForAdmin(AuthUser authUser, Long id, KioskTokenSetEnrollPinRequest request) {
-        requireAdmin(authUser);
-        FingerprintKioskToken row = kioskTokenRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("Token kiosk không tồn tại"));
-        if (!row.isActive()) {
-            throw new BusinessException("Chỉ đặt PIN trên token đang dùng");
-        }
-        String pin = request.getEnrollPin() != null ? request.getEnrollPin().trim() : "";
-        if (!pin.matches("^\\d{4,8}$")) {
-            throw new BusinessException("PIN đăng ký phải gồm 4–8 chữ số");
-        }
-        row.setEnrollPin(pin);
-        FingerprintKioskToken saved = kioskTokenRepository.save(row);
-        String deptName = departmentRepository.findById(saved.getDeptCode())
-                .map(d -> d.getDeptName())
-                .orElse(null);
-        return toKioskTokenDto(saved, deptName);
+        return issueToken(row.getDeptCode(), label);
     }
 
     /**
@@ -279,17 +362,11 @@ public class FingerprintService implements ApplicationRunner {
         }
         row.setLabel(label);
         FingerprintKioskToken saved = kioskTokenRepository.save(row);
-        String deptName = departmentRepository.findById(saved.getDeptCode())
-                .map(d -> d.getDeptName())
-                .orElse(null);
-        return toKioskTokenDto(saved, deptName);
+        Department dept = departmentRepository.findById(saved.getDeptCode()).orElse(null);
+        return toKioskTokenDto(saved, dept);
     }
 
     private KioskTokenIssuedDto issueToken(Integer deptCode, String label) {
-        return issueToken(deptCode, label, null);
-    }
-
-    private KioskTokenIssuedDto issueToken(Integer deptCode, String label, String enrollPin) {
         // SPEC §8.3 P4b — at most one active kiosk token per department
         revokeAllActiveTokensForDept(deptCode);
         String plaintext = generateKioskTokenPlaintext();
@@ -298,16 +375,14 @@ public class FingerprintService implements ApplicationRunner {
         row.setDeptCode(deptCode);
         row.setTokenHash(hash);
         row.setTokenPlaintext(plaintext);
-        row.setEnrollPin(StringUtils.hasText(enrollPin) ? enrollPin.trim() : null);
+        row.setEnrollPin(null);
         row.setLabel(label);
         row.setActive(true);
         row.setCreatedAt(Instant.now());
         FingerprintKioskToken saved = kioskTokenRepository.save(row);
-        String deptName = departmentRepository.findById(deptCode)
-                .map(d -> d.getDeptName())
-                .orElse(null);
+        Department dept = departmentRepository.findById(deptCode).orElse(null);
         return KioskTokenIssuedDto.builder()
-                .tokenInfo(toKioskTokenDto(saved, deptName))
+                .tokenInfo(toKioskTokenDto(saved, dept))
                 .token(plaintext)
                 .build();
     }
@@ -343,15 +418,14 @@ public class FingerprintService implements ApplicationRunner {
                         "Đơn vị không tồn tại: " + CodeFormatter.formatDeptCode(deptCode)));
     }
 
-    private Map<Integer, String> loadDeptNameMap() {
-        Map<Integer, String> map = new HashMap<>();
-        departmentRepository.findAll().forEach(d -> map.put(d.getDeptCode(), d.getDeptName()));
+    private Map<Integer, Department> loadDeptMap() {
+        Map<Integer, Department> map = new HashMap<>();
+        departmentRepository.findAll().forEach(d -> map.put(d.getDeptCode(), d));
         return map;
     }
 
-    private KioskTokenDto toKioskTokenDto(FingerprintKioskToken row, String deptName) {
+    private KioskTokenDto toKioskTokenDto(FingerprintKioskToken row, Department dept) {
         String token = row.isActive() ? row.getTokenPlaintext() : null;
-        String enrollPin = row.isActive() ? row.getEnrollPin() : null;
         Instant lastHb = row.getLastHeartbeatAt();
         long threshold = Math.max(30, fingerprintProperties.getOnlineThresholdSeconds());
         boolean online = row.isActive()
@@ -361,10 +435,10 @@ public class FingerprintService implements ApplicationRunner {
                 .id(row.getId())
                 .deptCode(row.getDeptCode())
                 .deptCodeFormatted(CodeFormatter.formatDeptCode(row.getDeptCode()))
-                .deptName(deptName)
+                .deptName(dept != null ? dept.getDeptName() : null)
+                .unitCode(dept != null ? dept.getUnitCode() : null)
                 .label(row.getLabel())
                 .token(token)
-                .enrollPin(enrollPin)
                 .active(row.isActive())
                 .createdAt(row.getCreatedAt())
                 .lastHeartbeatAt(lastHb)
@@ -478,6 +552,51 @@ public class FingerprintService implements ApplicationRunner {
             fingerprintRepository.save(fp);
         }
         return true;
+    }
+
+    private boolean hasActiveTemplate(Integer empCode) {
+        return !fingerprintRepository.findAllByEmpCodeAndActiveTrue(empCode).isEmpty();
+    }
+
+    private String resolveActiveFingerLabel(Integer empCode) {
+        return fingerprintRepository.findAllByEmpCodeAndActiveTrue(empCode).stream()
+                .map(EmployeeFingerprint::getFingerLabel)
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void deleteTemplateWithAudit(
+            Employee emp,
+            FingerprintTemplateAuditAction action,
+            String actorUsername,
+            String actorRole,
+            String kioskLabel,
+            String note) {
+        String fingerLabel = resolveActiveFingerLabel(emp.getEmpCode());
+        if (!deactivateActive(emp.getEmpCode())) {
+            throw new BusinessException("Nhân viên chưa đăng ký vân tay");
+        }
+        templateAuditService.log(
+                action,
+                emp.getEmpCode(),
+                emp.getDepartment().getDeptCode(),
+                emp.getFullname(),
+                actorUsername,
+                actorRole,
+                kioskLabel,
+                fingerLabel,
+                note);
+    }
+
+    private Employee requireActiveEmployee(Integer empCode) {
+        Employee emp = employeeRepository.findByEmpCodeWithDept(empCode)
+                .orElseThrow(() -> new BusinessException(
+                        "Nhân viên không tồn tại: " + CodeFormatter.formatEmpCode(empCode)));
+        if (!emp.isActive()) {
+            throw new BusinessException("Nhân viên đã ngưng hoạt động");
+        }
+        return emp;
     }
 
     private Employee requireEmployeeInDept(Integer empCode, Integer deptCode) {

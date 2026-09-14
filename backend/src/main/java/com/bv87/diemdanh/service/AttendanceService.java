@@ -8,7 +8,6 @@ import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.*;
 import com.bv87.diemdanh.security.AuthUser;
-import com.bv87.diemdanh.service.ai.AiPendingActionStore;
 import com.bv87.diemdanh.util.AttendanceValidity;
 import com.bv87.diemdanh.util.CodeFormatter;
 import com.bv87.diemdanh.util.VietnamTimeService;
@@ -44,7 +43,6 @@ public class AttendanceService {
     private final AttendanceReportBlockRepository reportBlockRepository;
     private final AttendanceLockService lockService;
     private final VietnamTimeService timeService;
-    private final AiPendingActionStore pendingActionStore;
     private final AttendanceStatusCatalogService statusCatalogService;
     private final AccountRepository accountRepository;
     private final FingerprintScanLogRepository scanLogRepository;
@@ -180,98 +178,6 @@ public class AttendanceService {
         return map;
     }
 
-    @Transactional
-    public Map<String, Object> previewBatchAttendance(
-            AuthUser authUser, LocalDate date, String status, String scope) {
-        if (!authUser.isHead()) {
-            throw new AccessDeniedException("Chỉ Trưởng đơn vị mới Chấm công hàng loạt qua AI");
-        }
-        Integer deptCode = authUser.getDeptCode();
-        if (deptCode == null) {
-            throw new BusinessException("Tài khoản chưa gắn mã Đơn vị");
-        }
-        lockService.assertCanWrite(authUser, deptCode, date);
-        assertHeadManualStatus(status);
-        statusCatalogService.assertActiveStatus(status);
-
-        List<Employee> employees = staffForAttendance(employeeRepository.findByDeptCode(deptCode));
-        Map<Integer, AttendanceRecord> recordMap = attendanceRepository
-                .findByDateAndDeptCode(date, deptCode).stream()
-                .collect(Collectors.toMap(AttendanceRecord::getEmpCode, r -> r));
-
-        boolean allStaff = "all_staff".equals(scope);
-        List<Map<String, Object>> targets = new ArrayList<>();
-        int overwriteCount = 0;
-
-        for (Employee emp : employees) {
-            AttendanceRecord record = recordMap.get(emp.getEmpCode());
-            if (record != null && AttendanceValidity.isPresenceStatus(record.getStatus())) {
-                continue;
-            }
-            boolean unchecked = !AttendanceValidity.isComplete(record);
-            if (!allStaff && !unchecked) {
-                continue;
-            }
-            if (allStaff && record != null && record.getStatus() != null && !status.equals(record.getStatus())) {
-                overwriteCount++;
-            }
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("empCode", emp.getEmpCode());
-            item.put("empCodeFormatted", CodeFormatter.formatEmpCode(emp.getEmpCode()));
-            item.put("fullname", emp.getFullname());
-            item.put("currentStatus", record != null ? record.getStatus() : null);
-            item.put("currentStatusLabel",
-                    record != null && record.getStatus() != null
-                            ? statusCatalogService.resolveLabel(record.getStatus())
-                            : "CHƯA CHẤM");
-            targets.add(item);
-        }
-
-        List<Integer> empCodes = targets.stream().map(t -> (Integer) t.get("empCode")).toList();
-        String actionId = pendingActionStore.saveBatchAttendanceAction(
-                deptCode, date, status, scope, empCodes);
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("actionId", actionId);
-        result.put("date", date.toString());
-        result.put("status", status);
-        result.put("statusLabel", statusCatalogService.resolveLabel(status));
-        result.put("scope", scope);
-        result.put("scopeLabel", allStaff ? "Toàn bộ nhân viên" : "Chỉ nhân viên CHƯA CHẤM");
-        result.put("targetCount", targets.size());
-        result.put("overwriteCount", overwriteCount);
-        result.put("staff", targets);
-        return result;
-    }
-
-    @Transactional
-    public Map<String, Object> confirmBatchAttendance(AuthUser authUser, String actionId) {
-        if (!authUser.isHead()) {
-            throw new AccessDeniedException("Chỉ Trưởng đơn vị mới Chấm công hàng loạt qua AI");
-        }
-        Integer deptCode = authUser.getDeptCode();
-        var action = pendingActionStore.consumeBatchAttendanceAction(actionId, deptCode)
-                .orElseThrow(() -> new BusinessException("Phiên xác nhận đã hết hạn hoặc không hợp lệ"));
-
-        lockService.assertCanWrite(authUser, deptCode, action.date());
-        int updated = 0;
-        for (Integer empCode : action.empCodes()) {
-            UpdateAttendanceRequest request = new UpdateAttendanceRequest();
-            request.setEmpCode(empCode);
-            request.setStatus(action.status());
-            saveAttendance(authUser, request, action.date());
-            updated++;
-        }
-
-        return Map.of(
-                "updated", updated,
-                "date", action.date().toString(),
-                "status", action.status(),
-                "statusLabel", statusCatalogService.resolveLabel(action.status()),
-                "message", String.format("Đã Chấm công %s cho %d nhân viên.",
-                        statusCatalogService.resolveLabel(action.status()), updated));
-    }
-
     public List<StaffAttendanceDto> getStaffList(AuthUser authUser, Integer departmentCode, LocalDate date) {
         Integer deptCode = resolveDeptCode(authUser, departmentCode);
         lockService.assertCanView(authUser, deptCode);
@@ -320,20 +226,16 @@ public class AttendanceService {
                         "Không tìm thấy nhân viên mã " + CodeFormatter.formatEmpCode(request.getEmpCode())));
 
         Integer deptCode = employee.getDepartment().getDeptCode();
-        lockService.assertCanWrite(authUser, deptCode, date);
+        AttendanceRecord existing = attendanceRepository
+                .findByDateAndEmpCode(date, request.getEmpCode())
+                .orElse(null);
+        lockService.assertCanWriteStaff(authUser, deptCode, date, existing, request.getNote());
         statusCatalogService.assertActiveStatus(request.getStatus());
         if (authUser.isHead()) {
             assertHeadManualStatus(request.getStatus());
         }
 
-        AttendanceRecord record = attendanceRepository
-                .findByDateAndEmpCode(date, request.getEmpCode())
-                .orElseGet(() -> {
-                    AttendanceRecord r = new AttendanceRecord();
-                    r.setAttendanceDate(date);
-                    r.setEmployee(employee);
-                    return r;
-                });
+        AttendanceRecord record = existing != null ? existing : createBlankRecord(date, employee);
 
         if (authUser.isHead() && AttendanceValidity.isPresenceStatus(record.getStatus())
                 && !isPostScanOverride(request.getStatus())) {
@@ -348,6 +250,7 @@ public class AttendanceService {
             record.setStatus(request.getStatus());
             record.setNote(request.getNote());
         }
+        applyIncompleteExplainReason(authUser, deptCode, date, record, request.getNote());
         AttendanceRecord saved = attendanceRepository.save(record);
         auditService.logAttendance(authUser, "ATTENDANCE_SAVE", deptCode, request.getEmpCode(), date,
                 Map.of("status", request.getStatus() != null ? request.getStatus() : ""));
@@ -426,13 +329,17 @@ public class AttendanceService {
         int skippedReport = 0;
         int skippedSoftLock = 0;
 
+        if (authUser.isHead() && rangeNeedsIncompleteExplain(
+                deptCode, from, to, existingByDate) && isBlank(request.getNote())) {
+            throw new BusinessException(AttendanceLockService.MSG_EXPLAIN_REQUIRED);
+        }
+
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
-            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day)) {
+            AttendanceRecord record = existingByDate.get(day);
+            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
                 skippedSoftLock++;
                 continue;
             }
-
-            AttendanceRecord record = existingByDate.get(day);
 
             if (record != null && AttendanceValidity.isPresenceStatus(record.getStatus())
                     && !isPostScanOverride(request.getStatus())) {
@@ -448,6 +355,7 @@ public class AttendanceService {
                 record.setEmployee(employee);
             }
             applyManualStatus(authUser, record, request.getStatus(), request.getNote());
+            applyIncompleteExplainReason(authUser, deptCode, day, record, request.getNote());
             attendanceRepository.save(record);
             updated++;
         }
@@ -513,11 +421,11 @@ public class AttendanceService {
         int skippedSoftLock = 0;
 
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
-            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day)) {
+            AttendanceRecord record = existingByDate.get(day);
+            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
                 skippedSoftLock++;
                 continue;
             }
-            AttendanceRecord record = existingByDate.get(day);
             if (record != null && AttendanceValidity.isPresenceStatus(record.getStatus())
                     && !isPostScanOverride(targetStatus)
                     && !authUser.isAdmin()) {
@@ -531,6 +439,66 @@ public class AttendanceService {
 
     private record RangeSkipCounts(
             int assignable, int skippedFingerprint, int skippedReport, int skippedSoftLock) {
+    }
+
+    private static AttendanceRecord createBlankRecord(LocalDate date, Employee employee) {
+        AttendanceRecord record = new AttendanceRecord();
+        record.setAttendanceDate(date);
+        record.setEmployee(employee);
+        return record;
+    }
+
+    private boolean rangeNeedsIncompleteExplain(
+            Integer deptCode,
+            LocalDate from,
+            LocalDate to,
+            Map<LocalDate, AttendanceRecord> existingByDate) {
+        for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
+            if (lockService.isIncompleteExplainAllowed(deptCode, AccountRole.HEAD, day)
+                    && !AttendanceValidity.isComplete(existingByDate.get(day))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void applyIncompleteExplainReason(
+            AuthUser authUser,
+            Integer deptCode,
+            LocalDate date,
+            AttendanceRecord record,
+            String note) {
+        if (!authUser.isHead() || note == null || note.isBlank()) {
+            return;
+        }
+        if (!lockService.isIncompleteExplainAllowed(deptCode, AccountRole.HEAD, date)) {
+            return;
+        }
+        record.setMissingPunchReason(note.trim());
+        if (record.getNote() == null || record.getNote().isBlank()) {
+            record.setNote(note.trim());
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String resolveHeadLockMessage(
+            AccountRole role,
+            LocalDate date,
+            boolean reportBlocked,
+            boolean incompleteExplainAllowed) {
+        if (role != AccountRole.HEAD) {
+            return null;
+        }
+        if (reportBlocked && date.equals(timeService.today())) {
+            return "Admin đã khóa chỉnh sửa Chấm công cho Đơn vị hôm nay.";
+        }
+        if (incompleteExplainAllowed) {
+            return lockService.getHeadIncompleteExplainBanner(date);
+        }
+        return null;
     }
 
     private static boolean isPostScanOverride(String status) {
@@ -563,7 +531,8 @@ public class AttendanceService {
         }
         if (AttendanceValidity.NGHI_TRUC_HALF.equals(status)) {
             PayrollIntent intent = PayrollIntent.fromCode(record.getPayrollIntent());
-            boolean wizardHalf = intent == PayrollIntent.HALF_MORNING || intent == PayrollIntent.HALF_AFTERNOON;
+            boolean wizardHalf = intent == PayrollIntent.HALF_AFTERNOON
+                    || intent == PayrollIntent.HALF_MORNING;
             if (!wizardHalf) {
                 requireHeadMissingPunchExplainForNghiTruc(record);
                 if (!AttendanceValidity.isHalfMorningPattern(record)
@@ -576,7 +545,6 @@ public class AttendanceService {
             record.setNote(note);
             record.setSource(AttendanceValidity.punchCount(record) > 0 ? "MIXED" : "MANUAL");
             AttendanceValidity.syncLegacyTimes(record);
-            applyPayrollFillPendingIfNeeded(record);
             return;
         }
         if (AttendanceValidity.NGHI_TRUC_FULL.equals(status)) {
@@ -677,6 +645,10 @@ public class AttendanceService {
         validateManualRangeDates(from, to);
 
         PayrollIntent intent = PayrollIntent.fromCode(request.getPayrollIntent());
+        if (intent == PayrollIntent.HALF_MORNING) {
+            throw new BusinessException(
+                    "Không còn chấm nghỉ trực nửa buổi sáng. Chọn nghỉ trực 1 ngày hoặc nửa buổi chiều.");
+        }
         if (intent == null || !intent.isNghiTrucAssignable()) {
             throw new BusinessException("Loại nghỉ trực không hợp lệ.");
         }
@@ -701,12 +673,12 @@ public class AttendanceService {
         int skippedSoftLock = 0;
 
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
-            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day)) {
+            AttendanceRecord record = existingByDate.get(day);
+            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
                 skippedSoftLock++;
                 continue;
             }
 
-            AttendanceRecord record = existingByDate.get(day);
             if (record == null) {
                 record = new AttendanceRecord();
                 record.setAttendanceDate(day);
@@ -737,9 +709,11 @@ public class AttendanceService {
                 record.setPayrollFillStatus(null);
             } else {
                 record.setStatus(AttendanceValidity.NGHI_TRUC_HALF);
+                record.setAfternoonInAt(null);
+                record.setAfternoonOutAt(null);
+                record.setPayrollFillStatus(null);
                 record.setSource(punches > 0 ? AttendanceValidity.SOURCE_MIXED : AttendanceValidity.SOURCE_MANUAL);
                 AttendanceValidity.syncLegacyTimes(record);
-                applyPayrollFillPendingIfNeeded(record);
             }
 
             attendanceRepository.save(record);
@@ -761,7 +735,7 @@ public class AttendanceService {
             message += " Bỏ qua " + skippedFingerprint + " ngày không áp dụng được.";
         }
         if (skippedSoftLock > 0) {
-            message += " Bỏ qua " + skippedSoftLock + " ngày do khóa mềm / chưa mở khóa.";
+            message += " Bỏ qua " + skippedSoftLock + " ngày đã đủ dữ liệu hoặc bị khóa.";
         }
 
         auditService.logAttendance(authUser, "ATTENDANCE_NGHI_TRUC", deptCode, request.getEmpCode(), from,
@@ -825,27 +799,29 @@ public class AttendanceService {
         return toStaffDto(employee, deptCode, saved);
     }
 
-    private void applyPayrollFillPendingIfNeeded(AttendanceRecord record) {
-        if (AttendanceValidity.hasEmptyPunchSlot(record)) {
-            record.setPayrollFillStatus(PayrollFillStatus.PENDING.name());
-        } else {
-            record.setPayrollFillStatus(null);
-        }
-    }
-
     private void fillOfficialTimesForNullSlots(
             AttendanceRecord record, LocalDate date, ZoneId zone, WorkSchedule schedule) {
-        if (record.getMorningInAt() == null) {
-            record.setMorningInAt(toOfficialInstant(date, zone, schedule.morningInOfficial()));
+        PayrollIntent intent = PayrollIntent.fromCode(record.getPayrollIntent());
+        if (intent == PayrollIntent.NGHI_TRUC_FULL) {
+            return;
         }
-        if (record.getNoonOutAt() == null) {
-            record.setNoonOutAt(toOfficialInstant(date, zone, schedule.noonOutOfficial()));
+        boolean fillMorning = intent != PayrollIntent.HALF_MORNING;
+        boolean fillAfternoon = intent != PayrollIntent.HALF_AFTERNOON;
+        if (fillMorning) {
+            if (record.getMorningInAt() == null) {
+                record.setMorningInAt(toOfficialInstant(date, zone, schedule.morningInOfficial()));
+            }
+            if (record.getNoonOutAt() == null) {
+                record.setNoonOutAt(toOfficialInstant(date, zone, schedule.noonOutOfficial()));
+            }
         }
-        if (record.getAfternoonInAt() == null) {
-            record.setAfternoonInAt(toOfficialInstant(date, zone, schedule.afternoonInOfficial()));
-        }
-        if (record.getAfternoonOutAt() == null) {
-            record.setAfternoonOutAt(toOfficialInstant(date, zone, schedule.afternoonOutOfficial()));
+        if (fillAfternoon) {
+            if (record.getAfternoonInAt() == null) {
+                record.setAfternoonInAt(toOfficialInstant(date, zone, schedule.afternoonInOfficial()));
+            }
+            if (record.getAfternoonOutAt() == null) {
+                record.setAfternoonOutAt(toOfficialInstant(date, zone, schedule.afternoonOutOfficial()));
+            }
         }
     }
 
@@ -1212,6 +1188,8 @@ public class AttendanceService {
         boolean unlocked = lockService.isUnlocked(deptCode, date);
         boolean manualLocked = lockService.isManualLocked(deptCode, date);
         boolean editable = lockService.isEditable(deptCode, role, date);
+        boolean incompleteExplainAllowed =
+                lockService.isIncompleteExplainAllowed(deptCode, role, date);
         long markedCount = statusCatalogService.sumBreakdownCounts(statusBreakdown);
         long uncheckedCount = Math.max(0, total - markedCount);
         int progressPercent = total == 0 ? 0 : (int) Math.round(100.0 * markedCount / total);
@@ -1222,7 +1200,7 @@ public class AttendanceService {
         boolean reportBlocked =
                 reportBlockRepository.findByAttendanceDateAndDeptCode(date, deptCode).isPresent();
         AttendanceUnlockRequest latestRequest = unlockRequestService.latestFor(deptCode, date);
-        // editable already includes reportBlocked via AttendanceLockService.isEditable (SPEC_AI §3.2)
+        String lockMessage = resolveHeadLockMessage(role, date, reportBlocked, incompleteExplainAllowed);
 
         return AttendanceSummaryDto.builder()
                 .attendanceDate(date)
@@ -1236,8 +1214,9 @@ public class AttendanceService {
                 .locked(locked)
                 .unlocked(unlocked)
                 .editable(editable)
+                .incompleteExplainAllowed(incompleteExplainAllowed)
                 .lockTime(timeService.formatLockTime())
-                .lockMessage(locked ? lockService.getLockMessage(deptCode, role, date) : null)
+                .lockMessage(lockMessage)
                 .markedCount(markedCount)
                 .uncheckedCount(uncheckedCount)
                 .progressPercent(progressPercent)
@@ -1533,6 +1512,20 @@ public class AttendanceService {
         return statusCatalogService.resolveLabel(status);
     }
 
+    private static String resolveNghiTrucSubtitle(AttendanceRecord record, String status) {
+        if (!AttendanceValidity.isNghiTrucStatus(status)) {
+            return null;
+        }
+        PayrollIntent intent = record != null ? PayrollIntent.fromCode(record.getPayrollIntent()) : null;
+        if (intent != null && intent.getRosterSubtitle() != null) {
+            return intent.getRosterSubtitle();
+        }
+        if (AttendanceValidity.NGHI_TRUC_FULL.equals(status)) {
+            return PayrollIntent.NGHI_TRUC_FULL.getRosterSubtitle();
+        }
+        return PayrollIntent.HALF_AFTERNOON.getRosterSubtitle();
+    }
+
     private StaffAttendanceDto toStaffDto(Employee emp, Integer deptCode, AttendanceRecord record) {
         String status = record != null ? record.getStatus() : null;
         PayrollIntent intent = record != null ? PayrollIntent.fromCode(record.getPayrollIntent()) : null;
@@ -1554,6 +1547,7 @@ public class AttendanceService {
                 .missingPunchReason(record != null ? record.getMissingPunchReason() : null)
                 .payrollIntent(intent != null ? intent.name() : null)
                 .payrollIntentLabel(intent != null ? intent.getLabel() : null)
+                .nghiTrucSubtitle(resolveNghiTrucSubtitle(record, status))
                 .payrollFillStatus(fillStatus != null ? fillStatus.name() : null)
                 .payrollFillStatusLabel(fillStatus != null ? fillStatus.getLabel() : null)
                 .checkInAt(record != null ? record.getCheckInAt() : null)
@@ -1568,6 +1562,7 @@ public class AttendanceService {
                 .lastKioskDeptCode(record != null ? record.getLastKioskDeptCode() : null)
                 .lastKioskLabel(record != null ? record.getLastKioskLabel() : null)
                 .source(record != null ? record.getSource() : null)
+                .complete(AttendanceValidity.isComplete(record))
                 .build();
     }
 }

@@ -1,0 +1,47 @@
+<UserControl x:Class="BV87.App.Controls.PageBusyOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shell="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+             x:Name="Root"
+             Panel.ZIndex="200"
+             Visibility="Collapsed"
+             IsHitTestVisible="False">
+    <UserControl.Resources>
+        <Storyboard x:Key="RingStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="RingRotate"
+                             Storyboard.TargetProperty="Angle"
+                             From="0" To="360" Duration="0:0:0.8"/>
+        </Storyboard>
+    </UserControl.Resources>
+    <Border Background="Transparent">
+        <Border HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="{StaticResource SurfaceWhiteBrush}"
+                BorderBrush="{StaticResource LineBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="20,16"
+                MinWidth="160">
+            <StackPanel>
+                <Grid Width="40" Height="40" HorizontalAlignment="Center" Margin="0,0,0,10">
+                    <Ellipse Stroke="{StaticResource LineBrush}" StrokeThickness="3"/>
+                    <Ellipse Stroke="{StaticResource PrimaryBrush}"
+                             StrokeThickness="3"
+                             StrokeDashArray="14 50"
+                             StrokeStartLineCap="Round"
+                             StrokeEndLineCap="Round"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform x:Name="RingRotate" Angle="0"/>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                </Grid>
+                <TextBlock Text="{x:Static shell:ShellUiStrings.PageBusyMessage}"
+                           FontSize="{StaticResource FontSizeMd}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource ContentHeadingBrush}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>

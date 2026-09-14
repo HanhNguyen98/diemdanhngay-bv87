@@ -1,0 +1,151 @@
+<shell:AppDialogWindow x:Class="BV87.App.Views.Admin.Catalog.StaffAvatarDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:BV87.App.Shell"
+        xmlns:catalog="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+        Title="{x:Static catalog:CatalogUiStrings+Staff.AvatarTitle}"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource SurfacePageBrush}">
+    <Border Style="{StaticResource CardBorderStyle}" MinWidth="460" Margin="16">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="24,24,24,8">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                    <Border Width="40" Height="40" CornerRadius="20"
+                            Background="{StaticResource PrimaryLightBrush}"
+                            BorderBrush="{StaticResource PrimaryLightBorderBrush}"
+                            BorderThickness="1"
+                            VerticalAlignment="Center">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE77B;"
+                                   FontSize="18" Foreground="{StaticResource PrimaryBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Static catalog:CatalogUiStrings+Staff.AvatarTitle}"
+                                   FontFamily="{StaticResource AppFontFamily}"
+                                   FontSize="{StaticResource FontSizeLg}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource NavyBrush}"/>
+                        <TextBlock x:Name="StaffText"
+                                   FontFamily="{StaticResource AppFontFamily}"
+                                   FontSize="{StaticResource FontSizeBase}"
+                                   Foreground="{StaticResource PrimaryBrush}"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Grid Width="140" Height="140" HorizontalAlignment="Center" Margin="0,0,0,20">
+                    <Grid Width="128" Height="128"
+                          HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid.Clip>
+                            <EllipseGeometry Center="64,64" RadiusX="64" RadiusY="64"/>
+                        </Grid.Clip>
+                        <Border Background="{StaticResource NeutralBgBrush}">
+                            <Grid>
+                                <TextBlock x:Name="InitialsText" FontSize="28" FontWeight="Bold"
+                                           Foreground="{StaticResource PrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image x:Name="PreviewImage" Stretch="UniformToFill"
+                                       Visibility="Collapsed"/>
+                                <Button Click="Pick_Click" Cursor="Hand"
+                                        ToolTip="{x:Static catalog:CatalogUiStrings+Staff.AvatarPickFromComputer}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Grid>
+                                                <Border Background="{StaticResource NavyBrush}" Opacity="0.42"/>
+                                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE896;"
+                                                           FontSize="28"
+                                                           Foreground="{StaticResource SurfaceWhiteBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <Ellipse Width="128" Height="128"
+                             Stroke="{StaticResource PrimaryBrush}"
+                             StrokeThickness="2"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                             IsHitTestVisible="False"/>
+                    <Button x:Name="ClearButton"
+                            Width="28" Height="28"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Cursor="Hand"
+                            Click="Remove_Click"
+                            ToolTip="{x:Static catalog:CatalogUiStrings+Staff.AvatarRemove}"
+                            Visibility="Collapsed"
+                            Panel.ZIndex="1">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{StaticResource SurfaceWhiteBrush}"
+                                        BorderBrush="{StaticResource LineBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14">
+                                    <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE711;"
+                                               FontSize="11"
+                                               Foreground="{StaticResource DangerFgBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <Border Background="{StaticResource PrimaryLightBrush}"
+                        BorderBrush="{StaticResource PrimaryLightBorderBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" FontFamily="{StaticResource IconFont}" Text="&#xE946;"
+                                   FontSize="16" Foreground="{StaticResource PrimaryBrush}"
+                                   VerticalAlignment="Top" Margin="0,2,10,0"/>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{x:Static catalog:CatalogUiStrings+Staff.AvatarNote}"
+                                       FontFamily="{StaticResource AppFontFamily}"
+                                       FontSize="{StaticResource FontSizeSm}"
+                                       Foreground="{StaticResource ContentHeadingBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{x:Static catalog:CatalogUiStrings+Staff.AvatarHint}"
+                                       FontFamily="{StaticResource AppFontFamily}"
+                                       FontSize="{StaticResource FontSizeSm}"
+                                       Foreground="{StaticResource ContentMutedBrush}"
+                                       TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerFgBrush}"
+                           FontFamily="{StaticResource AppFontFamily}"
+                           FontSize="{StaticResource FontSizeSm}"
+                           TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0"
+                           Visibility="Collapsed"/>
+            </StackPanel>
+
+            <Border Grid.Row="1"
+                    Background="{StaticResource SurfacePageBrush}"
+                    BorderBrush="{StaticResource LineBrush}"
+                    BorderThickness="0,1,0,0"
+                    Padding="24,14">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="{x:Static catalog:CatalogUiStrings.Cancel}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Padding="16,8" Margin="0,0,8,0" Click="Cancel_Click"/>
+                    <Button Content="{x:Static catalog:CatalogUiStrings+Staff.AvatarSave}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Padding="16,8" Click="Save_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</shell:AppDialogWindow>

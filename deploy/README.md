@@ -1,16 +1,16 @@
-# Deploy Production — Chấm công BV87
+﻿# Deploy Production — Chấm công BV87
 
-## Kiến trúc
+## Kiến trúc (D5)
 
 ```
-LAN  : http://192.170.182.14:8081  →  Nginx (frontend)  →  /api  →  Spring Boot
-Cloud: https://diemdanh.<domain>   →  cloudflared       →  Nginx :80
+LAN  : http://192.170.182.14:8081  →  Spring Boot (`/api/*`)
 MySQL: host MySQL (cùng server khảo sát), DB riêng diemdanhngay_bv87_db
+Client: WPF BV87.exe (JWT) + BV87.exe --agent (kiosk token)
 ```
 
-Không dùng Ngrok. Cloudflare Tunnel chạy optional qua profile `tunnel`.
+**Cấm** Nginx SPA, **cấm** Cloudflare Tunnel cho app chấm công. Web khảo sát `:8080` không đụng.
 
-**Kiosk / Fingerprint Agent chỉ LAN** (`lan-gate-enabled: true`). Không trỏ `api.baseUrl` Agent qua Cloudflare.
+**Kiosk** (`lan-gate-enabled: true`). `apiBaseUrl` Agent = IP LAN `:8081`.
 
 ## Chuẩn bị MySQL (chạy một lần trên server)
 
@@ -30,7 +30,7 @@ Chạy `schema.sql` + `data.sql` lần đầu (hoặc migrate từ local). Prod 
 ```powershell
 cd deploy
 copy .env.example .env
-# Sửa DB_PASS, APP_CORS_ORIGINS, SESSION_COOKIE_SECURE
+# Sửa DB_PASS
 
 cd ..\backend
 copy prod-secrets.example.yml prod-secrets.yml
@@ -46,34 +46,18 @@ docker compose -f deploy/docker-compose.prod.yml up -d --build
 docker compose -f deploy/docker-compose.prod.yml logs -f diemdanh-backend
 ```
 
-Truy cập: http://192.170.182.14:8081
+Truy cập API: http://192.170.182.14:8081/api/… (WPF / Agent). Không còn UI web.
 
-## Cloudflare Tunnel
+WPF chỉ JWT. Không bật Cloudflare Tunnel.
 
-1. Cloudflare Zero Trust → Networks → Tunnels → tạo hoặc dùng tunnel khảo sát
-2. Public Hostname mới: `diemdanh.<domain>` → `http://diemdanh-frontend:80`
-3. Copy token vào `deploy/.env`: `CF_TUNNEL_TOKEN=...`
-4. Thêm domain vào `APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS`
-5. Nếu chỉ truy cập qua HTTPS Cloudflare: `SESSION_COOKIE_SECURE=true`
-
-```powershell
-docker compose -f deploy/docker-compose.prod.yml --profile tunnel up -d --build
-```
-
-## Cookie session
-
-| Truy cập | SESSION_COOKIE_SECURE |
-|----------|----------------------|
-| LAN HTTP `:8081` | `false` |
-| Cloudflare HTTPS | `true` (hoặc dùng HTTPS cả LAN) |
+Hướng dẫn ADMIN / HEAD / IT (ZIP, kiosk, Git): [`docs/HUONG_DAN_SU_DUNG.md`](../docs/HUONG_DAN_SU_DUNG.md).
 
 ## Kiểm tra sau deploy
 
-- [ ] Login admin / trưởng phòng
-- [ ] Chấm công mobile HEAD
-- [ ] Dashboard + Trợ lý AI (SSE + Excel)
-- [ ] Chuyển đơn vị (POST transfer) + lịch sử Từ→Đến
-- [ ] Settings mục 4 khung giờ 4 pha đã Lưu
+- [ ] WPF login ADMIN / HEAD (`BV87.exe`)
+- [ ] Agent `BV87.exe --agent` health + quét
+- [ ] Dashboard / catalog / enroll USB
+- [ ] Task `BV87-DiemDanh-Disk-Status` + `backup\disk-status.json` (banner Tổng quan chỉ khi ổ gần đầy)
 - [ ] Web khảo sát `:8080` vẫn hoạt động
 
 ## Cập nhật phiên bản
@@ -147,7 +131,7 @@ FROM attendance_status_types
 WHERE code IN ('VE_SOM','NGHI_TRUC','NGHI_TRUC_FULL','NGHI_TRUC_HALF','HSQ_BS');
 ```
 
-Nếu khung giờ NULL/lệch → Admin Web → **Cài đặt hệ thống** → mục 4 → **Lưu**  
+Nếu khung giờ NULL/lệch → WPF Admin → **Cài đặt hệ thống** → mục 4 → **Lưu**  
 (mặc định SPEC: 07:00 / 11:00 / 13:30 / 16:30 + midpoint / grace).
 
 ### 4. Hibernate validate (P7b / P7c)
@@ -165,100 +149,148 @@ Chỉ **restore dump** backup. Không viết down-migration V18 trên prod nóng
 
 ---
 
-## Fingerprint Agent trên PC khoa (P4a + P4 + P7c)
+## WPF Agent trên PC khoa (D1.2)
 
-Web **không** chạy SDK. Mỗi khoa: 1 Windows PC + ZK9500 + Agent (`fingerprint-agent/`).
+Mỗi khoa: 1 Windows PC + ZK9500 + **BV87.exe --agent** (`desktop/`).
 
-Chi tiết classpath: `fingerprint-agent/README.md` + `docs/SPEC_FINGERPRINT.md` §9.4–§9.5.
+Chi tiết: `desktop/scripts/README.md` + `docs/SPEC_DESKTOP.md` §2.22.
 
-### Build JAR (máy IT)
+### Copy lên PC khoa
+
+Từ ZIP `pack-release.ps1` **hoặc** build Release thủ công:
+
+- `BV87.exe` + runtime
+- `appsettings.json` (Admin/Head — đã cấu hình LAN trong ZIP)
+- `lib\` (libzkfpcsharp + ZK)
+- `scripts\`
+- `agent.config.json.example`
+
+### `agent.config.json` kiosk (LAN only)
+
+```json
+{
+  "apiBaseUrl": "http://192.170.182.14:8081",
+  "kioskToken": "<token active từ Admin — Quản lý token vân tay>",
+  "soundEnabled": true,
+  "deviceAutoOpen": true,
+  "heartbeatEnabled": true
+}
+```
+
+Tạo nhanh:
 
 ```powershell
-cd …\fingerprint-agent\scripts
-Set-ExecutionPolicy -Scope Process Bypass
-.\build-agent-jar.ps1
+cd C:\BV87Agent\scripts
+.\init-agent-config.ps1 -ApiBaseUrl "http://192.170.182.14:8081" -KioskToken "<token>"
 ```
 
-Tạo `dist\fingerprint-agent.jar` (gitignored). Copy lên PC khoa: `dist\`, `lib\`, `scripts\`, `agent.properties` (+ driver ZK).
+**Cấm** commit `agent.config.json` có token thật vào git.
 
-### `agent.properties` (LAN only)
+### Restart Agent sau deploy BE / exe mới
 
-```properties
-api.baseUrl=http://192.170.182.14:8081
-kiosk.token=<token active từ Admin — Quản lý token vân tay>
-enroll.pin=<PIN>
-device.autoOpen=true
-heartbeat.enabled=true
-```
-
-**Cấm** `https://…cloudflare…` cho kiosk.
-
-### Restart Agent sau deploy BE / JAR mới
-
-1. Đóng Agent cũ (cửa sổ / Task Manager `javaw` / `java` FingerprintAgentApp).  
-2. Thay `dist\fingerprint-agent.jar` (giữ `.jar.bak` nếu cần rollback).  
+1. Đóng Agent cũ (Task Manager `BV87.exe` có `--agent`).
+2. Thay `BV87.exe` (+ giữ bản `.bak` nếu cần rollback).
 3. Debug (có CMD):
 
 ```powershell
-cd …\fingerprint-agent\scripts
+cd C:\BV87Agent\scripts
 .\start-agent.bat
 ```
 
-Log: `Using dist\fingerprint-agent.jar` (không classpath IntelliJ cũ).
+4. Ops (ẩn CMD): `start-agent-silent.ps1` hoặc autostart/watchdog tự xử lý.
 
-4. Ops (ẩn CMD):
-
-```powershell
-cd …\fingerprint-agent\scripts
-powershell -NoProfile -ExecutionPolicy Bypass -File .\start-agent-silent.ps1
-```
-
-### Smoke Agent
-
-- Admin: token khoa **Online** (heartbeat ~30–90s).  
-- Quét 1 NV → banner tiếng Việt (`VÀO CHIỀU THÀNH CÔNG` / …), **không** raw `AFTERNOON_IN`, **không** `LỖI` do HTTP 500.  
-- Nếu `scan API failed: HTTP 500` → log BE (thường schema / settings giờ), không chỉ restart Agent.
-
-### Autostart + watchdog (một lần / sau đổi path)
-
-Trên PC khoa, user đăng nhập hàng ngày (Interactive — **không** Windows Service SYSTEM):
+### Autostart + watchdog WPF
 
 ```powershell
-cd …\fingerprint-agent\scripts
+cd C:\BV87Agent\scripts
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-autostart.ps1
+.\install-agent-autostart.ps1
 .\install-watchdog.ps1
 ```
 
-Nếu Access denied khi tạo task: PowerShell **Run as administrator**, chạy lại `install-watchdog.ps1`.
-
 | Thành phần | Hành vi |
 |------------|---------|
-| Autostart | Startup → `start-agent-silent.vbs` → `javaw` |
-| Watchdog | Task `BV87-Fingerprint-Agent-Watchdog` mỗi **2 phút** |
-| Cấm | Task Action = `powershell.exe` trực tiếp; Windows Service mở Swing |
+| Autostart | Startup → `start-agent-silent.vbs` → `BV87.exe --agent` |
+| Watchdog | Task `BV87-WPF-Agent-Watchdog` mỗi **2 phút** |
 
-**Sau đổi thư mục cài Agent:** chạy lại cả hai script install.
+## Java Agent (đã xóa D5)
 
-Kiểm tra: tắt Agent tay → ≤2 phút tự mở lại.
-
----
-
-## Thứ tự cắt gợi ý (1 buổi)
-
-1. Backup DB + ghi `flyway_schema_history`  
-2. Deploy BE/FE (`docker compose … --build`) — Flyway V17/V18  
-3. Verify SQL + Admin Lưu settings khung giờ  
-4. Smoke Web (transfer, attendance, dashboard)  
-5. Build JAR Agent → copy PC khoa  
-6. Stop Agent cũ → start JAR mới → smoke scan  
-7. Re-run `install-watchdog.ps1` (+ autostart nếu path đổi)  
-8. Theo dõi 1 ngày: Online token, không 500 scan  
+`fingerprint-agent/` không còn trong repo. Dùng **BV87.exe --agent**. Gỡ task `BV87-Fingerprint-Agent-Watchdog` trên PC khoa nếu còn.
 
 ## Rollback nhanh
 
 | Lớp | Cách |
 |-----|------|
 | App | Image/tag trước hoặc `git checkout` tag cũ + rebuild |
-| DB | Restore dump |
-| Agent | Copy lại `fingerprint-agent.jar.bak` + start |
+| DB | Restore dump (mục Backup hàng ngày bên dưới) |
+| Agent | ZIP WPF trước + `BV87.exe --agent` |
+
+---
+
+## Backup hàng ngày (B-BACKUP) — PC server Windows
+
+Chạy **trên host Windows** (cùng máy MySQL / DBeaver), **không** trong container Spring.
+
+| Mục | Quy tắc |
+|-----|---------|
+| Path repo | `C:\Users\VNT\diemdanhngay-bv87` |
+| Folder | `backup\backup_ddMMyyyy\` (ví dụ `backup\backup_14092026\`) |
+| File | `diemdanhngay_bv87_db.sql.gz` + `backup.log` |
+| Giờ | Task `BV87-DiemDanh-DB-Backup` **22:00** giờ máy (đặt Windows = VN) |
+| Giữ | **7** folder ngày gần nhất — xóa tự động |
+| DB | Chỉ `diemdanhngay_bv87_db` (không dump khảo sát) |
+| Git | `backup/` gitignored — **cấm** commit dump |
+
+Cảnh báo dung lượng ổ máy chủ (D-DISK.1): host ghi `backup\disk-status.json` mỗi **1 giờ** (task `BV87-DiemDanh-Disk-Status`) và sau dump 22:00. Docker bind-mount `../backup:/app/backup:ro`. Admin Tổng quan chỉ hiện banner khi ổ còn **< 20%** trống (`warning`) hoặc **< 10%** (`danger`) — **không** hiện khi còn đủ chỗ.
+
+Cần **recreate** container sau khi kéo bản có volume: `docker compose -f deploy/docker-compose.prod.yml up -d`.
+
+### Cài một lần (IT)
+
+1. Cài **MySQL client** (`mysqldump.exe`) nếu chưa có trên PATH (DBeaver không thay được).
+2. Copy env:
+
+```powershell
+cd C:\Users\VNT\diemdanhngay-bv87\deploy\scripts
+copy backup.env.example backup.env
+notepad backup.env
+```
+
+`DB_HOST=127.0.0.1` (script chạy trên host — **không** dùng `host.docker.internal`). Sửa `DB_PASS`.
+
+3. Chạy tay lần đầu:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\backup-diemdanh-db.ps1
+```
+
+Kiểm tra `C:\Users\VNT\diemdanhngay-bv87\backup\backup_ddMMyyyy\backup.log` dòng `Backup finished OK`.
+
+4. Gắn lịch 22:00 (dump) **và** 1 giờ (đĩa):
+
+```powershell
+.\install-backup-task.ps1
+```
+
+Hoặc dump ngay rồi gắn lịch: `.\install-backup-task.ps1 -RunOnce`
+
+Task đĩa: `BV87-DiemDanh-Disk-Status` → `write-disk-status.vbs` (cập nhật JSON mà không dump). Kiểm tra tay: `.\write-disk-status.ps1` → `backup\disk-status.json`.
+
+**Sau đổi đường dẫn clone:** chạy lại `install-backup-task.ps1`.
+
+### Restore (sập / hỏng migration)
+
+1. `docker compose -f deploy/docker-compose.prod.yml stop diemdanh-backend`
+2. Giải nén gzip → import:
+
+```powershell
+# Cần gzip hoặc 7-Zip; ví dụ với tar Windows 10+
+tar -xf C:\Users\VNT\diemdanhngay-bv87\backup\backup_14092026\diemdanhngay_bv87_db.sql.gz
+mysql -h 127.0.0.1 -u diemdanh_user -p diemdanhngay_bv87_db < diemdanhngay_bv87_db.sql
+```
+
+3. `docker compose -f deploy/docker-compose.prod.yml start diemdanh-backend`
+
+Dump trên **cùng PC** không chống cháy máy — copy USB/PC khác khi có điều kiện (B3).
+

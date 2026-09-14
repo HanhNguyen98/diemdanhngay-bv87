@@ -1,0 +1,225 @@
+<UserControl x:Class="BV87.App.Views.Admin.AdminDashboardOverviewPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BV87.App.Controls"
+             xmlns:strings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="200"/>
+        </Grid.RowDefinitions>
+
+        <controls:PageHeader Grid.Row="0"
+                             Title="{x:Static strings:AdminUiStrings.OverviewPageTitle}">
+            <controls:PageHeader.ActionsContent>
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding OpenReminderCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE725;" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="{x:Static strings:AdminUiStrings.SendReminder}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </controls:PageHeader.ActionsContent>
+        </controls:PageHeader>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerFgBrush}" TextWrapping="Wrap" Margin="0,0,0,4"
+                       Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}"/>
+            <Border Padding="12,10" CornerRadius="8"
+                    Background="{Binding DiskBannerTone, Converter={StaticResource BannerToneBrush}, ConverterParameter=Bg}"
+                    Visibility="{Binding ShowDiskBanner, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="{Binding DiskBannerMessage}" TextWrapping="Wrap"
+                           FontSize="{StaticResource FontSizeBase}"
+                           Foreground="{Binding DiskBannerTone, Converter={StaticResource BannerToneBrush}, ConverterParameter=Fg}"/>
+            </Border>
+        </StackPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Padding="20,16" Margin="0,0,0,16">
+            <controls:DashboardKpiBar KpiTotalText="{Binding KpiTotalText}"
+                                      ScopeLabel="{Binding KpiScopeLabel}"
+                                      UncheckedCount="{Binding DisplayKpiUnchecked}"
+                                      KpiItems="{Binding KpiItems}"/>
+        </Border>
+
+        <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" Padding="16" Margin="0,0,0,16">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="280"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{x:Static strings:AdminUiStrings.FilterDeptLabel}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"
+                           Foreground="{StaticResource ContentHeadingBrush}"
+                           FontSize="20"
+                           FontWeight="SemiBold"/>
+                <ComboBox Grid.Column="1"
+                          Style="{StaticResource FilterComboBoxStyle}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding DeptFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="DeptCode"
+                          SelectedValue="{Binding SelectedDeptFilterDraft, Mode=TwoWay}"/>
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
+                            Command="{Binding ApplyDeptFilterCommand}"
+                            Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE721;" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static strings:AdminUiStrings.ApplyFilter}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="{x:Static strings:AdminUiStrings.ClearFilter}"
+                            Style="{StaticResource FilterToolbarSecondaryButtonStyle}"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"
+                            Command="{Binding ResetDeptFilterCommand}"/>
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
+                            Command="{Binding RefreshCommand}"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <controls:RefreshSpinIcon IsSpinning="{Binding IsRefreshing}" FontSize="13" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static strings:AdminUiStrings.RefreshDashboard}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="0"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="TIẾN ĐỘ CHẤM CÔNG" Style="{StaticResource SectionTitleStyle}" Margin="20,16,20,12"/>
+                <TextBlock Grid.Row="1" Text="Đang tải bảng điều khiển..." Foreground="{StaticResource ContentMutedBrush}" Margin="20,0,20,16"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+
+                <DataGrid Grid.Row="2"
+                          ItemsSource="{Binding PagedDepartments}"
+                          Style="{StaticResource AdminDataGridStyle}"
+                          VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding IsLoading, Converter={StaticResource InverseBoolToVisibility}}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{x:Static strings:ShellUiStrings.ColStt}"
+                                            Binding="{Binding RowNumber}"
+                                            Width="{StaticResource DataGridSttColumnWidth}"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCenterStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridSttCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="ĐƠN VỊ" Binding="{Binding Dept.DisplayName}"
+                                            Width="*" MinWidth="180" MaxWidth="480">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}">
+                                    <Setter Property="HorizontalAlignment" Value="Left"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="TIẾN ĐỘ" Binding="{Binding Dept.ProgressText}" Width="120">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCenterStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="TỶ LỆ" Binding="{Binding Dept.ProgressPercent, StringFormat={}{0}%}" Width="90">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCenterStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Header="TRẠNG THÁI" Width="155">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="10,5" HorizontalAlignment="Left">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{StaticResource SuccessBgBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Dept.IsCompleted}" Value="False">
+                                                        <Setter Property="Background" Value="{StaticResource DangerBgBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding Dept.StatusLabel}"
+                                                   FontSize="{StaticResource FontSizeSm}"
+                                                   FontWeight="Bold"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding Dept.StatusLabel}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource SuccessFgBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Dept.IsCompleted}" Value="False">
+                                                            <Setter Property="Foreground" Value="{StaticResource DangerFgBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="THAO TÁC" Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Quản lý"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Padding="10,6"
+                                            HorizontalAlignment="Left"
+                                            Tag="{Binding Dept}"
+                                            Click="ManageButton_Click"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Grid.Row="2" Style="{StaticResource SearchEmptyHintStyle}"/>
+
+                <controls:TablePaginationBar Grid.Row="3"
+                                             CurrentPage="{Binding CurrentPage}"
+                                             TotalPages="{Binding TotalPages}"
+                                             TotalItems="{Binding TotalItems}"
+                                             PageSize="{Binding PageSize, Mode=TwoWay}"
+                                             PageSizeOptions="{Binding PageSizeOptions}"
+                                             UnitLabel="đơn vị"
+                                             GoToPageCommand="{Binding GoToPageCommand}"
+/>
+            </Grid>
+        </Border>
+        <controls:PageBusyOverlay Grid.Row="0" Grid.RowSpan="20"
+                                  IsLoading="{Binding IsLoading}"
+                                  IsRefreshing="{Binding IsRefreshing}"/>
+    </Grid>
+</UserControl>

@@ -1,7 +1,6 @@
-# SPEC — Trợ lý AI (sau P5)
+# SPEC — Trợ lý AI (lịch sử)
 
-> Binding: `SPEC_FINGERPRINT` §4.5 / §4.5.2 / §4.7 · `PLAN_AI_ASSISTANT_P5.md`  
-> UI: nút **Trợ lý AI** (Admin `ClinicalFlowPanel` · HEAD `HeadFlowPanel`)
+> **D5: ĐÃ XÓA khỏi repo.** Không còn `/api/admin/ai` · `/api/head/ai` · UI Web. Không implement lại.
 
 ## 1. Mục tiêu
 

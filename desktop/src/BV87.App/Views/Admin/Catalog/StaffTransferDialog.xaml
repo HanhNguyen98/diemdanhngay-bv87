@@ -1,0 +1,46 @@
+<shell:AppDialogWindow x:Class="BV87.App.Views.Admin.Catalog.StaffTransferDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:BV87.App.Shell"
+        SizeToContent="WidthAndHeight"
+        MinWidth="440"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource SurfacePageBrush}">
+    <Border Margin="16" Padding="20" Background="{StaticResource SurfaceWhiteBrush}"
+            BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" MinWidth="420">
+        <StackPanel>
+            <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource NavyBrush}" Margin="0,0,0,4"/>
+            <TextBlock x:Name="SubtitleText" Foreground="{StaticResource ContentMutedBrush}" Margin="0,0,0,16"/>
+
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerFgBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,12" Visibility="Collapsed"/>
+
+            <TextBlock Text="Đơn vị hiện tại" Style="{StaticResource FormLabelStyle}"/>
+            <TextBlock x:Name="FromDeptText" FontWeight="SemiBold" Margin="0,0,0,12"/>
+
+            <TextBlock Text="Đơn vị đích" Style="{StaticResource FormLabelStyle}"/>
+            <ComboBox x:Name="TargetDeptCombo" Style="{StaticResource FilterComboBoxStyle}"
+                      DisplayMemberPath="DisplayLabel" SelectedValuePath="DeptCode" Margin="0,0,0,12"/>
+
+            <TextBlock Text="Lý do luân chuyển" Style="{StaticResource FormLabelStyle}"/>
+            <TextBox x:Name="ReasonBox" Style="{StaticResource FilterTextBoxStyle}"
+                     MinHeight="72" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,8"/>
+
+            <TextBlock Text="Vân tay đã đăng ký vẫn dùng được tại mọi máy quét sau khi chuyển đơn vị."
+                       TextWrapping="Wrap" Foreground="{StaticResource ContentMutedBrush}" FontSize="12" Margin="0,0,0,8"/>
+
+            <TextBlock x:Name="HeadRevokeHint" TextWrapping="Wrap" Foreground="{StaticResource ContentMutedBrush}"
+                       FontSize="12" Margin="0,0,0,8" Visibility="Collapsed"/>
+            <CheckBox x:Name="RevokeHeadBox" Content="Thu hồi quyền trưởng đơn vị tại đơn vị cũ"
+                      Visibility="Collapsed" Margin="0,0,0,16"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Hủy" Padding="16,8" Margin="0,0,8,0" Click="Cancel_Click"/>
+                <Button x:Name="SaveButton" Content="Xác nhận chuyển" Style="{StaticResource PrimaryButtonStyle}"
+                        Padding="16,8" Click="Save_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</shell:AppDialogWindow>

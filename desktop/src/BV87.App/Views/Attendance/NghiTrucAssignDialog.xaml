@@ -1,0 +1,331 @@
+<shell:AppDialogWindow x:Class="BV87.App.Views.Attendance.NghiTrucAssignDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:BV87.App.Shell"
+        xmlns:strings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+        Title="{x:Static strings:AttendanceUiStrings.NghiTrucWizardTitle}"
+        Width="960"
+        MinWidth="880"
+        MinHeight="560"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource SurfacePageBrush}">
+    <Window.Resources>
+        <Style x:Key="WizardDatePickerStyle" TargetType="DatePicker" BasedOn="{StaticResource FilterDatePickerStyle}">
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="MinHeight" Value="44"/>
+        </Style>
+    </Window.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Border Margin="24" Padding="24" Style="{StaticResource CardBorderFlatStyle}">
+            <StackPanel>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock FontFamily="{StaticResource IconFont}"
+                               Text="&#xE708;"
+                               FontSize="{StaticResource FontSizeXl}"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,14,0"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock x:Name="TitleText"
+                                   FontSize="{StaticResource FontSizeXl}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource NavyBrush}"/>
+                        <TextBlock x:Name="StaffText"
+                                   Margin="0,4,0,0"
+                                   FontSize="{StaticResource FontSizeLg}"
+                                   Foreground="{StaticResource ContentMutedBrush}"/>
+                    </StackPanel>
+                </Grid>
+
+                <Border Padding="14,12" CornerRadius="8" Margin="0,0,0,16"
+                        BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="1"
+                        Background="{StaticResource PrimaryLightBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock FontFamily="{StaticResource IconFont}"
+                                   Text="&#xE946;"
+                                   FontSize="{StaticResource FontSizeLg}"
+                                   Foreground="{StaticResource PrimaryBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock x:Name="HintText" Grid.Column="1"
+                                   TextWrapping="Wrap"
+                                   FontSize="{StaticResource FontSizeSm}"
+                                   Foreground="{StaticResource ContentHeadingBrush}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <TextBlock x:Name="PunchLabelText"
+                           Style="{StaticResource FormLabelStyle}"
+                           Margin="0,0,0,8"/>
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Column="0" Grid.Row="0" Padding="12,10" CornerRadius="8"
+                            BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                            Background="{StaticResource NeutralBgBrush}">
+                        <StackPanel>
+                            <TextBlock x:Name="PunchMorningInLabel"
+                                       FontSize="{StaticResource FontSizeSm}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentMutedBrush}"/>
+                            <TextBlock x:Name="PunchMorningInValue"
+                                       FontSize="{StaticResource FontSizeBase}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentHeadingBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Grid.Row="0" Padding="12,10" CornerRadius="8"
+                            BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                            Background="{StaticResource NeutralBgBrush}">
+                        <StackPanel>
+                            <TextBlock x:Name="PunchNoonOutLabel"
+                                       FontSize="{StaticResource FontSizeSm}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentMutedBrush}"/>
+                            <TextBlock x:Name="PunchNoonOutValue"
+                                       FontSize="{StaticResource FontSizeBase}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentHeadingBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="0" Grid.Row="2" Padding="12,10" CornerRadius="8"
+                            BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                            Background="{StaticResource NeutralBgBrush}">
+                        <StackPanel>
+                            <TextBlock x:Name="PunchAfternoonInLabel"
+                                       FontSize="{StaticResource FontSizeSm}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentMutedBrush}"/>
+                            <TextBlock x:Name="PunchAfternoonInValue"
+                                       FontSize="{StaticResource FontSizeBase}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentHeadingBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Grid.Row="2" Padding="12,10" CornerRadius="8"
+                            BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                            Background="{StaticResource NeutralBgBrush}">
+                        <StackPanel>
+                            <TextBlock x:Name="PunchAfternoonOutLabel"
+                                       FontSize="{StaticResource FontSizeSm}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentMutedBrush}"/>
+                            <TextBlock x:Name="PunchAfternoonOutValue"
+                                       FontSize="{StaticResource FontSizeBase}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource ContentHeadingBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <TextBlock x:Name="IntentLabelText"
+                           Style="{StaticResource FormLabelStyle}"
+                           Margin="0,0,0,8"/>
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="FullDayCard" Grid.Column="0"
+                            MinHeight="56" Padding="16,12" CornerRadius="8"
+                            BorderThickness="1" Cursor="Hand"
+                            Focusable="True"
+                            MouseLeftButtonUp="FullDayCard_Click"
+                            KeyDown="FullDayCard_KeyDown">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="FullDayIcon"
+                                       FontFamily="{StaticResource IconFont}"
+                                       Text="&#xE787;"
+                                       FontSize="{StaticResource FontSizeXl}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="FullDayTitle"
+                                           FontSize="{StaticResource FontSizeMd}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource ContentHeadingBrush}"/>
+                                <TextBlock x:Name="FullDayCaption"
+                                           FontSize="{StaticResource FontSizeSm}"
+                                           Foreground="{StaticResource ContentMutedBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border x:Name="HalfAfternoonCard" Grid.Column="2"
+                            MinHeight="56" Padding="16,12" CornerRadius="8"
+                            BorderThickness="1" Cursor="Hand"
+                            Focusable="True"
+                            MouseLeftButtonUp="HalfAfternoonCard_Click"
+                            KeyDown="HalfAfternoonCard_KeyDown">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="HalfAfternoonIcon"
+                                       FontFamily="{StaticResource IconFont}"
+                                       Text="&#xE706;"
+                                       FontSize="{StaticResource FontSizeXl}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="HalfAfternoonTitle"
+                                           FontSize="{StaticResource FontSizeMd}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource ContentHeadingBrush}"/>
+                                <TextBlock x:Name="HalfAfternoonCaption"
+                                           FontSize="{StaticResource FontSizeSm}"
+                                           Foreground="{StaticResource ContentMutedBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock x:Name="FromLabelText" Style="{StaticResource FormLabelStyle}"/>
+                        <DatePicker x:Name="FromDatePicker" Style="{StaticResource WizardDatePickerStyle}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock x:Name="ToLabelText" Style="{StaticResource FormLabelStyle}"/>
+                        <DatePicker x:Name="ToDatePicker" Style="{StaticResource WizardDatePickerStyle}"/>
+                    </StackPanel>
+                    <TextBlock x:Name="DayCountText"
+                               Grid.Column="3"
+                               FontSize="{StaticResource FontSizeMd}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource InfoFgBrush}"
+                               VerticalAlignment="Bottom"
+                               Margin="16,0,0,12"/>
+                </Grid>
+                <TextBlock x:Name="SummaryText"
+                           FontSize="{StaticResource FontSizeSm}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,16"/>
+
+                <TextBlock x:Name="ReasonLabelText" Style="{StaticResource FormLabelStyle}"/>
+                <Grid Margin="0,0,0,6">
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8"
+                            Background="{StaticResource SurfaceWhiteBrush}" Padding="12,10" MinHeight="120">
+                        <TextBox x:Name="ReasonBox"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 MaxLength="255"
+                                 FontSize="{StaticResource FontSizeBase}"
+                                 TextChanged="ReasonBox_TextChanged"/>
+                    </Border>
+                    <TextBlock x:Name="ReasonPlaceholder"
+                               IsHitTestVisible="False"
+                               FontSize="{StaticResource FontSizeBase}"
+                               Foreground="{StaticResource ContentMutedBrush}"
+                               Margin="16,18,16,0"
+                               TextWrapping="Wrap"/>
+                </Grid>
+                <TextBlock x:Name="ReasonHintText"
+                           FontSize="{StaticResource FontSizeSm}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,16"/>
+
+                <Border x:Name="ErrorBanner"
+                        Visibility="Collapsed"
+                        Background="{StaticResource DangerBgBrush}"
+                        BorderBrush="{StaticResource DangerFgBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12,10"
+                        Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock FontFamily="{StaticResource IconFont}"
+                                   Text="&#xE783;"
+                                   FontSize="{StaticResource FontSizeLg}"
+                                   Foreground="{StaticResource DangerFgBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock x:Name="ErrorText"
+                                   Grid.Column="1"
+                                   TextWrapping="Wrap"
+                                   FontSize="{StaticResource FontSizeMd}"
+                                   Foreground="{StaticResource DangerFgBrush}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            MinHeight="44"
+                            MinWidth="108"
+                            Padding="16,0"
+                            Margin="0,0,12,0"
+                            Click="CancelButton_Click"/>
+                    <Button x:Name="SubmitButton"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            MinHeight="44"
+                            MinWidth="220"
+                            Padding="16,0"
+                            Click="SubmitButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}"
+                                       Text="&#xE74E;"
+                                       FontSize="{StaticResource FontSizeMd}"
+                                       Foreground="White"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0"/>
+                            <TextBlock x:Name="SubmitLabel"
+                                       FontSize="{StaticResource FontSizeMd}"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </ScrollViewer>
+</shell:AppDialogWindow>

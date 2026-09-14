@@ -13,6 +13,7 @@ public class ReminderHistoryItemDto {
     private final LocalDate attendanceDate;
     private final Integer deptCode;
     private final String deptName;
+    private final String unitCode;
     private final String triggerType;
     private final String status;
     private final LocalDateTime createdAt;

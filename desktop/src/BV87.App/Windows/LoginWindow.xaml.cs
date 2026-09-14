@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using BV87.App.Branding;
 using BV87.Core;
 using BV87.Core.Models;
 
@@ -7,20 +8,33 @@ namespace BV87.App.Windows;
 
 public partial class LoginWindow : Window
 {
+    private const double WindowHeightDefault = 600;
+    private const double WindowHeightWithError = 680;
+
     public LoginWindow()
     {
         InitializeComponent();
+        WindowBrandingHelper.ApplyHospitalIcon(this);
+        Loaded += OnLoadedAsync;
         UsernameBox.Focus();
+    }
+
+    private async void OnLoadedAsync(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await App.Branding.EnsureLoadedAsync();
+            BrandingUiApplicator.ApplyLogin(this, App.Branding.Current);
+        }
+        catch
+        {
+            BrandingUiApplicator.ApplyLogin(this, AppBrandingState.Defaults);
+        }
     }
 
     private async void LoginButton_Click(object sender, RoutedEventArgs e)
     {
         await TryLoginAsync();
-    }
-
-    private void KioskButton_Click(object sender, RoutedEventArgs e)
-    {
-        OpenKioskShell();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -35,7 +49,7 @@ public partial class LoginWindow : Window
 
     private async Task TryLoginAsync()
     {
-        ErrorText.Visibility = Visibility.Collapsed;
+        ClearError();
         LoginButton.IsEnabled = false;
 
         try
@@ -43,7 +57,7 @@ public partial class LoginWindow : Window
             var request = new LoginRequest
             {
                 Username = UsernameBox.Text.Trim(),
-                Password = PasswordBox.Password
+                Password = PasswordField.Password
             };
 
             if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
@@ -53,9 +67,8 @@ public partial class LoginWindow : Window
             }
 
             var response = await App.AuthApi.LoginAsync(request);
-            App.Session.ApplyLogin(response);
-            Close();
-            App.OpenModeSelectOrShell();
+            App.Sessions.ApplyLogin(response);
+            App.OpenShellAfterLogin();
         }
         catch (ApiException ex)
         {
@@ -71,23 +84,16 @@ public partial class LoginWindow : Window
         }
     }
 
-    private static void OpenKioskShell()
-    {
-        var shell = new ShellWindow(AppMode.Kiosk);
-        shell.Show();
-        foreach (Window window in Application.Current.Windows)
-        {
-            if (window is LoginWindow loginWindow)
-            {
-                loginWindow.Close();
-                break;
-            }
-        }
-    }
-
     private void ShowError(string message)
     {
         ErrorText.Text = message;
-        ErrorText.Visibility = Visibility.Visible;
+        ErrorPanel.Visibility = Visibility.Visible;
+        Height = WindowHeightWithError;
+    }
+
+    private void ClearError()
+    {
+        ErrorPanel.Visibility = Visibility.Collapsed;
+        Height = WindowHeightDefault;
     }
 }

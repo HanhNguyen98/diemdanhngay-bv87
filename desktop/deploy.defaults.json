@@ -1,0 +1,4 @@
+{
+  "hospitalApiBaseUrl": "http://192.170.182.14:8081",
+  "lanOnlyEnabled": true
+}

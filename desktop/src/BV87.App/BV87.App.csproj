@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BV87.Core\BV87.Core.csproj" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -12,12 +13,31 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>BV87</AssemblyName>
     <RootNamespace>BV87.App</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="agent.config.json.example">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Content Include="lib\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Reference Include="libzkfpcsharp">
+      <HintPath>lib\libzkfpcsharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Resource Include="Resources\Images\hospital-logo.png" />
+    <Resource Include="Assets\Sounds\scan-success.wav" />
+    <Resource Include="Assets\Sounds\scan-fail.wav" />
   </ItemGroup>
+
+  <!-- Dev convenience: release file lock when rebuilding while app is open -->
+  <Target Name="StopRunningApp" BeforeTargets="Build">
+    <Exec Command="taskkill /IM BV87.exe /F /T 2&gt;nul" IgnoreExitCode="true" />
+  </Target>
 
 </Project>

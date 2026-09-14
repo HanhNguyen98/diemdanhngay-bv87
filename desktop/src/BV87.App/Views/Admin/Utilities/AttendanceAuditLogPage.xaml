@@ -1,0 +1,214 @@
+<UserControl x:Class="BV87.App.Views.Admin.Utilities.AttendanceAuditLogPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BV87.App.Controls"
+             xmlns:strings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="200"/>
+        </Grid.RowDefinitions>
+
+        <controls:PageHeader Grid.Row="0"
+                             Title="{Binding PageTitle}"/>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerFgBrush}" TextWrapping="Wrap"
+                       Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}"/>
+        </StackPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Padding="16" Margin="0,0,0,16">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{x:Static strings:UtilitiesUiStrings.FilterDeptLabel}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
+                <ComboBox Grid.Column="1"
+                          Style="{StaticResource FilterComboBoxStyle}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding DeptFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="DeptCode"
+                          SelectedValue="{Binding SelectedDeptFilter, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding FilterRangeLabel}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
+                <DatePicker Grid.Column="3"
+                            Style="{StaticResource FilterDatePickerStyle}"
+                            SelectedDate="{Binding DateFromDraft, Mode=TwoWay}"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"/>
+                <TextBlock Grid.Column="4"
+                           Text="{x:Static strings:UtilitiesUiStrings.DateRangeSeparator}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           Margin="0,0,8,0"/>
+                <DatePicker Grid.Column="5"
+                            Style="{StaticResource FilterDatePickerStyle}"
+                            SelectedDate="{Binding DateToDraft, Mode=TwoWay}"
+                            VerticalAlignment="Center"
+                            Margin="0,0,12,0"/>
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
+                            Command="{Binding ApplyFilterCommand}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE721;" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static strings:UtilitiesUiStrings.ApplyFilter}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="{x:Static strings:UtilitiesUiStrings.ClearFilter}"
+                            Style="{StaticResource FilterToolbarSecondaryButtonStyle}"
+                            Command="{Binding ResetFiltersCommand}"
+                            Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
+                            Command="{Binding RefreshCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <controls:RefreshSpinIcon IsSpinning="{Binding IsRefreshing}" FontSize="13" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static strings:UtilitiesUiStrings.Refresh}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="0"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+              
+                <TextBlock Grid.Row="1"
+                           Text="{Binding LoadingMessage}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           Margin="20,0,20,12"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Items}"
+                          Style="{StaticResource AdminDataGridStyle}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto"
+                          MinWidth="860"
+                          Visibility="{Binding IsLoading, Converter={StaticResource InverseBoolToVisibility}}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{x:Static strings:ShellUiStrings.ColStt}"
+                                            Binding="{Binding RowNumber}"
+                                            Width="{StaticResource DataGridSttColumnWidth}"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogCenterStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridSttCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static strings:UtilitiesUiStrings+AuditLog.ColTime}"
+                                            Binding="{Binding CreatedAtText}" Width="200">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static strings:UtilitiesUiStrings+AuditLog.ColUser}"
+                                            Binding="{Binding Username}" Width="130">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static strings:UtilitiesUiStrings+AuditLog.ColDept}"
+                                            Binding="{Binding DeptCodeText}" Width="150">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static strings:UtilitiesUiStrings+AuditLog.ColEmp}"
+                                            Binding="{Binding EmpCodeText}" Width="135">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static strings:UtilitiesUiStrings+AuditLog.ColDate}"
+                                            Binding="{Binding AttendanceDateText}" Width="200">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static strings:UtilitiesUiStrings+AuditLog.ColAction}"
+                                            Binding="{Binding ActionLabel}" Width="*" MinWidth="150">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static strings:UtilitiesUiStrings+AuditLog.ColIp}"
+                                            Binding="{Binding IpText}" Width="120">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader"
+                                       BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Grid.Row="1" Style="{StaticResource SearchEmptyHintStyle}"/>
+                <controls:TablePaginationBar Grid.Row="2"
+                                             CurrentPage="{Binding CurrentPage}"
+                                             TotalPages="{Binding TotalPages}"
+                                             TotalItems="{Binding TotalItems}"
+                                             PageSize="{Binding PageSize, Mode=TwoWay}"
+                                             PageSizeOptions="{Binding PageSizeOptions}"
+                                             UnitLabel="{Binding UnitLabel}"
+                                             GoToPageCommand="{Binding GoToPageCommand}"
+/>
+            </Grid>
+        </Border>
+        <controls:PageBusyOverlay Grid.Row="0" Grid.RowSpan="20"
+                                  IsLoading="{Binding IsLoading}"
+                                  IsRefreshing="{Binding IsRefreshing}"/>
+    </Grid>
+</UserControl>

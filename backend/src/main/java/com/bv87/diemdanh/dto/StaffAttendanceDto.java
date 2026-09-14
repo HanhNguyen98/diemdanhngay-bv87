@@ -26,6 +26,8 @@ public class StaffAttendanceDto {
     /** HALF_MORNING | HALF_AFTERNOON | NGHI_TRUC_FULL | EXPLAIN_ONLY */
     private final String payrollIntent;
     private final String payrollIntentLabel;
+    /** Roster line under NGHỈ TRỰC — SPEC P16. */
+    private final String nghiTrucSubtitle;
     /** PENDING | APPROVED — P8 payroll auto-fill */
     private final String payrollFillStatus;
     private final String payrollFillStatusLabel;
@@ -45,6 +47,8 @@ public class StaffAttendanceDto {
     private final String lastKioskLabel;
     /** FINGERPRINT | MANUAL | ADMIN | MIXED — null when no day record. */
     private final String source;
+    /** SPEC D-DATA.1 — same as AttendanceValidity.isComplete; false when no day record. */
+    private final boolean complete;
 
     public static String formatEmp(Integer empCode) {
         return CodeFormatter.formatEmpCode(empCode);

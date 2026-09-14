@@ -34,8 +34,10 @@ public class AdminController {
     private final StaffPositionCatalogService staffPositionCatalogService;
     private final AttendanceService attendanceService;
     private final FingerprintService fingerprintService;
+    private final FingerprintTemplateAuditService templateAuditService;
     private final AuditService auditService;
     private final AttendanceUnlockRequestService unlockRequestService;
+    private final ServerStorageService serverStorageService;
 
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
@@ -45,6 +47,11 @@ public class AdminController {
     @GetMapping("/dashboard")
     public ResponseEntity<AdminDashboardDto> getDashboard() {
         return ResponseEntity.ok(adminDashboardService.getDashboard(authService.getAuthUser()));
+    }
+
+    @GetMapping("/system/storage")
+    public ResponseEntity<ServerStorageDto> getServerStorage() {
+        return ResponseEntity.ok(serverStorageService.getStorage());
     }
 
     @PostMapping("/attendance/reminders")
@@ -402,6 +409,30 @@ public class AdminController {
         return ResponseEntity.ok(fingerprintService.listStatusForAdmin(authService.getAuthUser(), deptCode));
     }
 
+    @DeleteMapping("/fingerprints/{empCode}")
+    public ResponseEntity<Map<String, String>> deleteFingerprint(@PathVariable Integer empCode) {
+        fingerprintService.deleteForAdmin(authService.getAuthUser(), empCode);
+        return ResponseEntity.ok(Map.of("message", "Đã xóa đăng ký vân tay thành công"));
+    }
+
+    @PostMapping("/fingerprints/enroll")
+    public ResponseEntity<FingerprintStatusDto> enrollFingerprint(
+            @Valid @RequestBody FingerprintEnrollRequest request) {
+        return ResponseEntity.ok(
+                fingerprintService.enrollFromAdmin(authService.getAuthUser(), request));
+    }
+
+    @GetMapping("/fingerprints/audit-logs")
+    public ResponseEntity<FingerprintTemplateAuditLogPageDto> listFingerprintAuditLogs(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Integer deptCode,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ResponseEntity.ok(templateAuditService.listForAdmin(
+                authService.getAuthUser(), from, to, deptCode, page, pageSize));
+    }
+
     @GetMapping("/fingerprint/kiosk-tokens")
     public ResponseEntity<List<KioskTokenDto>> listKioskTokens() {
         return ResponseEntity.ok(fingerprintService.listKioskTokensForAdmin(authService.getAuthUser()));
@@ -412,14 +443,6 @@ public class AdminController {
             @Valid @RequestBody KioskTokenCreateRequest request) {
         return ResponseEntity.ok(
                 fingerprintService.createKioskTokenForAdmin(authService.getAuthUser(), request));
-    }
-
-    @PostMapping("/fingerprint/kiosk-tokens/{id}/enroll-pin")
-    public ResponseEntity<KioskTokenDto> setKioskEnrollPin(
-            @PathVariable Long id,
-            @Valid @RequestBody KioskTokenSetEnrollPinRequest request) {
-        return ResponseEntity.ok(
-                fingerprintService.setEnrollPinForAdmin(authService.getAuthUser(), id, request));
     }
 
     @PostMapping("/fingerprint/kiosk-tokens/{id}/label")

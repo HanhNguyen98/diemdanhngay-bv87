@@ -31,7 +31,7 @@ public class FingerprintKioskToken {
     @Column(name = "token_plaintext", length = 128)
     private String tokenPlaintext;
 
-    /** Enroll-mode PIN for Agent (SPEC P2.1e); cleared on revoke; kept on rotate. */
+        /** Leftover Java enroll PIN (D5.6) — not exposed; cleared on revoke; do not DROP column. */
     @Column(name = "enroll_pin", length = 16)
     private String enrollPin;
 

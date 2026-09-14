@@ -3,11 +3,11 @@ backend/target/
 backend/.mvn/
 target/
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
-fingerprint-agent/dist/
-
+# Desktop build output
+desktop/dist/
+desktop/_build_out/
+desktop/**/bin/
+desktop/**/obj/
 
 # IDE
 .idea/
@@ -23,17 +23,9 @@ Thumbs.db
 .env
 .env.local
 deploy/.env
+deploy/scripts/backup.env
 backend/local-secrets.yml
 backend/prod-secrets.yml
 
-# Fingerprint Agent (local secrets + build artifacts)
-fingerprint-agent/agent.properties
-fingerprint-agent/out/
-fingerprint-agent/bin/
-fingerprint-agent/dist/
-fingerprint-agent/logs/
-fingerprint-agent/fingerprint.bmp
-fingerprint-agent/*.class
-fingerprint-agent/hs_err_pid*.log
-fingerprint-agent/BV87-Agent-*/
-fingerprint-agent/BV87-Agent-*.zip
+# Daily MySQL dumps (ops on server — never commit)
+backup/

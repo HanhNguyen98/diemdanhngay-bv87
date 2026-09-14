@@ -1,6 +1,6 @@
 # SPEC — Role HEAD (Trưởng đơn vị / Trưởng khoa phòng ban)
 
-> **UI Web DEPRECATED.** Client binding chuyển sang **`docs/SPEC_DESKTOP.md`** (mode `head`).  
+> **D5:** UI Web **đã xóa** (`frontend/`). Client binding: **`docs/SPEC_DESKTOP.md`** (mode `head`).  
 > File này giữ **logic nghiệp vụ + API** làm tham chiếu port WPF.
 
 > **Binding contract.** Mọi thay đổi code liên quan role `HEAD` phải tuân thủ file này.  
@@ -9,8 +9,9 @@
 > Nếu cần hành vi mới: cập nhật file này **trước**, rồi mới code.
 
 **Nguồn sự thật (source of truth trong repo):**
-- Backend: `AttendanceController`, `AttendanceService`, `AttendanceStatisticsService`, `HeadStaffController`, `HeadAiAssistantController`, `NotificationController`, `AuthController` (+ fingerprint services khi P1+)
-- Frontend: `Dashboard.jsx`, `AttendancePage.jsx`, `StatisticsPage.jsx`, `HeadStaffPage.jsx`, `HeadAppShell.jsx`, `constants/attendance.js`, `constants/headLayout.js`, `constants/theme.js`, `tailwind.config.js`, `index.css`
+- Client: `docs/SPEC_DESKTOP.md` (mode `head`) — WPF
+- Backend: `AttendanceController`, `AttendanceService`, `AttendanceStatisticsService`, `HeadStaffController`, `NotificationController`, `AuthController` (+ fingerprint)
+- UI Web (lịch sử, **đã xóa D5**): `Dashboard.jsx` / `constants/attendance.js` — **cấm** implement lại SPA
 - Chuẩn chung: `.cursorrules`, `docs/CODING_STANDARDS.md`, `docs/SPEC_ADMIN.md` (theme dùng chung)
 - Vân tay / Chấm công mới: **`docs/SPEC_FINGERPRINT.md` ưu tiên** khi xung đột với mô tả legacy khóa sổ
 - `AttendanceLockService` / unlock API: **legacy** — không dùng cho quyền HEAD Chấm công / báo cáo theo SPEC mới
@@ -22,10 +23,11 @@
 | Mục | Quy tắc |
 |-----|---------|
 | Enum | `AccountRole.HEAD` — label: **Trưởng đơn vị** (UI Chấm công cũng dùng “Trưởng phòng”) |
-| Sau login | `App.jsx` → `view = 'attendance'` → `Dashboard` (không vào `AdminApp`) |
+| Sau login | WPF `MainShellWindow` mode **head** (`SPEC_DESKTOP` §2.3.1) |
 | Phạm vi dữ liệu | **Chỉ** `deptCode` gắn trên tài khoản — không xem/sửa đơn vị khác |
 | Tài khoản | Mỗi đơn vị tối đa **1** HEAD active (do Admin tạo ở Phân quyền); gắn bắt buộc `empCode` |
-| Không được gọi | `/api/admin/**`, `/api/admin/ai/**` |
+| Không được gọi | `/api/admin/**` — **không** còn `/api/head/ai/**` (D5) |
+| Date picker (UI) | Hiển thị **`dd/mm/yyyy`** (`DatePickerField` / `formatDateDMY`) — `SPEC_ADMIN` §4 / `SPEC_DESKTOP` §2.7.6. **Cấm** `<input type="date">` |
 
 ---
 
@@ -96,7 +98,7 @@ Labels: `UI`, `MOBILE_UI`, `STATISTICS_UI` trong `constants/attendance.js` — c
 | Nguồn có mặt | `DI_LAM` / `DI_TRE` **chỉ** từ vân tay (Agent); `VE_SOM` suy từ ra chiều + grace |
 | Thủ công HEAD | Chỉ status active có `manualAllowed = true`; **cấm** gán tay `DI_LAM` / `DI_TRE`; status cha `groupParent = true` chỉ dùng làm nút nhóm UI, không lưu DB |
 | Ngoại lệ sau quét | HEAD **được** gán `NGHI_TRUC_HALF` / `NGHI_TRUC_FULL` và nhập lý do `VE_SOM` dù đã có presence — §4.13 |
-| Chưa chấm | `status == null` |
+| Chưa chấm | `!AttendanceValidity.isComplete` — cùng KPI `uncheckedCount` / filter Web `isAttendanceUnchecked`. **Cấm** chỉ `status == null` (Đi làm thiếu giờ vẫn «Chưa chấm»). Badge vẫn hiện `statusLabel` khi đã có status |
 | Nguồn DB | **Một nguồn** dùng chung Chấm công / thống kê / dashboard / báo cáo (`SPEC_FINGERPRINT` mục Data model) |
 
 ---
@@ -113,7 +115,7 @@ Labels: `UI`, `MOBILE_UI`, `STATISTICS_UI` trong `constants/attendance.js` — c
 | HEAD sửa dữ liệu đã quét | **Không** sửa giờ từ máy. **Admin** được điền **ô giờ trống** 4 mốc (`SPEC_FINGERPRINT` §4.6 / §4.13) |
 | NV đã có `DI_LAM` hoặc `DI_TRE` | HEAD **không** gán PHEP/HSQ/…; **được** `NGHI_TRUC_*` + lý do `VE_SOM` (§4.13) |
 | NV đã có thủ công vắng (không hybrid) | Agent **không** cập nhật giờ (log REJECTED) |
-| Hybrid `VE_SOM` / `NGHI_TRUC_HALF` + quét thêm | Vẫn ghi giờ; `source=MIXED` nếu đã MANUAL/ADMIN; rời `VE_SOM` (ra chiều MAX không còn sớm) → xóa `note` (`SPEC_FINGERPRINT` §4.13 P7b) |
+| Hybrid `VE_SOM` + quét thêm | Vẫn ghi giờ. `NGHI_TRUC_HALF`: chỉ sáng/trưa; **cấm quét chiều** (P16 D2). `NGHI_TRUC_FULL`: **cấm mọi quét**. Rời `VE_SOM` → xóa `note` |
 | HEAD ngoại lệ | Status `manualAllowed` + khoảng ngày; nửa ngày / 1 ngày nghỉ trực theo §4.13.4 |
 | Giám sát | Xem realtime + hàng đợi thiếu dữ liệu chấm công (§4.5.2) — **không** nút Gửi báo cáo |
 | Cửa sổ IN/OUT trên Agent | Chỉ phân loại quét vào/ra — **không** khóa quyền HEAD theo nộp báo cáo |
@@ -135,7 +137,7 @@ Xem ngày khác hôm nay: **chỉ xem** (HistoryViewBanner). Không dùng LockBa
 | PUT | `/api/attendance/manual-range` | Body `empCode`, `status`, `fromDate`, `toDate`, `note?` — khoảng ngày; max 366; **skip** ngày `DI_LAM`/`DI_TRE` trừ khi `status` ∈ `NGHI_TRUC_*`; **cấm** `VE_SOM` trên range |
 | POST | `/api/attendance/report-submit` | **Deprecated (P5)** — không dùng |
 | GET | `/api/attendance/missing-punches?date=` | Hàng đợi thiếu dữ liệu chấm công khoa mình |
-| PUT | `/api/attendance/nghi-truc-assign` | Wizard nghỉ trực — giải trình + chấm khoảng ngày (P8 / P13 — §4.13.8). Mở khi `punchCount` 0–3. HEAD **không** skip `DI_LAM`/`DI_TRE`; skip `NGHI_TRUC_FULL` khi có giờ; **ngày quá khứ** skip nếu chưa unlock (P14) |
+| PUT | `/api/attendance/nghi-truc-assign` | Wizard nghỉ trực — giải trình + chấm khoảng ngày (P8 / P13 — §4.13.8). Mở khi `punchCount` 0–3. HEAD **không** skip `DI_LAM`/`DI_TRE`; skip `NGHI_TRUC_FULL` khi có giờ; ngày khóa P17: gán NV incomplete (`reason` đủ), skip NV đã complete |
 | GET | `/api/attendance/audit-logs` | Nhật ký thao tác Web khoa mình (P14 — §4.7.1) |
 | POST | `/api/attendance/unlock-requests` | Gửi yêu cầu Admin mở khóa ngày ≤ hôm nay + lý do (P15 — §4.7.2). Không tự unlock. Chuông fail **không** hủy yêu cầu; lỗi trả `message` VN |
 | GET | `/api/attendance/scan-logs?empCode&date&page&pageSize` | Chỉ NV khoa mình — log quét ngày (append-only, lớp B) |
@@ -145,7 +147,7 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 ### 6.2 UI bắt buộc
 
 - Header: ngày, KPI, chuông, **hàng đợi thiếu dữ liệu chấm công** — **không** nút **Gửi báo cáo**; **không** UI khóa sổ theo nghĩa nộp báo cáo
-- **P15:** ngày ≤ hôm nay chưa unlock — nút **Gửi yêu cầu mở khóa** trên banner (không chỉ chữ “Liên hệ Admin”). `PENDING` → chờ xác nhận; chuông `UNLOCK_REQUEST_RESULT` khi Admin duyệt/từ chối — §4.7.2
+- **P17:** ngày ≤ hôm nay khóa mềm / chưa unlock — HEAD **chấm NV thiếu dữ liệu** kèm **lý do giải trình bắt buộc** (không chờ Admin). Banner P17. P15 **Gửi yêu cầu mở khóa** chỉ khi cần sửa NV **đã đủ** — §4.7.2a / §4.7.2
 - Cột: nhân viên, cấp bậc, chức vụ, **4 mốc giờ** (2×2), **Máy** (luôn hiện hostname+IP), badge status (+ text đỏ `+ Đi trễ` nếu `lateFlag`), thao tác thủ công theo `manualAllowed` + chọn khoảng ngày + **Chi tiết quét** + ô lý do `VE_SOM` bắt buộc
 - **P9-RowHintDeclutter:** **không** hiện hint `Thiếu dữ liệu chấm công` dưới ô giờ trên từng dòng (`EmployeeRow` / `AttendanceStaffCard`) — trùng banner + 4 mốc trống. Thiếu dữ liệu chỉ ở `MissingPunchBanner` (§4.5.2).
 - Roster: full NV active + null
@@ -161,9 +163,10 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
   - **P7-NghiTrucExplainGate** (deprecated FE) — thay bởi P8 wizard.
   - **P6-QuickParentUx:** nút cha active nếu `staff.status` ∈ `statusOptions` con; mobile label dùng `action.label` / badge (không hiện raw code); AI `StatusPickerCard` = manual leaf **trừ** `VE_SOM` / presence.
   - Banner thiếu dữ liệu chấm công trên HEAD Chấm công **bắt buộc hiện** khi API có items.
-  - **P8-ReassignNghiTruc:** nếu NV đang `NGHI_TRUC_*` và `punchCount` 0–3, HEAD bấm lại `N.trực` phải mở wizard để đổi `Loại nghỉ trực` sáng/chiều/cả ngày và sửa giải trình; **không** rơi về modal khoảng ngày catalog.
-  - **P13-NghiTrucWizardZeroPunch:** NV **chưa quét** (0 mốc) — HEAD vẫn mở wizard, chọn được **nửa buổi chiều** (không chỉ FULL / nửa sáng) — §4.13.8.
-  - **P10-NghiTrucWizardLayout:** wizard N.trực — desktop 2 cột ngang, không scroll dọc; mobile xếp dọc gọn — §4.13.8.
+  - **P8-ReassignNghiTruc:** `NGHI_TRUC_*` + `punchCount` 0–3 → wizard đổi **1 ngày / nửa buổi chiều** (P16: không nửa buổi sáng).
+  - **P13 / P16:** NV chưa quét — wizard **nửa buổi chiều** hoặc **1 ngày**; HALF không tự điền giờ sáng.
+  - **P16-NghiTrucDutyRest:** subtitle roster **1 ngày** / **Nửa buổi chiều**; HEAD lưu xong hiện status ngay, không chờ Admin duyệt giờ.
+  - **P10-NghiTrucWizardLayout / D-ATT.2:** wizard N.trực lớn — radio 2 loại, hint 1 dòng; Web `max-w-5xl`; WPF toast — `SPEC_DESKTOP` §2.18.2.
 
 ### 6.3 CompletionStatus / thiếu dữ liệu chấm công (P5)
 
@@ -211,24 +214,45 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 - Chart / Excel: cập nhật constants cho đủ 6 status (`DI_TRE`, `THAI_SAN`) khi P3 — không giữ palette chỉ 4 status
 - Export Excel: headers gồm ngày, NV, status, giờ vào, giờ ra, ghi chú (phase P3)
 
+### 7.1a KPI thống kê = bảng lịch sử (D-STAT.1)
+
+Cùng filter `deptCode + from + to + search`:
+
+| Mục | Quy tắc |
+|-----|---------|
+| Tập dòng | Mọi `attendance_records` — **cùng** predicate `findHistoryAll` / `findHistoryPage` |
+| **Cấm** | `AttendanceValidity.isComplete` khi dựng KPI / trend thống kê |
+| Chip catalog | Đếm theo `status` đã lưu (Đi trễ thiếu giờ vẫn +1 ĐI TRỄ; `NGHI_TRUC_*` gộp cha) |
+| Chip CHƯA CHẤM | `status` null/blank → code sentinel `UNCHECKED` · label **CHƯA CHẤM** — **không** thêm row catalog DB |
+| Số lớn | `sum(statusBreakdown)` = `history.totalItems` |
+| Empty filter | Khối KPI **vẫn hiện** — số lớn `0`, chip catalog giữ chỗ (`count` 0) · **cấm** collapse |
+| Chip 0 | Catalog (kể cả 0) luôn hiện · `UNCHECKED` **ẩn** khi count = 0 |
+| **Cấm đụng** | `AttendanceService` / KPI ngày / Tổng quan Admin — vẫn `isComplete` |
+
 ### 7.2 UI
 
 - Desktop: header + KPI + chart + bảng lịch sử phân trang
 - Mobile: `StatisticsMobileKpiCards` + history cards; scroll pattern hiện có
-- Empty: `Không có dữ liệu!`
-- KPI / chart / Excel: **mọi status catalog active** (gồm `VE_SOM`, `NGHI_TRUC_*`) — **cùng nguồn DB** với màn Chấm công (`SPEC_FINGERPRINT`)
+- Empty bảng: `Không có dữ liệu!` — **không** ẩn khối KPI (§7.1a empty filter)
+- WPF (D-UI.41): **cấm** `PageSubtitle` · **Xuất Excel** trên hàng filter phải — `SPEC_DESKTOP` §2.7.8 / §2.20.2
+- WPF (D-UI.39): dưới **LƯỢT CHẤM CÔNG** — `HeadUiStrings.Statistics.KpiHint` (**Theo bản ghi đã có — không phải quân số ngày**) · tooltip chip UNCHECKED ≠ «Chưa chấm» màn Chấm công · **cấm** đổi công thức §7.1a
+- KPI / chart / Excel: **mọi status catalog active** (gồm `VE_SOM`, `NGHI_TRUC_*`) — **cùng nguồn DB** với màn Chấm công (`SPEC_FINGERPRINT`) · đếm record theo §7.1a
 - **KPI status desktop (P6-StatusKpi5Col):** `StatisticsKpiCards` — `lg:grid-cols-5`, compact, bỏ `min-h-[9.5rem]`; đồng bộ §6.2 Chấm công + `SPEC_FINGERPRINT` §10.5. Mobile scroll **không đổi**.
+- Web merge catalog: **giữ** item `UNCHECKED` sau `mergeBreakdownWithCatalog` — **cấm** làm mất chip CHƯA CHẤM
 
 ---
 
 ## 8. Màn Nhân viên (HEAD) — quyền hạn chế
 
-- Entry: `HeadStaffPage` → `StaffPage mode="head"`
-- API: `GET /api/head/staff`, `GET /api/head/staff/stats` — chỉ đơn vị mình
-- **Được**: xem danh sách NV đơn vị; cập nhật **ảnh đại diện** (avatar only); cột/flag **đã đăng ký vân tay** + **ghi chú ngón** (`fingerLabel`, không template)
-- Đăng ký / ghi đè / xóa mẫu vân tay: **chỉ trên Agent** (`SPEC_FINGERPRINT` — chốt A); Web HEAD **không** DELETE template
-- **Không được**: tạo/sửa/xóa hồ sơ NV, luân chuyển, lịch sử điều chuyển admin, Excel admin CRUD; **không** xóa đăng ký vân tay trên Web
-- UI flags: `avatarOnly`, `hideDeptColumn`, không render form/delete/history admin
+- Entry Web: `HeadStaffPage` → `StaffPage mode="head"`
+- Entry WPF: `HeadStaffFingerprintPage` — nav `staff` (§2.17.6 `SPEC_DESKTOP`)
+- API: `GET /api/head/staff`, `GET /api/head/staff/stats`, `GET /api/head/fingerprints` — chỉ đơn vị mình
+- **Được**: xem danh sách NV đơn vị; cập nhật **ảnh đại diện** (`PATCH /api/head/staff/{empCode}/avatar`) — Web `avatarOnly` **và** WPF `HeadStaffFingerprintPage` (D-STAFF.1)
+- **Xóa mẫu vân tay:** WPF Danh mục NV hoặc Nhân viên (HEAD)
+- **Đăng ký vân tay (USB):** WPF **Tiện ích → Đăng ký vân tay** — `POST /api/head/fingerprints/enroll` (khoa mình)
+- **Không được**: tạo/sửa/xóa hồ sơ NV, luân chuyển, Excel admin CRUD; enroll trên Web React browser
+- UI flags Web: `avatarOnly`, `hideDeptColumn`, không render form/delete/history admin
+- **Bảng (D-STAFF.1c):** cột **ẢNH ĐẠI DIỆN** ngay trước **MÃ NV** — Web `StaffTable`/`StaffRow` + WPF `HeadStaffFingerprintPage` (`SPEC_DESKTOP` §2.15.4). Họ tên không kèm avatar. Mobile `StaffCard` giữ avatar header.
 
 ### 8.1 Mobile card badges (`StaffCard.jsx`)
 
@@ -250,15 +274,15 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 |-----|----------|
 | GET `/api/notifications` | Danh sách (reminder từ Admin, kết quả yêu cầu mở khóa…) |
 | GET `/api/notifications/unread-count` | Badge chuông |
-| POST `/api/auth/change-password` | Đổi MK; new password ≥ 6; confirm khớp |
+| POST `/api/auth/change-password` | Đổi MK; new password ≥ 6; confirm khớp; **không** yêu cầu mật khẩu hiện tại (HEAD và ADMIN — parity Desktop §2.19.1) |
 
-UI: `NotificationBell` trên attendance/staff; labels đổi MK trong `UI.*Password*`.
+UI: `NotificationBell` trên attendance/staff; labels đổi MK trong `UI.*Password*`. Form đổi MK HEAD: chỉ **Mật khẩu mới** + **Xác nhận** — parity `ChangePasswordForm` prop `requireCurrentPassword={false}`.
 
 ---
 
 ## 10. HEAD AI assistant
 
-> Chi tiết binding: `docs/SPEC_AI_ASSISTANT.md` (sau P5).
+> **D5: ĐÃ XÓA.** Không còn `/api/head/ai/**`. Lịch sử: `docs/SPEC_AI_ASSISTANT.md`. **Cấm** implement lại.
 
 Base: `/api/head/ai`
 
@@ -330,7 +354,7 @@ UI: `HeadFlowPanel` — không port Admin ClinicalFlow tools sang HEAD.
 | Gán tay `DI_LAM` / `DI_TRE` | **Không** |
 | Gán thủ công 4 status + khoảng ngày (khi chưa có DI_LAM/DI_TRE) | Có |
 | Đổi thủ công về “chưa chấm” | **Không** (chỉ Admin) |
-| CRUD đăng ký vân tay NV khoa | **Chỉ Agent** — Web chỉ xem flag/`fingerLabel` |
+| CRUD đăng ký vân tay NV khoa | Enroll **WPF Tiện ích**; xóa **WPF Nhân viên** |
 | Gửi báo cáo hàng ngày | **Không** (P5 — bỏ) |
 | Xem thiếu dữ liệu chấm công / gán ngoại lệ | Có |
 | Phụ thuộc khóa sổ 06:00–16:00 | **Không** (đã bỏ) |
@@ -370,6 +394,13 @@ Chi tiết: `docs/SPEC_FINGERPRINT.md`.
 - [x] **P8-WizardPresenceFix:** wizard `nghi-truc-assign` HEAD ghi được trên `DI_LAM`/`DI_TRE` + thiếu 1-3 mốc — §4.13.8
 - [x] **P13-NghiTrucWizardZeroPunch:** N.trực khi 0 mốc → wizard (đủ sáng/chiều/cả ngày) — §4.13.8
 - [x] **P14-PastUnlockAudit:** HEAD ghi ngày quá khứ chỉ khi Admin unlock đúng ngày; roster ngày khác không còn luôn read-only — §4.7
+- [x] **P17-HeadIncompleteExplainWrite:** HEAD chấm NV thiếu dữ liệu (quá khứ + hôm nay sau khóa mềm) kèm giải trình, không chờ Admin — §4.7.2a
+- [x] **D-STAFF.1c:** Bảng Nhân viên — cột ẢNH ĐẠI DIỆN trước MÃ NV — §8
+- [x] **D-STAT.1:** KPI thống kê đếm như bảng lịch sử — §7.1a
+- [x] **D-STAT.1b:** Empty filter — giữ bố cục KPI, số = 0 — §7.1a / §7.2
+- [x] **D-UI.39:** Hint WPF đơn vị đếm Chấm công vs Thống kê — §7.2
+- [x] **D-UI.40:** H1 WPF IN HOA (`CHẤM CÔNG HẰNG NGÀY` · `THỐNG KÊ LỊCH SỬ CHẤM CÔNG` · `NHÂN VIÊN`) — `SPEC_DESKTOP` §2.7.7
+- [x] **D-UI.41:** Thống kê HEAD — bỏ subtitle, Excel trên hàng filter — `SPEC_DESKTOP` §2.7.8
 - [x] **P15-HeadUnlockRequest:** nút gửi yêu cầu mở khóa ngày cũ; chờ Admin xác nhận — §4.7.2
 - [x] **P15-UnlockRequestNotifyType:** gửi yêu cầu không 500 vì ENUM chuông; luôn `message` VN — §4.7.2
 

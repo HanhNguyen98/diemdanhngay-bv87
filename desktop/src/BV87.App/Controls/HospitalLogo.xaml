@@ -1,0 +1,61 @@
+<UserControl x:Class="BV87.App.Controls.HospitalLogo"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType">
+    <StackPanel x:Name="LayoutPanel" Orientation="{Binding Layout, ElementName=Root}">
+        <Image Source="{Binding LogoSource, ElementName=Root}"
+               Width="{Binding LogoSize, ElementName=Root}"
+               Height="{Binding LogoSize, ElementName=Root}"
+               Stretch="Uniform"
+               RenderOptions.BitmapScalingMode="HighQuality"/>
+        <StackPanel Margin="{Binding TextMargin, ElementName=Root}" VerticalAlignment="Center">
+            <TextBlock Text="{Binding AppSubtitle, ElementName=Root}"
+                       FontSize="{Binding SubtitleFontSize, ElementName=Root}"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource NavyBrush}"
+                       TextOptions.TextFormattingMode="Display"
+                       TextOptions.TextRenderingMode="ClearType"
+                       Visibility="{Binding ShowAppSubtitle, ElementName=Root, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextAlignment" Value="Left"/>
+                        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+                        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Layout, ElementName=Root}" Value="Vertical">
+                                <Setter Property="TextAlignment" Value="Center"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Text="{Binding HospitalName, ElementName=Root}"
+                       FontSize="{Binding HospitalNameFontSize, ElementName=Root}"
+                       FontWeight="{Binding HospitalNameFontWeight, ElementName=Root}"
+                       Foreground="{StaticResource ContentMutedBrush}"
+                       TextWrapping="Wrap"
+                       TextOptions.TextFormattingMode="Display"
+                       TextOptions.TextRenderingMode="ClearType"
+                       Visibility="{Binding ShowHospitalName, ElementName=Root, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextAlignment" Value="Left"/>
+                        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+                        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Layout, ElementName=Root}" Value="Vertical">
+                                <Setter Property="TextAlignment" Value="Center"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

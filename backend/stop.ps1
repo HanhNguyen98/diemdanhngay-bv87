@@ -1,4 +1,4 @@
-# Stop backend — free port 8082
+# Stop backend - free port 8082
 $PORT = 8082
 
 $pids = Get-NetTCPConnection -LocalPort $PORT -ErrorAction SilentlyContinue |

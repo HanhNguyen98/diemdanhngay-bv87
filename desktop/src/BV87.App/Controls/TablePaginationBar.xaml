@@ -1,0 +1,103 @@
+<UserControl x:Class="BV87.App.Controls.TablePaginationBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="16,12">
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center">
+            <TextBlock VerticalAlignment="Center"
+                       Foreground="{StaticResource ContentMutedBrush}"
+                       FontSize="{StaticResource FontSizeMd}"
+                       Margin="0,0,16,0">
+                <Run Text="Tổng số "/>
+                <Run Text="{Binding TotalItems, ElementName=Root, Mode=OneWay, StringFormat=N0}" FontWeight="SemiBold"/>
+                <Run Text=" "/>
+                <Run Text="{Binding UnitLabel, ElementName=Root, Mode=OneWay}"/>
+            </TextBlock>
+
+            <Button Content="«"
+                    Style="{StaticResource PaginationNavButtonStyle}"
+                    IsEnabled="{Binding CanGoPrevious, ElementName=Root}"
+                    Click="FirstPage_Click"
+                    ToolTip="Trang đầu"/>
+            <Button Content="‹"
+                    Style="{StaticResource PaginationNavButtonStyle}"
+                    IsEnabled="{Binding CanGoPrevious, ElementName=Root}"
+                    Click="PreviousPage_Click"
+                    ToolTip="Trang trước"/>
+            <ItemsControl ItemsSource="{Binding PageItems, ElementName=Root}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Width="36" Height="36" Margin="0,0,4,0">
+                            <TextBlock Text="…"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource ContentMutedBrush}"
+                                       FontSize="{StaticResource FontSizeMd}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Button Tag="{Binding PageNumber}"
+                                    Click="PageNumber_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource PaginationPageButtonStyle}">
+                                        <Setter Property="Content" Value="{Binding PageNumber}"/>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                                <Setter Property="Cursor" Value="Arrow"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Content="›"
+                    Style="{StaticResource PaginationNavButtonStyle}"
+                    IsEnabled="{Binding CanGoNext, ElementName=Root}"
+                    Click="NextPage_Click"
+                    ToolTip="Trang sau"/>
+            <Button Content="»"
+                    Style="{StaticResource PaginationNavButtonStyle}"
+                    Margin="0,0,16,0"
+                    IsEnabled="{Binding CanGoNext, ElementName=Root}"
+                    Click="LastPage_Click"
+                    ToolTip="Trang cuối"/>
+
+            <TextBlock Text="Hiển thị"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource ContentMutedBrush}"
+                       FontSize="{StaticResource FontSizeMd}"
+                       Margin="0,0,8,0"/>
+            <ComboBox ItemsSource="{Binding PageSizeOptions, ElementName=Root}"
+                      SelectedItem="{Binding PageSize, ElementName=Root, Mode=TwoWay}"
+                      Style="{StaticResource PaginationComboBoxStyle}"
+                      Width="80"/>
+        </StackPanel>
+    </Border>
+</UserControl>

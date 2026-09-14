@@ -1,0 +1,104 @@
+<Window x:Class="BV87.App.Shell.MainShellWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:BV87.App.Controls"
+        xmlns:shell="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+        Title="{x:Static shell:ShellUiStrings.WindowTitle}"
+        WindowState="Maximized"
+        MinHeight="600" MinWidth="960"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource SurfacePageBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
+    <Grid UseLayoutRounding="True" SnapsToDevicePixels="True">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{StaticResource SidebarWidth}"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{StaticResource SurfaceWhiteBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <controls:HospitalLogo x:Name="SidebarLogo" DockPanel.Dock="Top"
+                                       Margin="20,24,20,16"
+                                       LogoSize="40"
+                                       SubtitleFontSize="16"
+                                       HospitalNameFontSize="13"
+                                       TextMargin="10,0,0,0"/>
+                <ScrollViewer DockPanel.Dock="Top" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="NavPanel" Margin="0,0,0,16"/>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- Main -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Light header -->
+            <Border Grid.Row="0" Background="{StaticResource SurfaceWhiteBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="24,0">
+                <Grid Height="{StaticResource HeaderHeight}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text=""
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource NavyBrush}"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <controls:NotificationBell x:Name="NotificationBellControl"
+                                                   Visibility="Collapsed"/>
+                        <Border x:Name="NotificationSeparator"
+                                Width="1"
+                                Height="24"
+                                Background="{StaticResource LineBrush}"
+                                Margin="8,0,16,0"
+                                Visibility="Collapsed"/>
+                        <Border Style="{StaticResource UserAvatarStyle}" Margin="0,0,10,0">
+                            <TextBlock x:Name="UserAvatarText"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource PrimaryBrush}"/>
+                        </Border>
+                        <TextBlock x:Name="UserInfoText"
+                                   Foreground="{StaticResource ContentHeadingBrush}"
+                                   FontWeight="SemiBold"
+                                   FontSize="{StaticResource FontSizeBase}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0"/>
+                        <Button Style="{StaticResource GhostButtonStyle}"
+                                ToolTip="Đăng xuất"
+                                Padding="8,8"
+                                Click="LogoutButton_Click">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7E8;" FontSize="16"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <Border Grid.Row="1" Padding="24,20,24,20">
+                <ContentControl x:Name="ContentHost"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"/>
+            </Border>
+
+            <controls:AppContentFooter Grid.Row="2"/>
+
+            <controls:ToastHost Grid.Row="1"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,8,24,0"
+                                Panel.ZIndex="100"/>
+        </Grid>
+    </Grid>
+</Window>

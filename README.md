@@ -1,25 +1,25 @@
-# Hệ thống Bệnh viện Quân y 87 - Chương trình chấm công
+# Hệ thống Bệnh viện Quân y 87 — Chương trình chấm công
 
-## Cấu trúc dự án
+Client: **WPF** (`desktop/`). API: **Spring Boot**. Không còn Web React / Java Agent trong repo (D5).
+
+Hướng dẫn ADMIN / HEAD / IT (đóng gói ZIP, Git, deploy): [`docs/HUONG_DAN_SU_DUNG.md`](docs/HUONG_DAN_SU_DUNG.md).
+
+## Cấu trúc
 
 ```
 diemdanhngay-bv87/
-├── backend/                    # Spring Boot 3.x
-│   ├── src/main/resources/
-│   │   ├── application.yml
-│   │   ├── application-local.yml
-│   │   ├── schema.sql
-│   │   └── data.sql
-│   └── local-secrets.example.yml
-├── frontend/                   # React + Vite + Tailwind
-├── docs/CODING_STANDARDS.md    # Quy ước code (English) / UI (Tiếng Việt)
-└── .cursorrules                # Quy tắc cho AI & dev
+├── backend/          # Spring Boot 3.x — port local 8082
+├── desktop/          # WPF BV87.exe (Admin / HEAD / --agent)
+├── deploy/           # Docker prod — API LAN :8081
+├── docs/             # SPEC + HUONG_DAN_SU_DUNG.md (ADMIN / HEAD / IT)
+└── .cursorrules
 ```
 
 ## Yêu cầu
 
-- Java 17+, Maven 3.8+, Node.js 18+
-- MySQL 8.x cổng **3306D** (cùng server với web khảo sát)
+- Java 17+, Maven 3.8+
+- .NET 8 **Desktop Runtime** x64 (máy chạy `BV87.exe`)
+- MySQL 8.x cổng **3306** (cùng server với web khảo sát)
 - Database: **`diemdanhngay_bv87_db`**
 
 ### DBeaver
@@ -50,19 +50,21 @@ copy local-secrets.example.yml local-secrets.yml
 # 3. Dùng xong — giải phóng port 8082
 .\stop.ps1
 
-# 4. Frontend (terminal khác)
-cd ..\frontend
-npm run dev
+# 4. WPF (terminal khác)
+cd ..\desktop
+.\run.cmd
 ```
+
+Kiosk local: `.\run.cmd --agent` (cần `agent.config.json` cạnh exe).
 
 > Lỗi `Port 8082 was already in use` → chạy `.\stop.ps1` rồi `.\start.ps1` lại.
 
 | Ứng dụng | Profile | DB_NAME | Port |
 |----------|---------|---------|------|
-| Web khảo sát | `mysql` | `fm_db_bv87` | 8080 |
-| Chấm công | `local` | `diemdanhngay_bv87_db` | **8082** |
+| Web khảo sát (app khác) | `mysql` | `fm_db_bv87` | 8080 |
+| API chấm công (dev) | `local` | `diemdanhngay_bv87_db` | **8082** |
 
-- Giao diện: http://localhost:5173
+- WPF: `desktop\run.cmd`
 - API: http://localhost:8082
 
 ## Tài khoản mẫu
@@ -72,32 +74,30 @@ npm run dev
 | Admin | admin | admin123 |
 | Trưởng phòng 02 | truongphong02 | head123 |
 
-## Deploy production (Docker + Cloudflare)
+## Deploy production (LAN)
 
-Xem hướng dẫn chi tiết: [`deploy/README.md`](deploy/README.md)
+Xem [`docs/HUONG_DAN_SU_DUNG.md`](docs/HUONG_DAN_SU_DUNG.md) (IT + user) · [`deploy/README.md`](deploy/README.md) · gói WPF: `desktop\scripts\pack-release.ps1`.
 
 | Ứng dụng | Port LAN | Database |
 |----------|----------|----------|
 | Web khảo sát | `8080` | `fm_db_bv87` |
-| Chấm công | `8081` | `diemdanhngay_bv87_db` |
+| API chấm công | `8081` | `diemdanhngay_bv87_db` |
 
 ```powershell
-# Trên server 192.170.182.14
 cd deploy
 copy .env.example .env
-# Sửa DB_PASS, domain Cloudflare...
+# Sửa DB_PASS
 
 docker compose -f docker-compose.prod.yml up -d --build
-
-# Bật Cloudflare Tunnel (sau khi có CF_TUNNEL_TOKEN)
-docker compose -f docker-compose.prod.yml --profile tunnel up -d
 ```
 
-Truy cập LAN: http://192.170.182.14:8081
+WPF / Agent trỏ `http://192.170.182.14:8081`. **Cấm** Cloudflare Tunnel cho chấm công.
+
+Backup DB hàng ngày (PC server Windows, 22:00): [`deploy/README.md`](deploy/README.md) mục **Backup hàng ngày**.
 
 ## Quy tắc dev
 
 - Code & comment method: **tiếng Anh** — xem `docs/CODING_STANDARDS.md`
 - Giao diện & thông báo lỗi API: **tiếng Việt**
 - `dept_code` / `emp_code`: INT trong DB, hiển thị `%02d` / `%05d`
-- Chốt sổ: **16:00** (Asia/Ho_Chi_Minh)
+- Binding UI: `docs/SPEC_DESKTOP.md`

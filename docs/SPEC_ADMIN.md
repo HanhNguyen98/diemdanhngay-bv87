@@ -1,7 +1,7 @@
 # SPEC — Role ADMIN (Quản trị viên)
 
-> **UI Web DEPRECATED.** Client binding chuyển sang **`docs/SPEC_DESKTOP.md`** (mode `admin`).  
-> File này giữ **logic nghiệp vụ + API** làm tham chiếu port WPF.
+> **D5:** UI Web **đã xóa** (`frontend/`). Client binding: **`docs/SPEC_DESKTOP.md`** (mode `admin`).  
+> File này giữ **logic nghiệp vụ + API** (không phải path JSX).
 
 > **Binding contract.** Mọi thay đổi code liên quan role `ADMIN` phải tuân thủ file này.  
 > **Không** thêm / sửa / suy diễn chức năng ngoài phạm vi đã ghi.  
@@ -9,8 +9,9 @@
 > Nếu cần hành vi mới: cập nhật file này **trước**, rồi mới code.
 
 **Nguồn sự thật (source of truth trong repo):**
-- Backend: `AdminController`, `AiAssistantController`, `AttendanceController`, `AdminService`, `AdminAccountService`, `AdminDashboardService`, `AttendanceReminderService`, `AttendanceReportService` (+ fingerprint khi P1+)
-- Frontend: `AdminApp.jsx`, `AdminShell.jsx`, `constants/admin.js`, `constants/adminTabs.js`, `constants/theme.js`, `tailwind.config.js`, `index.css`
+- Client: `docs/SPEC_DESKTOP.md` (mode `admin`) — WPF
+- Backend: `AdminController`, `AttendanceController`, `AdminService`, `AdminAccountService`, `AdminDashboardService`, `AttendanceReminderService`, `AttendanceReportService` (+ fingerprint)
+- UI Web (lịch sử, **đã xóa D5**): `AdminApp.jsx` / `constants/admin.js` — **cấm** implement lại SPA
 - Chuẩn chung: `.cursorrules`, `docs/CODING_STANDARDS.md`
 - Vân tay / Chấm công mới: **`docs/SPEC_FINGERPRINT.md` ưu tiên** khi xung đột với mô tả legacy unlock/khóa sổ
 
@@ -21,11 +22,11 @@
 | Mục | Quy tắc |
 |-----|---------|
 | Enum | `AccountRole.ADMIN` — label UI: **Quản trị viên** |
-| Sau login | `App.jsx` → `view = 'admin'` → lazy-load `AdminApp` |
+| Sau login | WPF `MainShellWindow` mode **admin** (`SPEC_DESKTOP` §2.3.1) |
 | Phạm vi | Toàn viện — mọi đơn vị (`dept_code`) |
-| Session | Cookie session Spring Security; API tương đối `/api/*` |
-| Public không auth | `POST /api/auth/login`, `GET /api/public/branding`, `GET /actuator/health` |
-| Admin API | Toàn bộ `/api/admin/**` và `/api/admin/ai/**` bắt buộc `@PreAuthorize("hasRole('ADMIN')")` |
+| Session | JWT desktop (`POST /api/auth/desktop/login`) — **cấm** cookie session / `POST /api/auth/login` (D5) |
+| Public không auth | `POST /api/auth/desktop/login`, `POST /api/auth/desktop/refresh`, `GET /api/public/branding`, `GET /actuator/health` |
+| Admin API | `/api/admin/**` bắt buộc `@PreAuthorize("hasRole('ADMIN')")` — **không** còn `/api/admin/ai/**` (D5) |
 
 ---
 
@@ -125,8 +126,10 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 | `dept_code`, `emp_code` | `INT` trong DB/API; **không** lưu chuỗi pad |
 | Hiển thị mã | Backend `CodeFormatter` `%02d` / `%05d`; FE **chỉ** `formatDeptCode` / `formatEmpCode` / `displayDeptCode` / `displayEmpCode` (`utils/formatters.js`). **Cấm** `padStart` rải trong JSX/modal. Ưu tiên `*Formatted` từ API |
 | Label status | Catalog `statusOptions` (DB); fallback `STATUS_BADGE`. `status == null` → `UI.filterUnchecked` (**Chưa chấm**). **Cấm** literal `'Chưa chấm'` / `'ĐI LÀM'` / `'ĐI TRỄ'` trong component |
+| Filter Chưa chấm | `isAttendanceUnchecked` = `!isComplete` (KPI `uncheckedCount`, D-DATA.1) — **cấm** chỉ `status == null` |
 | Giờ Instant | FE `formatInstantHm()` — gồm cột giờ, Excel Chi tiết ĐV. **Cấm** `toLocaleTimeString` duplicate |
 | Datetime log (Admin) | Cột thời gian bảng lịch sử / token: `formatLogDateTime()` hoặc `formatLogDateTimeOrDash()` (`utils/reminderHistory.js`) → `dd/mm/yyyy HH:mm`. Empty → `—`. **Cấm** `toLocaleString` / hàm format local trong page |
+| Date picker (UI) | Hiển thị **`dd/mm/yyyy`** (`DatePickerField` / `formatDateDMY`). **Cấm** `<input type="date">` (format theo OS). API vẫn ISO `yyyy-mm-dd` |
 | Hiển thị IP / Máy | `displayIp()` + `formatKioskMachine` / `formatKioskMachineParts` (`utils/kioskMachine.js`) — §4.7.1 / `SPEC_FINGERPRINT` §10.3 |
 | Pagination FE | `totalPages = Math.max(1, api.totalPages ?? 1)` — kể cả thống kê lịch sử |
 | Timezone | `Asia/Ho_Chi_Minh` qua `VietnamTimeService` |
@@ -167,11 +170,13 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 | Method | Path | Mục đích |
 |--------|------|----------|
 | GET | `/api/admin/dashboard` | KPI toàn viện + list summary từng Đơn vị (ngày hôm nay) |
+| GET | `/api/admin/system/storage` | Dung lượng ổ máy chủ từ `disk-status.json` — banner Tổng quan (D-DISK.1). `level`: `ok` \| `warning` \| `danger`. Thiếu file → `ok` + `message=null` |
 | GET | `/api/attendance/summaries` | Chỉ Admin — tổng hợp toàn viện theo `date` |
 | GET | `/api/attendance/page?deptCode=&date=` | Chi tiết 1 đơn vị (summary + staff) — Admin **bắt buộc** truyền `deptCode` |
 
 ### 6.2 KPI & bảng tiến độ
 
+- Banner dung lượng máy chủ (D-DISK.1): chỉ **ADMIN Tổng quan** khi `GET /api/admin/system/storage` là `warning` / `danger` — ẩn khi `ok` hoặc lỗi (`SPEC_DESKTOP` §2.8.2)
 - KPI / donut / breakdown: **mọi** status catalog active (gồm `VE_SOM`, nhóm `NGHI_TRUC` / `HSQ_BS`) — `mergeBreakdowns` flatten children — **cùng nguồn DB** với Chấm công HEAD (`SPEC_FINGERPRINT` §4.13)
 - Thứ tự card: **Đi làm → Đi trễ (bên phải)** → … trên Tổng quan + Chi tiết Đơn vị (`SPEC_FINGERPRINT` §3.1 P3b)
 - Nhãn card trạng thái KPI: **font-weight 700 + chữ đen** — đồng bộ HEAD Chấm công (`SPEC_FINGERPRINT` §10.4 P3c)
@@ -207,8 +212,9 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
   - Menu **Vân tay**: portal + clamp viewport (§10.6); **Duyệt bổ sung giờ** khi `payroll_fill_status = PENDING`; modal **Lịch thủ công** fit viewport + scroll body (§3.2.2)
 - **P12-AdminApproveUx:** desktop + mobile — **click badge `Chờ duyệt giờ`** mở `ApprovePayrollFillModal`; **cấm** nút **Duyệt giờ** trùng cột Thao tác; menu **Vân tay → Duyệt bổ sung giờ** vẫn giữ — §4.13.6.
 - **Desktop quick-action labels (P6-HeadQuickLabel):** `QuickActionGroup` dùng chung với HEAD — icon + nhãn rút gọn trên desktop; chi tiết `SPEC_HEAD` §6.2.
-- **P8-ReassignNghiTruc:** trong Chi tiết Đơn vị, quick-action `N.trực` khi `punchCount` 0–3 phải mở cùng wizard `NghiTrucAssignModal` như HEAD (`HALF_MORNING` / `HALF_AFTERNOON` / FULL), không dùng modal khoảng ngày catalog.
-- **P13-NghiTrucWizardZeroPunch:** NV chưa quét — Admin/HEAD vẫn chọn được **nửa buổi chiều** qua wizard — §4.13.8.
+- **P8-ReassignNghiTruc / P16:** Chi tiết Đơn vị — `N.trực` `punchCount` 0–3 mở wizard **1 ngày / nửa buổi chiều** (không `HALF_MORNING`).
+- **P13 / P16:** NV chưa quét — chọn nửa buổi chiều; NV **phải quét sáng**; không auto-fill 07:00/11:00.
+- **P16-NghiTrucDutyRest:** FULL không 4 giờ giả; kiosk cấm quét FULL / cấm chiều HALF; subtitle roster; không PENDING trên wizard mới.
 - **P8-WizardPresenceFix:** wizard `nghi-truc-assign` — HEAD/Admin **không** skip presence; case `DI_TRE` + 1 mốc → HALF chiều phải lưu được (§4.13.8).
 - **P9-RowHintDeclutter:** **không** hint `Thiếu dữ liệu chấm công` dưới ô giờ (`DeptAttendanceRow` / `DeptAttendanceStaffCard`) — `SPEC_FINGERPRINT` §4.5.1.
 
@@ -238,12 +244,15 @@ Xóa chỉ khi nhóm không còn Đơn vị.
 
 **API / DB (giữ tương thích):** mã (INT), tên, nhóm, unitCode, `location`, `locationImageUrl`, head, active — BE có thể còn trường vị trí từ dữ liệu cũ; **UI không expose**.
 
-**UI danh mục Đơn vị (P6-DeptCatalog):**
+**UI danh mục Đơn vị (P6-DeptCatalog / D-UI.44):**
 
+- Cột **MÃ ĐƠN VỊ** = khóa chính `dept_code` padded (`deptCodeFormatted`, 01…). Cột `unitCode` = **KÝ HIỆU ĐƠN VỊ** (vd. A2 / C11) — **cấm** hai cột cùng nhãn «MÃ ĐƠN VỊ».
+- Form: PK «Mã đơn vị» readonly · `unitCode` «Ký hiệu đơn vị (vd: C11)».
+- Màn Admin khác (cột/combo ĐƠN VỊ): `{unitCode} - {deptNameDisplay\|\|deptName}`; không `unitCode` thì chỉ tên — **cấm** `[01] tên`. DTO có `deptCode` kèm `deptName` phải expose `unitCode`.
 - **Không** cột **Vị trí** trên bảng desktop, card mobile, Excel export/import template, ô tìm kiếm, modal thêm/sửa, modal sơ đồ vị trí — loại bỏ hoàn toàn khỏi FE.
 - Khi **sửa** Đơn vị: FE **giữ nguyên** `location` / `locationImageUrl` hiện có trên BE (không ghi đè null) vì form không còn field.
 - **Cột Trưởng đơn vị (desktop + mobile card):** avatar + **tên** dòng trên (`font-semibold`); **cấp bậc** (`headRank`) dòng dưới, cỡ nhỏ (`text-2xs`), màu phụ — **không** xếp ngang cùng tên (giảm chiều rộng cột).
-- Tìm kiếm: tên, mã đơn vị, khối, tên trưởng đơn vị — **không** theo vị trí.
+- Tìm kiếm: tên, mã PK, ký hiệu, khối, tên trưởng đơn vị — **không** theo vị trí.
 
 ### 7.3 Nhân viên
 
@@ -252,6 +261,8 @@ Xóa chỉ khi nhóm không còn Đơn vị.
 | GET | `/staff?search&deptCode&page&pageSize` |
 | GET | `/staff/next-code?deptCode=` |
 | GET/PUT/DELETE | `/staff/{empCode}` |
+
+`GET /staff` trả `unitCode` + `deptName` (D-UI.44 — UI cột ĐƠN VỊ = `{unitCode} - {tên}`).
 | GET | `/staff/{empCode}/department-history` |
 | POST | `/staff/{empCode}/transfer` |
 | POST | `/staff` |
@@ -283,6 +294,7 @@ Xóa chỉ khi nhóm không còn Đơn vị.
   | `initial` | `true` nếu không có đơn vị trước (gán ban đầu) |
   UI bảng: cột **Từ** · **Đến** · **Từ ngày** · **Đến ngày** · **Lý do** · **Người ghi** · **Thời điểm**. Mobile: card cùng field. Derive Từ/Đến từ chuỗi kỳ assignment (không bắt buộc cột DB mới).
 - Excel import/export/template: theo `ADMIN_UI.excel` — không đổi format cột ngoài mẫu hiện có
+- **Bảng desktop (D-STAFF.1c):** cột **ẢNH ĐẠI DIỆN** **ngay trước MÃ NV** (sau Đơn vị nếu hiện). Ảnh tròn 36px; không ảnh → initials. Cột Họ tên **chỉ** tên — **cấm** avatar trong cell tên. Mobile `StaffCard` giữ avatar header (không thêm cột).
 - Mobile `StaffCard` badges: đồng bộ `SPEC_HEAD` §8.1 (compact, không uppercase bold; vân tay rút gọn + `title` đầy đủ)
 - Mobile `StaffCard` footer (P6-StaffMobile): **một hàng** `grid-cols-3` — cột 1 **Sửa + Xóa** ngang (`flex` + `divide-x`, cân đối với Chuyển đơn vị / Lịch sử); **cấm** Xóa rớt hàng dưới Sửa; có thêm Xóa vân tay → cột 4 riêng
 
@@ -326,6 +338,7 @@ Base: `/api/admin/accounts`
 | List | `GET /accounts?search&role&status&page&pageSize` (max pageSize backend 500) |
 | Create/Update/Delete | POST/PUT/DELETE |
 | Reset password | `POST /accounts/{id}/reset-password` — mật khẩu ≥ 6 ký tự |
+| Admin — màn Đổi mật khẩu | **ADMIN only.** Self: **không** ô mật khẩu hiện tại (parity HEAD). Reset user: dropdown **Đơn vị** + dropdown **Tên nhân viên** lọc theo đơn vị và ô tìm; cùng API reset; parity Desktop §2.19.1 · Web follow-up |
 | Không xóa | Tài khoản đang đăng nhập |
 | HEAD account | Bắt buộc chọn `empCode` trong danh mục; **mỗi đơn vị tối đa 1 HEAD active**; sync `department.headEmpCode` |
 | ADMIN account | Có thể gắn / không gắn employee; fullname bắt buộc nếu không gắn |
@@ -370,7 +383,7 @@ Messages uniqueness HEAD: đúng chuỗi `HEAD_DEPT_TAKEN_MESSAGE` trong `AdminA
 
 Binding đầy đủ: **`SPEC_FINGERPRINT` §10.1–§10.2** (nav `settings-fingerprint-tokens`, API kiosk-tokens, workflow đổi `agent.properties`).  
 **P1.2d:** Đổi nhãn token đang dùng trên cùng màn — không phát hành lại; chi tiết §10.1.  
-**P1.2e:** Cột Thao tác gom dropdown (Đổi nhãn / Đặt PIN / Xoay / Thu hồi); header bảng một dòng — `SPEC_FINGERPRINT` §10.1.  
+**P1.2e / D5.6:** Cột Thao tác dropdown (Đổi nhãn / Xoay / Thu hồi) — **không** Đặt PIN; header bảng một dòng — `SPEC_FINGERPRINT` §10.1.  
 **P1.2f:** Mobile card list thay bảng token — §10.1 P1.2f.  
 File này chỉ ghi nav/tab; **không** duplicate rule nghiệp vụ token.
 
@@ -378,7 +391,7 @@ File này chỉ ghi nav/tab; **không** duplicate rule nghiệp vụ token.
 
 ## 10. Admin AI assistant
 
-> Chi tiết binding: `docs/SPEC_AI_ASSISTANT.md` (sau P5).
+> **D5: ĐÃ XÓA.** Không còn `/api/admin/ai/**`. Lịch sử: `docs/SPEC_AI_ASSISTANT.md`. **Cấm** implement lại.
 
 Base: `/api/admin/ai` — chỉ ADMIN
 
@@ -474,11 +487,12 @@ Chương trình chạy đồng thời:
 - [ ] `AdminShell` `<main>`: `.mobile-page-y` + `lg:overflow-y-auto` — `settings-system` cuộn dọc được, không clip mục 3
 - [ ] `settings-system` mục 4: label `reminderTime` 1 hàng (`sm+`); ô time compact `w-44` (không `w-full` / không `max-w-xl`)
 - [ ] Không tự ý sinh code ngoài yêu cầu / ngoài SPEC
-- [ ] Biometric tuân `SPEC_FINGERPRINT.md` (không lộ template public; **không** DELETE template Web — P2.3)
+- [x] Biometric tuân `SPEC_FINGERPRINT.md` (không lộ template public; Web React không DELETE — P2.3; WPF ADMIN/HEAD xóa + audit — P2.4)
 - [x] **P6-Adminb:** `SearchableSelect` string \| `{ value, label }`; modal Chuyển đơn vị chọn Đơn vị đích không crash
 - [x] **P6-Adminc:** `POST /staff/{empCode}/transfer` body chỉ deptCode + lý do (+ revoke HEAD); modal không PUT hồ sơ
 - [x] **P6-Admind:** Lịch sử luân chuyển hiện **Từ → Đến** + ai / khi / lý do
 - [x] **P6-DeptCatalog:** Danh mục Đơn vị — bỏ Vị trí toàn FE; cột Trưởng đơn vị xếp dọc (tên + `headRank`)
+- [x] **D-UI.44:** Cột KÝ HIỆU ĐƠN VỊ (`unitCode`); nhãn ghép `{unitCode} - {tên}` trên màn Admin khác
 - [x] **P6-StatusKpi5Col:** Dashboard + Chi tiết ĐV — status KPI `grid-cols-5`; Tổng tách hàng riêng
 - [x] **P6-StatusKpiSideTotal:** Dashboard + Chi tiết ĐV — Tổng trái | status 5 cột phải
 - [x] **P6-HeadQuickLabel:** Chi tiết ĐV desktop — quick-action icon + nhãn rút gọn (shared `QuickActionGroup`)
@@ -494,9 +508,10 @@ Chương trình chạy đồng thời:
 - [x] **P15-UnlockRequestsAdminUiPolish:** sidebar 272px; badge nav đỏ; dropdown THAO TÁC — §4.7.2
 - [x] **P15-UnlockRequestsTablePolish:** nhãn Trạng thái filter; header một dòng; LÝ DO truncate — §4.7.2
 - [x] **P9-RowHintDeclutter:** Chi tiết ĐV — bỏ hint dòng dưới ô giờ; giữ 4 mốc + badge + banner KPI
-- [x] **P10-NghiTrucWizardLayout:** wizard N.trực layout ngang desktop — §4.13.8
+- [x] **P10-NghiTrucWizardLayout:** wizard N.trực layout ngang desktop — §4.13.8; **D-ATT.2** supersede layout lớn + toast (`SPEC_DESKTOP` §2.18.2)
 - [x] **P11b-PendingBadgeCompact / P12-AdminApproveUx:** badge pending một dòng; click badge duyệt giờ (không nút trùng Thao tác) — §4.13.6
 - [x] **P16-DashboardRefreshDup:** Tổng quan chung — bỏ nút làm mới thừa trên toolbar Tiến độ Chấm công; giữ một **Làm mới** — §6.2
+- [x] **D-STAFF.1c:** Bảng Nhân viên — cột ẢNH ĐẠI DIỆN trước MÃ NV (Admin + HEAD) — §7.3
 
 ---
 
@@ -506,7 +521,9 @@ Chi tiết: `docs/SPEC_FINGERPRINT.md`.
 
 | Quyền | ADMIN |
 |-------|--------|
-| Enroll / đăng ký lại / xóa template | **Chỉ Agent** (đổi `kiosk.token` theo khoa — §10.2 `SPEC_FINGERPRINT`) — **không** Web DELETE/enroll |
+| Enroll / đăng ký lại template (USB) | **Có** — WPF Tiện ích **Đăng ký vân tay** · toàn viện |
+| Xóa template (soft-delete, mọi NV) | **Có** — WPF Danh mục NV · `DELETE /api/admin/fingerprints/{empCode}` |
+| Nhật ký đăng ký / xóa mẫu | **Có** — WPF Lịch sử vân tay · `GET /api/admin/fingerprints/audit-logs` |
 | Xem trạng thái ĐK + `fingerLabel` | Toàn viện (GET; không template) |
 | Quản lý token / PIN kiosk | Có (Cài đặt — không thay CRUD mẫu) |
 | Lịch sử ra vào (giờ vào, giờ ra, đi trễ, logs) | Toàn viện |

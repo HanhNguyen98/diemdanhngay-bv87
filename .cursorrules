@@ -18,23 +18,23 @@ Any product/UI/API change request must follow this order — **no exceptions**:
 |-------|----------|----------|
 | Source code | **English** | Class/method/variable names, JavaDoc, inline comments |
 | API user messages | **Vietnamese** | `BusinessException`, `AttendanceLockedException`, validation messages |
-| Frontend UI/UX | **Vietnamese** | Labels, buttons, badges, modals, toasts, empty states |
+| Frontend UI/UX | **Vietnamese** | WPF labels, buttons, badges, modals, toasts |
 | Dev docs (README) | **Vietnamese** | Setup guides for the team |
 | This file | **English** | AI coding conventions |
 
-**Never** mix Vietnamese in Java/React identifiers or English in end-user-facing text.
+**Never** mix Vietnamese in Java/C# identifiers or English in end-user-facing text.
 
 ---
 
 ## 2. TECH STACK & LOCAL ENV
 
 - **Backend:** Spring Boot 3.x, Spring Security, Spring Data JPA, Java 17
-- **Frontend:** React 18, Vite, Tailwind CSS
+- **Client:** WPF .NET 8 (`desktop/`) — Admin / HEAD / `--agent`
 - **Database:** MySQL 8.0 on `localhost:3306` (shared instance with survey app `fm_db_bv87`)
 - **Attendance DB:** `diemdanhngay_bv87_db` (separate database, same MySQL server)
 - **Secrets:** `backend/local-secrets.yml` (gitignored) — never commit passwords
-- **Schema:** Hibernate `ddl-auto: update` + `schema.sql` / `data.sql` on startup
-- **API port (local):** 8082 · **Frontend:** 5173
+- **Schema:** Hibernate `ddl-auto: update` + `schema.sql` / `data.sql` on startup (local); prod Flyway + `validate`
+- **API port (local):** 8082 · **Prod LAN:** 8081
 
 ---
 
@@ -43,7 +43,7 @@ Any product/UI/API change request must follow this order — **no exceptions**:
 - `dept_code`, `emp_code`: **INT / Integer** in DB and entities (index-friendly)
 - Display padding at application layer only:
   - Backend: `CodeFormatter.formatDeptCode()` → `%02d`, `formatEmpCode()` → `%05d`
-  - Frontend: `padStart(2,'0')`, `padStart(5,'0')`
+  - WPF: `padStart` equivalent in format helpers
 - Do not store padded strings in the database
 
 ---
@@ -71,10 +71,8 @@ Current enums:
 - **Non-obvious business rules:** brief inline comment in English
 - **No** commented-out code blocks; **no** Vietnamese in code comments
 
-### React (Frontend)
-- UI label maps live in `src/constants/` (Vietnamese values)
-- Component props: JSDoc only when behaviour is non-obvious
-- No Vietnamese in function/variable names
+### React (removed D5)
+- Do not add a web SPA. UI lives in `desktop/`.
 
 ---
 
@@ -106,10 +104,9 @@ Entity      → DB mapping only
 
 ---
 
-## 8. FRONTEND UI COLOR TOKENS (MANDATORY)
+## 8. WPF UI COLOR TOKENS (MANDATORY)
 
-All React components must use **Tailwind semantic tokens** from `frontend/tailwind.config.js`.
-Reference map: `frontend/src/constants/theme.js`. **Never** hardcode hex in JSX.
+WPF uses `ThemeResources.xaml` (same hex tokens as the former web theme). **Never** hardcode hex in XAML Views.
 
 ### Brand (Light Mode — mockup)
 | Token | Hex | Usage |
@@ -138,19 +135,13 @@ Reference map: `frontend/src/constants/theme.js`. **Never** hardcode hex in JSX.
 | `neutral` | `#F3F4F6` | `#6B7280` | Chưa chấm |
 
 ### Admin portal (ADMIN role only)
-- Frontend: `components/admin/AdminApp.jsx` — lazy-loaded tabs Departments / Staff
-- API base: `/api/admin/*` (relative paths, session cookie)
-- Codes: INT in DB; display with `CodeFormatter` / `padStart` — never strip leading zeros in UI
-
-### CSS component classes (`index.css`)
-- Badges: `badge-success`, `badge-warning`, `badge-danger`, `badge-info`, `badge-neutral`
-- Buttons: `btn-primary` (blue), `btn-navy` (dark CTA)
-- Do not use Tailwind default `green-500`, `red-600`, etc. in attendance UI
+- WPF: `desktop/` Admin shell — JWT `/api/admin/*`
+- Codes: INT in DB; display with `CodeFormatter` / pad — never strip leading zeros in UI
 
 ---
 
 ## 9. INFRASTRUCTURE (PRODUCTION — REFERENCE ONLY)
 
 - Server: `192.170.182.14` · Docker Compose · LAN port `8081` (survey app uses `8080`)
-- Public access: **Cloudflare Tunnel** (free) — see `deploy/README.md`
-- Do **not** use Ngrok; secrets (`CF_TUNNEL_TOKEN`, DB passwords) stay on server env only
+- LAN only — **no** Cloudflare Tunnel for attendance (SPEC_DESKTOP §1.1)
+- Do **not** use Ngrok; DB passwords stay on server env only

@@ -1,0 +1,44 @@
+<UserControl x:Class="BV87.App.Controls.CatalogStatGrid"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16,12" Margin="0,0,8,0">
+            <StackPanel>
+                <TextBlock Text="{Binding TotalLabel, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           FontSize="{StaticResource FontSizeStatLabel}"/>
+                <TextBlock Text="{Binding TotalValue, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontSize="{StaticResource FontSizeXl}" FontWeight="Bold"
+                           Foreground="{StaticResource NavyBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Padding="16,12" Margin="0,0,8,0">
+            <StackPanel>
+                <TextBlock Text="{Binding ActiveLabel, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           FontSize="{StaticResource FontSizeStatLabel}"/>
+                <TextBlock Text="{Binding ActiveValue, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontSize="{StaticResource FontSizeXl}" FontWeight="Bold"
+                           Foreground="{StaticResource SuccessFgBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" Padding="16,12">
+            <StackPanel>
+                <TextBlock Text="{Binding InactiveLabel, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           FontSize="{StaticResource FontSizeStatLabel}"/>
+                <TextBlock Text="{Binding InactiveValue, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontSize="{StaticResource FontSizeXl}" FontWeight="Bold"
+                           Foreground="{StaticResource NeutralFgBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

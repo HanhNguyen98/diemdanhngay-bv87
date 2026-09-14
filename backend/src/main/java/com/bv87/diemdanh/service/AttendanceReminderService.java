@@ -223,22 +223,26 @@ public class AttendanceReminderService {
                 .sorted(java.util.Comparator.comparing(Department::getDeptCode))
                 .toList();
 
-        Map<Integer, String> deptNames = departments.stream()
-                .collect(Collectors.toMap(Department::getDeptCode, Department::getDeptName));
+        Map<Integer, Department> deptByCode = departments.stream()
+                .collect(Collectors.toMap(Department::getDeptCode, d -> d));
 
         List<ReminderHistoryItemDto> history = reminderLogRepository
                 .findByDeptCodeGreaterThanAndAttendanceDateBetweenAndStatusOrderByCreatedAtDesc(
                         0, resolvedFrom, resolvedTo, ReminderLogStatus.SENT, Pageable.ofSize(200))
                 .stream()
-                .map(log -> ReminderHistoryItemDto.builder()
-                        .id(log.getId())
-                        .attendanceDate(log.getAttendanceDate())
-                        .deptCode(log.getDeptCode())
-                        .deptName(deptNames.getOrDefault(log.getDeptCode(), "Mã " + log.getDeptCode()))
-                        .triggerType(log.getTriggerType().name())
-                        .status(log.getStatus().name())
-                        .createdAt(log.getCreatedAt())
-                        .build())
+                .map(log -> {
+                    Department dept = deptByCode.get(log.getDeptCode());
+                    return ReminderHistoryItemDto.builder()
+                            .id(log.getId())
+                            .attendanceDate(log.getAttendanceDate())
+                            .deptCode(log.getDeptCode())
+                            .deptName(dept != null ? dept.getDeptName() : "Mã " + log.getDeptCode())
+                            .unitCode(dept != null ? dept.getUnitCode() : null)
+                            .triggerType(log.getTriggerType().name())
+                            .status(log.getStatus().name())
+                            .createdAt(log.getCreatedAt())
+                            .build();
+                })
                 .toList();
 
         Map<Integer, Long> countMap = reminderLogRepository.countSentByDeptBetween(resolvedFrom, resolvedTo)

@@ -1,0 +1,78 @@
+<shell:AppDialogWindow x:Class="BV87.App.Views.Admin.Catalog.StaffCatalogFormDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:BV87.App.Shell"
+        SizeToContent="WidthAndHeight"
+        MinWidth="460"
+        MaxHeight="720"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource SurfacePageBrush}">
+    <Border Margin="16" Padding="20" Background="{StaticResource SurfaceWhiteBrush}"
+            BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" MinWidth="440">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="640">
+            <StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{StaticResource NavyBrush}" Margin="0,0,0,16"/>
+
+                <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerFgBrush}"
+                           TextWrapping="Wrap" Margin="0,0,0,12" Visibility="Collapsed"/>
+
+                <TextBlock Text="Đơn vị" Style="{StaticResource FormLabelStyle}"/>
+                <ComboBox x:Name="DeptCombo" Style="{StaticResource FilterComboBoxStyle}"
+                          DisplayMemberPath="DisplayLabel" SelectedValuePath="DeptCode"
+                          SelectionChanged="DeptCombo_SelectionChanged" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Họ và tên" Style="{StaticResource FormLabelStyle}"/>
+                <TextBox x:Name="FullnameBox" Style="{StaticResource FilterTextBoxStyle}" Margin="0,0,0,12"/>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Cấp bậc" Style="{StaticResource FormLabelStyle}"/>
+                        <ComboBox x:Name="RankCombo" Style="{StaticResource FilterComboBoxStyle}" IsEditable="True"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Chức vụ" Style="{StaticResource FormLabelStyle}"/>
+                        <ComboBox x:Name="PositionCombo" Style="{StaticResource FilterComboBoxStyle}" IsEditable="True"/>
+                    </StackPanel>
+                </Grid>
+
+                <CheckBox x:Name="ActiveBox" Content="Đang hoạt động" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Ảnh đại diện" Style="{StaticResource FormLabelStyle}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <Button Content="Chọn / xem ảnh" Padding="12,6" Margin="0,0,8,0" Click="Avatar_Click"/>
+                    <TextBlock x:Name="AvatarStatusText" VerticalAlignment="Center"
+                               Foreground="{StaticResource ContentMutedBrush}"/>
+                </StackPanel>
+
+                <StackPanel x:Name="TransferPanel" Visibility="Collapsed" Margin="0,0,0,12">
+                    <Border Style="{StaticResource CardBorderStyle}" Padding="12" Background="{StaticResource SurfacePageBrush}">
+                        <StackPanel>
+                            <TextBlock Text="Thông tin luân chuyển" FontWeight="SemiBold"
+                                       Foreground="{StaticResource NavyBrush}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Lý do luân chuyển" Style="{StaticResource FormLabelStyle}"/>
+                            <TextBox x:Name="TransferReasonBox" Style="{StaticResource FilterTextBoxStyle}"
+                                     MinHeight="64" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,8"/>
+                            <TextBlock x:Name="HeadRevokeHint" TextWrapping="Wrap" Foreground="{StaticResource ContentMutedBrush}"
+                                       FontSize="12" Margin="0,0,0,8" Visibility="Collapsed"/>
+                            <CheckBox x:Name="RevokeHeadBox" Content="Thu hồi quyền trưởng đơn vị tại đơn vị cũ"
+                                      Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Hủy" Padding="16,8" Margin="0,0,8,0" Click="Cancel_Click"/>
+                    <Button x:Name="SaveButton" Content="Lưu" Style="{StaticResource PrimaryButtonStyle}"
+                            Padding="16,8" Click="Save_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</shell:AppDialogWindow>

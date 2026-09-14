@@ -16,6 +16,7 @@ public class UnlockRequestItemDto {
     private final Integer deptCode;
     private final String deptCodeFormatted;
     private final String deptName;
+    private final String unitCode;
     private final String reason;
     private final UnlockRequestStatus status;
     private final String statusLabel;

@@ -26,7 +26,7 @@ public class NghiTrucAssignRequest {
     @Size(max = 255, message = "Lý do tối đa 255 ký tự")
     private String reason;
 
-    /** HALF_MORNING | HALF_AFTERNOON | NGHI_TRUC_FULL */
+    /** HALF_AFTERNOON | NGHI_TRUC_FULL — HALF_MORNING rejected on assign (P16). */
     @NotBlank(message = "Vui lòng chọn loại nghỉ trực")
     private String payrollIntent;
 

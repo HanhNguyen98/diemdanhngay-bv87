@@ -1,0 +1,60 @@
+<shell:AppDialogWindow x:Class="BV87.App.Views.Admin.FillAttendanceTimesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:BV87.App.Shell"
+        xmlns:strings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+        Title="Điền giờ"
+        Width="520"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource SurfacePageBrush}">
+    <Border Margin="20" Padding="20" Background="{StaticResource SurfaceWhiteBrush}"
+            BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8">
+        <StackPanel>
+            <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{StaticResource NavyBrush}"/>
+            <TextBlock x:Name="SubtitleText" Margin="0,4,0,12" Foreground="{StaticResource ContentMutedBrush}"/>
+            <TextBlock x:Name="HintText" TextWrapping="Wrap" Margin="0,0,0,12"
+                       Foreground="{StaticResource ContentHeadingBrush}"/>
+
+            <Border Padding="12" Margin="0,0,0,12" Background="{StaticResource InfoBgBrush}"
+                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel>
+                    <TextBlock Text="{x:Static strings:AdminUiStrings.FillTimesHeadReasonTitle}"
+                               FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="IntentLabelText" Foreground="{StaticResource ContentMutedBrush}" FontSize="{StaticResource FontSizeSm}"/>
+                    <TextBlock x:Name="IntentValueText" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="ReasonLabelText" Foreground="{StaticResource ContentMutedBrush}" FontSize="{StaticResource FontSizeSm}"/>
+                    <TextBlock x:Name="ReasonValueText" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel x:Name="MorningPanel" Margin="0,0,0,8">
+                <TextBlock x:Name="MorningLabel" Foreground="{StaticResource ContentMutedBrush}" FontSize="{StaticResource FontSizeSm}"/>
+                <TextBox x:Name="MorningBox" Height="34" Margin="0,4,0,0" ToolTip="HH:mm"/>
+            </StackPanel>
+            <StackPanel x:Name="NoonPanel" Margin="0,0,0,8">
+                <TextBlock x:Name="NoonLabel" Foreground="{StaticResource ContentMutedBrush}" FontSize="{StaticResource FontSizeSm}"/>
+                <TextBox x:Name="NoonBox" Height="34" Margin="0,4,0,0" ToolTip="HH:mm"/>
+            </StackPanel>
+            <StackPanel x:Name="AfternoonInPanel" Margin="0,0,0,8">
+                <TextBlock x:Name="AfternoonInLabel" Foreground="{StaticResource ContentMutedBrush}" FontSize="{StaticResource FontSizeSm}"/>
+                <TextBox x:Name="AfternoonInBox" Height="34" Margin="0,4,0,0" ToolTip="HH:mm"/>
+            </StackPanel>
+            <StackPanel x:Name="AfternoonOutPanel" Margin="0,0,0,8">
+                <TextBlock x:Name="AfternoonOutLabel" Foreground="{StaticResource ContentMutedBrush}" FontSize="{StaticResource FontSizeSm}"/>
+                <TextBox x:Name="AfternoonOutBox" Height="34" Margin="0,4,0,0" ToolTip="HH:mm"/>
+            </StackPanel>
+
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerFgBrush}" TextWrapping="Wrap"
+                       Margin="0,0,0,12" Visibility="Collapsed"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Hủy" Width="80" Margin="0,0,8,0" Click="CancelButton_Click"/>
+                <Button Content="{x:Static strings:AdminUiStrings.FillTimesSubmit}" Width="100"
+                        Style="{StaticResource PrimaryButtonStyle}" Click="SaveButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</shell:AppDialogWindow>

@@ -16,11 +16,15 @@ public static class ConfigLoader
         var path = Path.Combine(baseDirectory, "appsettings.json");
         if (!File.Exists(path))
         {
-            return new AppConfig();
+            var missing = new AppConfig();
+            LanDeploymentPolicy.Apply(missing);
+            return missing;
         }
 
         var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+        var config = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+        LanDeploymentPolicy.Apply(config);
+        return config;
     }
 
     public static void Save(string baseDirectory, AppConfig config)

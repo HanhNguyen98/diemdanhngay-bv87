@@ -1,6 +1,5 @@
 package com.bv87.diemdanh.config;
 
-import com.bv87.diemdanh.security.AiRateLimitFilter;
 import com.bv87.diemdanh.security.CustomUserDetailsService;
 import com.bv87.diemdanh.security.JsonSecurityHandlers;
 import com.bv87.diemdanh.security.JwtAuthFilter;
@@ -37,7 +36,6 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JsonSecurityHandlers jsonSecurityHandlers;
     private final AppSecurityProperties securityProperties;
-    private final AiRateLimitFilter aiRateLimitFilter;
     private final KioskTokenFilter kioskTokenFilter;
     private final KioskLanGateFilter kioskLanGateFilter;
     private final JwtAuthFilter jwtAuthFilter;
@@ -45,13 +43,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF disabled: SPA uses session cookie with SameSite=strict (prod).
-                // Do not enable wildcard CORS with credentials in production.
+                // CSRF off: WPF/Agent use JWT or kiosk token, not cookie session (D5).
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/desktop/login").permitAll()
                         .requestMatchers("/api/auth/desktop/refresh").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
@@ -62,7 +58,6 @@ public class SecurityConfig {
                 .addFilterBefore(kioskLanGateFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(kioskTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(aiRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(jsonSecurityHandlers)
                         .accessDeniedHandler(jsonSecurityHandlers)
@@ -76,13 +71,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         List<String> originPatterns = securityProperties.getCors().getAllowedOriginPatterns();
-        if (CollectionUtils.isEmpty(originPatterns)) {
-            originPatterns = List.of("http://localhost:5173", "http://127.0.0.1:5173");
+        if (!CollectionUtils.isEmpty(originPatterns)) {
+            config.setAllowedOriginPatterns(originPatterns);
+            config.setAllowCredentials(true);
         }
-        config.setAllowedOriginPatterns(originPatterns);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

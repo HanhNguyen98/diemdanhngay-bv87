@@ -17,10 +17,12 @@ public class StaffDepartmentAssignmentDto {
     private final Integer fromDeptCode;
     private final String fromDeptCodeFormatted;
     private final String fromDeptName;
+    private final String fromUnitCode;
     /** Department of this assignment period (destination). */
     private final Integer toDeptCode;
     private final String toDeptCodeFormatted;
     private final String toDeptName;
+    private final String toUnitCode;
     /** @deprecated use {@link #toDeptCode} — kept for older FE readers */
     private final Integer deptCode;
     /** @deprecated use {@link #toDeptCodeFormatted} */

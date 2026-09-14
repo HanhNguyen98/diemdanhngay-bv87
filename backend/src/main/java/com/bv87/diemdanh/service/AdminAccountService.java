@@ -290,6 +290,7 @@ public class AdminAccountService {
                 .deptCode(deptCode)
                 .deptCodeFormatted(deptCode != null ? CodeFormatter.formatDeptCode(deptCode) : null)
                 .deptName(dept != null ? dept.getDeptName() : null)
+                .unitCode(dept != null ? dept.getUnitCode() : null)
                 .empCode(empCode)
                 .empCodeFormatted(empCode != null ? CodeFormatter.formatEmpCode(empCode) : null)
                 .active(account.isActive())

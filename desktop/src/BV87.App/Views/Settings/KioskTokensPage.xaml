@@ -1,0 +1,267 @@
+<UserControl x:Class="BV87.App.Views.Settings.KioskTokensPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BV87.App.Controls"
+             xmlns:settings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+             VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="200"/>
+        </Grid.RowDefinitions>
+
+        <controls:PageHeader Grid.Row="0" Title="{Binding PageTitle}">
+            <controls:PageHeader.ActionsContent>
+                <Button Style="{StaticResource PrimaryButtonStyle}" Command="{Binding IssueCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE710;" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="{Binding IssueLabel}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </controls:PageHeader.ActionsContent>
+        </controls:PageHeader>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerFgBrush}" TextWrapping="Wrap" Margin="0,0,0,4"
+                       Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}"/>
+        </StackPanel>
+
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16,12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding StatsTotalLabel}" Foreground="{StaticResource ContentMutedBrush}"/>
+                    <TextBlock Text="{Binding StatsTotal}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{StaticResource NavyBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Padding="16,12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding StatsActiveLabel}" Foreground="{StaticResource ContentMutedBrush}"/>
+                    <TextBlock Text="{Binding StatsActive}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{StaticResource SuccessFgBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" Padding="16,12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding StatsRevokedLabel}" Foreground="{StaticResource ContentMutedBrush}"/>
+                    <TextBlock Text="{Binding StatsRevoked}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{StaticResource NeutralFgBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="3" Style="{StaticResource CardBorderStyle}" Padding="16,12">
+                <StackPanel>
+                    <TextBlock Text="{Binding StatsOnlineLabel}" Foreground="{StaticResource ContentMutedBrush}"/>
+                    <TextBlock Text="{Binding StatsOnline}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{StaticResource InfoFgBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" Padding="16" Margin="0,0,0,16">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{Binding FilterDeptLabel}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
+                <ComboBox Grid.Column="1"
+                          Style="{StaticResource FilterComboBoxStyle}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding DeptFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="DeptCode"
+                          SelectedValue="{Binding DeptFilterDraft, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding FilterStatusLabel}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
+                <ComboBox Grid.Column="3"
+                          Style="{StaticResource FilterComboBoxStyle}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding StatusFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="Value"
+                          SelectedValue="{Binding StatusFilterDraft, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="4"
+                           Text="{Binding FilterAgentLabel}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
+                <ComboBox Grid.Column="5"
+                          Style="{StaticResource FilterComboBoxStyle}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding AgentFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="Value"
+                          SelectedValue="{Binding AgentFilterDraft, Mode=TwoWay}"/>
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
+                            Command="{Binding ApplyFilterCommand}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE721;" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static settings:SettingsUiStrings.ApplyFilter}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="{x:Static settings:SettingsUiStrings.ClearFilter}"
+                            Style="{StaticResource FilterToolbarSecondaryButtonStyle}"
+                            Command="{Binding ResetFiltersCommand}"
+                            Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
+                            Command="{Binding RefreshCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <controls:RefreshSpinIcon IsSpinning="{Binding IsRefreshing}" FontSize="13" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static settings:SettingsUiStrings.Refresh}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="0"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="{x:Static settings:SettingsUiStrings.Loading}" Foreground="{StaticResource ContentMutedBrush}"
+                           Margin="20,16,20,12" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding PagedItems}" Style="{StaticResource AdminDataGridStyle}"
+                          MinWidth="940" HorizontalScrollBarVisibility="Auto"
+                          Visibility="{Binding IsLoading, Converter={StaticResource InverseBoolToVisibility}}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{x:Static settings:ShellUiStrings.ColStt}"
+                                            Binding="{Binding RowNumber}"
+                                            Width="{StaticResource DataGridSttColumnWidth}"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogCenterStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridSttCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+KioskTokens.ColDept}" Binding="{Binding DeptDisplay}" Width="300">
+                            <DataGridTextColumn.HeaderStyle><Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/></DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+KioskTokens.ColLabel}" Binding="{Binding LabelDisplay}" Width="180">
+                            <DataGridTextColumn.HeaderStyle><Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/></DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Header="{x:Static settings:SettingsUiStrings+KioskTokens.ColToken}" Width="280">
+                            <DataGridTemplateColumn.HeaderStyle><Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/></DataGridTemplateColumn.HeaderStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" MinWidth="0"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding TokenDisplay}" FontFamily="Consolas" FontSize="12"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding TokenDisplay}"/>
+                                        <Button Grid.Column="1" Content="{Binding DataContext.CopyLabel, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                Style="{StaticResource SecondaryButtonStyle}" Padding="6,2"
+                                                Command="{Binding DataContext.CopyTokenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Visibility="{Binding HasCopyableToken, Converter={StaticResource BoolToVisibility}}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="{x:Static settings:SettingsUiStrings+KioskTokens.ColStatus}" Width="140">
+                            <DataGridTemplateColumn.HeaderStyle><Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/></DataGridTemplateColumn.HeaderStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <controls:StatusBadge Label="{Binding StatusLabel}">
+                                        <controls:StatusBadge.Style>
+                                            <Style TargetType="controls:StatusBadge">
+                                                <Setter Property="Kind" Value="Success"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Active}" Value="False">
+                                                        <Setter Property="Kind" Value="Neutral"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </controls:StatusBadge.Style>
+                                    </controls:StatusBadge>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="{x:Static settings:SettingsUiStrings+KioskTokens.ColAgent}" Width="100">
+                            <DataGridTemplateColumn.HeaderStyle><Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/></DataGridTemplateColumn.HeaderStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <controls:StatusBadge Label="{Binding AgentLabel}">
+                                        <controls:StatusBadge.Style>
+                                            <Style TargetType="controls:StatusBadge">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AgentOnline}" Value="True">
+                                                        <Setter Property="Kind" Value="Success"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding AgentOnline}" Value="False">
+                                                        <Setter Property="Kind" Value="Neutral"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </controls:StatusBadge.Style>
+                                    </controls:StatusBadge>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+KioskTokens.ColCreated}" Binding="{Binding CreatedAtText}" Width="170">
+                            <DataGridTextColumn.HeaderStyle><Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/></DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Header="{x:Static settings:SettingsUiStrings+KioskTokens.ColActions}" Width="110">
+                            <DataGridTemplateColumn.HeaderStyle><Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/></DataGridTemplateColumn.HeaderStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding DataContext.ActionsMenu, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            Style="{StaticResource SecondaryButtonStyle}" Padding="8,4" Tag="{Binding}"
+                                            Click="ActionsButton_Click"
+                                            IsEnabled="{Binding Active}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Grid.Row="1" Style="{StaticResource SearchEmptyHintStyle}"/>
+                <controls:TablePaginationBar Grid.Row="2"
+                                             CurrentPage="{Binding CurrentPage}"
+                                             TotalPages="{Binding TotalPages}"
+                                             TotalItems="{Binding TotalItems}"
+                                             PageSize="{Binding PageSize, Mode=TwoWay}"
+                                             PageSizeOptions="{Binding PageSizeOptions}"
+                                             UnitLabel="{Binding UnitLabel}"
+                                             GoToPageCommand="{Binding GoToPageCommand}"
+/>
+            </Grid>
+        </Border>
+        <controls:PageBusyOverlay Grid.Row="0" Grid.RowSpan="20"
+                                  IsLoading="{Binding IsLoading}"
+                                  IsRefreshing="{Binding IsRefreshing}"/>
+    </Grid>
+</UserControl>

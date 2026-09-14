@@ -1,0 +1,204 @@
+<UserControl x:Class="BV87.App.Views.Settings.PermissionsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BV87.App.Controls"
+             xmlns:settings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="200"/>
+        </Grid.RowDefinitions>
+
+        <controls:PageHeader Grid.Row="0" Title="{Binding PageTitle}">
+            <controls:PageHeader.ActionsContent>
+                <Button Style="{StaticResource PrimaryButtonStyle}" Command="{Binding AddCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE710;" FontSize="14"
+                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="{Binding NewButtonLabel}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </controls:PageHeader.ActionsContent>
+        </controls:PageHeader>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerFgBrush}" TextWrapping="Wrap" Margin="0,0,0,4"
+                       Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}"/>
+        </StackPanel>
+
+        <controls:CatalogStatGrid Grid.Row="2" Margin="0,0,0,16"
+                                  TotalLabel="{Binding StatsTotalLabel}" TotalValue="{Binding StatsTotal}"
+                                  ActiveLabel="{Binding StatsActiveLabel}" ActiveValue="{Binding StatsActive}"
+                                  InactiveLabel="{Binding StatsInactiveLabel}" InactiveValue="{Binding StatsInactive}"/>
+
+        <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" Padding="16" Margin="0,0,0,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding RoleFilterLabel}" Style="{StaticResource FilterToolbarLabelStyle}" Margin="0,0,10,0"/>
+                <ComboBox Grid.Column="1" Style="{StaticResource FilterComboBoxStyle}" VerticalAlignment="Center" Margin="0,0,12,0"
+                          ItemsSource="{Binding RoleFilterOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                          SelectedValue="{Binding RoleFilterDraft, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="2" Text="{Binding StatusFilterLabel}" Style="{StaticResource FilterToolbarLabelStyle}" Margin="0,0,10,0"/>
+                <ComboBox Grid.Column="3" Style="{StaticResource FilterComboBoxStyle}" VerticalAlignment="Center" Margin="0,0,12,0"
+                          ItemsSource="{Binding StatusFilterOptions}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                          SelectedValue="{Binding StatusFilterDraft, Mode=TwoWay}"/>
+                <TextBox Grid.Column="4" Style="{StaticResource FilterTextBoxStyle}" VerticalAlignment="Center" Margin="0,0,12,0"
+                         Tag="{x:Static settings:SettingsUiStrings+Accounts.SearchPlaceholder}"
+                         ToolTip="{x:Static settings:SettingsUiStrings+Accounts.SearchPlaceholder}"
+                         Text="{Binding SearchDraft, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding ApplyFiltersCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+                <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}" Command="{Binding ApplyFiltersCommand}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE721;" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static settings:SettingsUiStrings.ApplyFilter}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="{x:Static settings:SettingsUiStrings.ClearFilter}"
+                            Style="{StaticResource FilterToolbarSecondaryButtonStyle}"
+                            Command="{Binding ResetFiltersCommand}"
+                            Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}" Command="{Binding RefreshCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <controls:RefreshSpinIcon IsSpinning="{Binding IsRefreshing}" FontSize="13" Margin="0,0,6,0"/>
+                            <TextBlock Text="{x:Static settings:SettingsUiStrings.Refresh}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="0"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="{x:Static settings:SettingsUiStrings.Loading}" Foreground="{StaticResource ContentMutedBrush}"
+                           Margin="20,16,20,12" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding PagedItems}" Style="{StaticResource AdminDataGridStyle}"
+                          MinWidth="960" HorizontalScrollBarVisibility="Auto"
+                          Visibility="{Binding IsLoading, Converter={StaticResource InverseBoolToVisibility}}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{x:Static settings:ShellUiStrings.ColStt}"
+                                            Binding="{Binding RowNumber}"
+                                            Width="{StaticResource DataGridSttColumnWidth}"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogCenterStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource DataGridSttCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColUsername}" Binding="{Binding Username}" Width="180">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColEmpCode}" Binding="{Binding EmpCodeDisplay}" Width="96">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColFullname}" Binding="{Binding Fullname}" Width="200">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColRole}" Binding="{Binding RoleLabel}" Width="*" MinWidth="120">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColDept}" Binding="{Binding DeptDisplay}" Width="*" MinWidth="120">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTextColumn.HeaderStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColStatus}" Width="*" MinWidth="120">
+                            <DataGridTemplateColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTemplateColumn.HeaderStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <controls:StatusBadge Label="{Binding StatusLabel}">
+                                        <controls:StatusBadge.Style>
+                                            <Style TargetType="controls:StatusBadge">
+                                                <Setter Property="Kind" Value="Success"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Active}" Value="False">
+                                                        <Setter Property="Kind" Value="Neutral"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </controls:StatusBadge.Style>
+                                    </controls:StatusBadge>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColActions}" Width="*" MinWidth="120">
+                            <DataGridTemplateColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
+                            </DataGridTemplateColumn.HeaderStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="{x:Static settings:SettingsUiStrings+Accounts.ActionsMenuLabel}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Padding="8,4"
+                                            HorizontalAlignment="Left"
+                                            Tag="{Binding}"
+                                            Click="ActionsMenuButton_Click"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Grid.Row="1" Style="{StaticResource SearchEmptyHintStyle}"/>
+                <controls:TablePaginationBar Grid.Row="2"
+                                             CurrentPage="{Binding CurrentPage}"
+                                             TotalPages="{Binding TotalPages}"
+                                             TotalItems="{Binding TotalItems}"
+                                             PageSize="{Binding PageSize, Mode=TwoWay}"
+                                             PageSizeOptions="{Binding PageSizeOptions}"
+                                             UnitLabel="{Binding UnitLabel}"
+                                             GoToPageCommand="{Binding GoToPageCommand}"
+/>
+            </Grid>
+        </Border>
+        <controls:PageBusyOverlay Grid.Row="0" Grid.RowSpan="20"
+                                  IsLoading="{Binding IsLoading}"
+                                  IsRefreshing="{Binding IsRefreshing}"/>
+    </Grid>
+</UserControl>

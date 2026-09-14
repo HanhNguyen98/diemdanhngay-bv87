@@ -1,0 +1,12 @@
+{
+  "apiBaseUrl": "http://localhost:8082",
+  "kioskToken": "local-kiosk-dept-02",
+  "soundEnabled": true,
+  "deviceAutoOpen": true,
+  "deviceAutoOpenRetries": 5,
+  "deviceAutoOpenRetryMs": 800,
+  "heartbeatEnabled": true,
+  "heartbeatIntervalSeconds": 30,
+  "templateReloadMinutes": 30,
+  "lanOnlyEnabled": true
+}

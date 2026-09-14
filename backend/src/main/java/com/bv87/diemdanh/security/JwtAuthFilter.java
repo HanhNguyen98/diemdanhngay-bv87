@@ -17,7 +17,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/** Authenticates Bearer JWT access tokens for desktop clients (SPEC_DESKTOP §2). */
+/**
+ * Authenticates Bearer JWT access tokens for desktop clients (SPEC_DESKTOP §2 / D-AUTH.1).
+ * Valid Bearer always overrides an existing Web session authentication.
+ */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -44,13 +47,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         try {
             String username = jwtService.validateAccessToken(token);
-            if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
             filterChain.doFilter(request, response);
         } catch (Exception ex) {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());

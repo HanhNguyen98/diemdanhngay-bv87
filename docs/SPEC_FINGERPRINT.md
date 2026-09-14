@@ -1,6 +1,6 @@
 # SPEC — Vân tay ZK9500 (Fingerprint)
 
-> **Binding contract.** Mọi thay đổi liên quan đăng ký vân tay, Agent, Chấm công IN/OUT phải tuân thủ file này **và** `SPEC_ADMIN.md` / `SPEC_HEAD.md`.  
+> **D5:** `frontend/` và `fingerprint-agent/` **đã xóa khỏi repo**. Client = WPF `desktop/` (`BV87.exe` + `--agent`). Đoạn Java/Web dưới đây là lịch sử — **cấm** implement lại JAR/SPA.  
 > **Không** thêm / sửa / suy diễn chức năng ngoài phạm vi đã ghi.  
 > **Không tự ý sinh code ngoài yêu cầu / ngoài SPEC đã review.**  
 > Nếu cần hành vi mới: cập nhật file SPEC **trước**, được review, rồi mới code.
@@ -58,8 +58,8 @@ Thay bằng: quét = Chấm công **ngày hiện tại** → dữ liệu vào DB
 1. Cài **một lần** Agent (fork Demo2 → `fingerprint-agent/`) + token kiosk + `deptCode`; mở sẵn mỗi ngày.  
 2. **Enroll:** trên **Agent** (chọn NV → quét 3 lần → lưu DB) — không quét trên Web.  
 3. **Mỗi ngày:** NV quét trên Agent → lưu DB (P2+).  
-4. **Web HEAD/ADMIN:** xem trạng thái ĐK / lịch sử / báo cáo / can thiệp Chấm công (Admin) — **không** enroll/xóa template trên Web.  
-5. **CRUD mẫu vân tay (enroll / ghi đè / xóa):** **chỉ Agent** + token kiosk. Enroll khoa khác = đổi `kiosk.token` hoặc máy khoa hồ sơ (§10.2).  
+4. **Web HEAD/ADMIN:** xem trạng thái ĐK; **xóa mẫu** để đăng ký lại (HEAD khoa mình, ADMIN toàn viện); **enroll vật lý** vẫn chỉ Agent + token kiosk.  
+5. **CRUD mẫu vân tay (enroll / ghi đè):** **chỉ Agent** + token kiosk. Enroll khoa khác = đổi `kiosk.token` hoặc máy khoa hồ sơ (§10.2). **Xóa mẫu (soft-delete)** — Agent kiosk, WPF HEAD (khoa mình), WPF ADMIN (mọi NV).  
 6. Auth máy khoa: **token kiosk**.  
 7. **Cross-kiosk (P6):** Mỗi kiosk vẫn 1 token / 1 `deptCode` (audit, heartbeat, enroll). **Chấm công (Identify/scan):** NV active + đã ĐK vân tay được quét **tại mọi kiosk**; dữ liệu chấm công thuộc **khoa hồ sơ** NV (`employees.dept_code`).  
 8. **Enroll:** không đổi — chỉ NV thuộc khoa token kiosk.
@@ -72,8 +72,10 @@ Thay bằng: quét = Chấm công **ngày hiện tại** → dữ liệu vào DB
 
 | Hành động | HEAD | ADMIN |
 |-----------|------|--------|
-| Đăng ký / đăng ký lại / xóa template vân tay | **Chỉ Agent** (khoa token) — **không** Web | **Chỉ Agent** (đổi token khoa — §10.2) — **không** Web DELETE/enroll template |
+| Enroll / đăng ký lại template vân tay (USB) | **WPF** — Tiện ích **Đăng ký vân tay** (JWT); HEAD khoa mình | **WPF** — Tiện ích **Đăng ký vân tay** (JWT); toàn viện |
+| Xóa template vân tay (soft-delete, đăng ký lại) | **Khoa mình** — Danh mục NV (HEAD) | **Toàn viện** — Danh mục NV (ADMIN) |
 | Xem trạng thái ĐK + `fingerLabel` (không template) | Khoa mình (GET) | Toàn viện (GET staff / fingerprints status) |
+| Nhật ký đăng ký / xóa mẫu | **Không** | `GET /api/admin/fingerprints/audit-logs` (WPF Tiện ích — Lịch sử vân tay) |
 | Gán tay `DI_LAM` / `DI_TRE` | **Không** | **Chỉ qua Điền giờ** (§4.6 rule C khi điền `check_in` trống) — **không** có UI đặt có mặt không giờ |
 | Gán thủ công `NGHI_PHEP` / `DI_HOC` / `DI_CONG_TAC` / `THAI_SAN` | Được **chỉ khi** NV **chưa** có `DI_LAM`/`DI_TRE` từ vân tay trong ngày (hoặc ngày trong khoảng) | Được |
 | Sửa / xóa dữ liệu đã quét (giờ vào/ra, DI_LAM/DI_TRE từ scan) | **Không** | Soft clear (§4.11) / điền ô trống (§4.6) / manual-range đè sang thủ công — **không** ghi đè giờ đã có từ máy khi fill |
@@ -167,7 +169,8 @@ Sau khi gán khoảng ngày (§3.2.1), HEAD/Admin cần xem lại lịch nghỉ 
 | Nguồn | `attendance_records` với status ∈ `NGHI_PHEP`\|`DI_HOC`\|`DI_CONG_TAC`\|`THAI_SAN` |
 | Gộp khoảng | Các ngày **liên tiếp** cùng `status` → một dòng `{ fromDate, toDate, dayCount, status, statusLabel }` |
 | Response | `{ empCode, empCodeFormatted, fullname, from, to, items: [...] }` |
-| UI | `ManualScheduleModal.jsx` — subtitle `{mã} - {tên}`; **bộ lọc** 2 ô date `Từ` / `Đến` + nút **Tìm**; **không** dòng “Khoảng xem”; bảng = lịch đã gán; empty VN; Đóng |
+| UI Web | `ManualScheduleModal.jsx` — subtitle `{mã} - {tên}`; **bộ lọc** 2 ô date `Từ` / `Đến` + nút **Tìm**; **không** dòng “Khoảng xem”; bảng = lịch đã gán; empty VN; Đóng |
+| UI Desktop | `ManualScheduleDialog` — «Thông tin nhân viên: `{mã} - {tên}`»; filter Từ / Đến + Combo **Trạng thái** (Tất cả + 4 mã nguồn) + **Tìm**; DataGrid STT + `TablePaginationBar` (`khoảng`); empty VN; Đóng — `SPEC_DESKTOP` §2.18.6 · **cấm** `?status=` |
 | Mobile modal | `< lg`: backdrop có padding; panel `max-h` ≤ viewport (`min(92dvh, 100svh − margin)`); nội dung cuộn trong panel — **cấm** chàn mép dưới / che nút Đóng |
 | UX tải | Lần mở đầu: skeleton trong vùng bảng. Khi **Tìm**: thead/`tbody` ổn định; nút Tìm **không** đổi icon / không `disabled:opacity` (tránh nhấp nháy); chặn double-submit bằng cờ `refreshing` |
 | Cấm | Sửa/xóa từ modal này (chỉ xem); không invent màn riêng |
@@ -324,12 +327,12 @@ Rule P7 đầy đủ: **§4.13.3**. Tóm tắt:
 
 | Rule | Chi tiết |
 |------|----------|
-| Settings `lockTime` | **Giờ khóa mềm ngày công** (VN): sau giờ này (ngày hiện tại) HEAD **không** ghi Chấm công / manual-range cho **hôm nay** (trừ Admin unlock). **Không** mang nghĩa “HEAD phải nộp báo cáo trước giờ này” |
+| Settings `lockTime` | **Giờ khóa mềm ngày công** (VN): sau giờ này, HEAD **không** sửa NV **đã đủ dữ liệu** của **hôm nay** (trừ Admin unlock). HEAD **được** chấm NV **còn thiếu dữ liệu** cả ngày (P17). **Không** mang nghĩa “HEAD phải nộp báo cáo trước giờ này” |
 | Kiosk scan | **Không** REJECTED vì “đã gửi báo cáo”. Chỉ cửa sổ IN/OUT + rule chéo §3.3 |
-| HEAD ghi **hôm nay** | `assertCanWrite` / `isEditable`: role + scope + chưa qua khóa mềm (hoặc đã unlock Admin cho **ngày đó**). Message VN khi khóa: `Đã qua giờ khóa mềm ngày công. Liên hệ Admin nếu cần chỉnh sửa.` |
-| HEAD ghi **ngày quá khứ** (P14) | **Cấm** trừ khi Admin đã mở khóa **đúng `deptCode` + `attendance_date`**. Không dùng unlock hôm nay cho ngày khác. Tương lai (gán nghỉ phép): **không** bắt unlock |
-| Manual-range / wizard (P6 + P14) | `assertCanAssignManual` + từng ngày: hôm nay → soft-lock / reportBlocked; quá khứ → skip nếu **chưa** unlock ngày đó (`skippedSoftLock`); tương lai → không skip khóa. Message VN khi skip |
-| FE HEAD (P6 + P14) | Hôm nay sau khóa mềm: **không** disable hết quick-action (vẫn mở khoảng ngày khác). **Khóa** ghi ngày đang xem nếu `editable=false` (hôm nay soft-lock **hoặc** quá khứ chưa unlock). Banner: khóa mềm hôm nay / **ngày quá khứ chưa mở khóa**. `reportBlocked` vẫn khóa full roster hôm nay |
+| HEAD ghi **hôm nay** | `isEditable`: role + scope + chưa qua khóa mềm (hoặc đã unlock Admin cho **ngày đó**). Sau khóa mềm: **P17** — NV incomplete + `note` giải trình bắt buộc. Message NV đã đủ: `Nhân viên đã đủ dữ liệu chấm công. Liên hệ Admin nếu cần chỉnh sửa.` Thiếu note: `Vui lòng nhập lý do giải trình thiếu dữ liệu chấm công.` |
+| HEAD ghi **ngày quá khứ** (P14 + P17) | NV **đã đủ dữ liệu**: **cấm** trừ khi Admin đã mở khóa **đúng `deptCode` + `attendance_date`**. NV **thiếu dữ liệu**: HEAD ghi được **không** chờ Admin, **bắt buộc** lý do giải trình (P17). Không dùng unlock hôm nay cho ngày khác. Tương lai (gán nghỉ phép): **không** bắt unlock / giải trình P17 |
+| Manual-range / wizard (P6 + P14 + P17) | `assertCanAssignManual` + từng ngày: `reportBlocked` / khóa tay Admin → skip; ngày `editable` → gán bình thường; ngày khóa P17 → **skip NV đã complete**, gán NV incomplete nếu có `note`/`reason`. Wizard nghỉ trực: `reason` đủ cho P17. Message VN khi skip |
+| FE HEAD (P6 + P14 + P17) | Hôm nay sau khóa mềm / ngày quá khứ chưa unlock: **không** khóa hết roster. **Mở** quick-action NV `complete=false`; **khóa** NV đã đủ. Banner P17 (không CTA chờ Admin cho luồng thiếu dữ liệu). `reportBlocked` vẫn khóa full roster hôm nay. P15 yêu cầu mở khóa: chỉ khi cần sửa NV **đã đủ** (Admin unlock) — **không** bắt HEAD chờ duyệt để chấm thiếu dữ liệu |
 | Unlock Admin (P14) | `POST /api/attendance/unlock` body `deptCode`, `reason` bắt buộc, `date?` (mặc định hôm nay; **cấm** ngày tương lai). Unique `(attendance_date, dept_code)`. `DELETE /api/attendance/unlock/{deptCode}?date=` thu hồi. UI: Chi tiết ĐV + màn Chấm công Admin — nút **Mở khóa ngày** khi ngày ≤ hôm nay và chưa unlock. Unlock trực tiếp **tự duyệt** yêu cầu HEAD `PENDING` cùng `dept+date` (nếu có) |
 | HEAD yêu cầu mở khóa (P15) | HEAD **không** tự unlock. Ngày ≤ hôm nay, chưa unlock: nút **Gửi yêu cầu mở khóa** + lý do bắt buộc. Admin **Xác nhận** → tạo `attendance_unlocks`. **Từ chối** → HEAD gửi lại được. Chi tiết §4.7.2 |
 | ADMIN | Vẫn fill / clear / manual-range / wizard **mọi ngày** không cần unlock |
@@ -349,12 +352,28 @@ Rule P7 đầy đủ: **§4.13.3**. Tóm tắt:
 | Hiển thị IP | FE chuẩn hoá IPv6 loopback (`::1`, `0:0:0:0:0:0:0:1`) → `127.0.0.1` (`displayIp()` trong `utils/formatters.js`). Áp dụng **mọi** chỗ hiện IP Web: Lịch sử Chấm công, **Chi tiết quét** (cột Máy), Excel Chi tiết ĐV (`lastKioskIp`). IP LAN / prod giữ nguyên. **Cấm** render `clientIp` thô |
 | API Admin | `GET /api/admin/attendance/audit-logs?from=&to=&deptCode=&username=&page=&pageSize=` — toàn viện |
 | API HEAD | `GET /api/attendance/audit-logs?from=&to=&page=&pageSize=` — **chỉ khoa mình** |
-| UI Admin | Tiện ích → **Lịch sử Chấm công** — bảng `table-fixed` + `colgroup`; tất cả header `whitespace-nowrap` (1 hàng); cột: THỜI GIAN / TÀI KHOẢN / ĐƠN VỊ / NHÂN VIÊN / NGÀY CÔNG / HÀNH ĐỘNG / IP; lọc từ–đến + đơn vị |
+| UI Admin | Tiện ích → **Lịch sử Chấm công** — bảng `table-fixed` + `colgroup`; tất cả header `whitespace-nowrap` (1 hàng); cột: THỜI GIAN / TÀI KHOẢN / ĐƠN VỊ / NHÂN VIÊN / NGÀY CHẤM CÔNG / HÀNH ĐỘNG / IP; lọc từ–đến + đơn vị |
 | Cấm | Invent màn trùng Chi tiết quét; không log Identify kiosk vào bảng này |
+
+#### 4.7.2a HEAD chấm NV thiếu dữ liệu kèm giải trình — P17-HeadIncompleteExplainWrite
+
+HEAD **không chờ Admin duyệt** để chấm nhân viên **còn thiếu dữ liệu** (`!AttendanceValidity.isComplete`) ngày ≤ hôm nay khi ngày bị khóa mềm / chưa `attendance_unlocks`.
+
+| Rule | Chi tiết |
+|------|----------|
+| Điều kiện | HEAD + khoa mình + **không** `reportBlocked` + **không** khóa tay Admin (`manualLocked`) + ngày ≤ hôm nay + `isEditable=false` |
+| NV được ghi | Chỉ record **incomplete** (chưa record / thiếu mốc / thủ công chưa complete). Null record = incomplete |
+| NV cấm | `isComplete` — vẫn P14: cần Admin unlock đúng `dept+date` |
+| `note` bắt buộc | Trim không rỗng. Lưu `note` + `missing_punch_reason`. Wizard N.trực: field `reason` đủ (không bắt `note` thêm) |
+| `VE_SOM` | Lý do về sớm vẫn bắt buộc như §4.13 — đủ cho P17 |
+| Summary API | `GET …/page` thêm `incompleteExplainAllowed` (boolean). `editable` **không** đổi nghĩa (full-write khi chưa khóa / đã unlock) |
+| BE | `AttendanceLockService.assertCanWriteStaff` trên PUT 1 ngày / manual-range / `nghi-truc-assign`. `assertCanWrite` (department-level, AI batch) vẫn đòi `editable` |
+| FE / WPF | Dialog / ô **Lý do giải trình** bắt buộc trước Lưu. Nút Lưu disable khi trống. Banner: được chấm NV thiếu; NV đã đủ cần Admin mở khóa |
+| Cấm | Tự tạo `attendance_unlocks`; bỏ `reportBlocked`; cho HEAD sửa NV đã complete |
 
 #### 4.7.2 HEAD gửi yêu cầu mở khóa — P15-HeadUnlockRequest
 
-HEAD không gọi `POST /api/attendance/unlock`. Ngày quá khứ (và hôm nay sau khóa mềm / chưa unlock) cần **Admin xác nhận** qua hàng đợi yêu cầu.
+HEAD không gọi `POST /api/attendance/unlock`. P15 **không** dùng cho chấm NV thiếu dữ liệu (P17). Hàng đợi vẫn dùng khi HEAD cần Admin mở khóa để **sửa NV đã đủ dữ liệu**.
 
 | Rule | Chi tiết |
 |------|----------|
@@ -562,15 +581,17 @@ UI: badge Về sớm; nếu `late_flag` → text đỏ **`+ Đi trễ`** bên c�
 
 `VE_SOM`: active, `manualAllowed = true` (HEAD/Admin nhập lý do), **không** `groupParent`. Không dùng quick-action khoảng ngày cho `VE_SOM` (chỉ xác nhận lý do ngày đang xem).
 
-**Nửa ngày (P7-NghiTrucExplainGate):** hợp lệ khi **(vào sáng + ra trưa, chiều trống)** **HOẶC** **(vào chiều + ra chiều, sáng/trưa trống)**. Thiếu cặp mốc → từ chối. `applyManualStatus` HALF: **giữ giờ**, `late_flag` không xóa nếu đã set, `source=MIXED` nếu đã có giờ vân tay. Badge/label UI: **nửa buổi sáng** / **nửa buổi chiều** / **1 buổi** (không chỉ 「NỬA NGÀY」).
+**Nửa buổi chiều (P16-NghiTrucDutyRest):** NV **phải đi làm sáng** và quét **vào sáng + ra trưa** (giờ máy thật). **Cấm** tự điền `WorkSchedule` 07:00/11:00. Chiều trống; **cấm quét chiều**. Hợp lệ KPI khi `morning_in` + `noon_out` và chiều trống. `applyManualStatus` / wizard HALF: **giữ giờ sáng**, **xóa giờ chiều** nếu có; `source=MIXED` nếu đã có giờ vân tay. **Không** còn loại **nửa buổi sáng** trên wizard (`HALF_MORNING` chỉ đọc bản ghi cũ).
 
-**Giải trình thiếu giờ (P8 — §4.13.8):** HEAD **bắt buộc** wizard một bước: lý do + loại nghỉ trực (constants `NGHI_TRUC_ASSIGNMENT`) + khoảng ngày → `PUT /api/attendance/nghi-truc-assign`. **Không** suy luận intent từ giờ quét. Admin **duyệt** auto-fill giờ hành chính vào ô null (`POST /api/admin/attendance/payroll-fill/approve`). HEAD **không** điền giờ.
+**1 ngày (D1):** không bắt quét; **cấm** điền 4 giờ hành chính giả. Nếu `punchCount > 0` → HEAD skip (Admin clear trước nếu cần). FULL: xóa 4 mốc; KPI đủ nhờ `status`.
 
-**1 ngày:** không bắt quét; nếu `punchCount > 0` → HEAD từ chối (Admin clear trước nếu cần). FULL: xóa 4 giờ như thủ công vắng khác.
+**HEAD chấm trước (ngày mai):** wizard `fromDate`/`toDate` tương lai **không** bị khóa mềm. Lưu xong roster hiện badge + subtitle **ngay** — **không** `payroll_fill_status = PENDING`, **không** chờ Admin duyệt giờ.
 
-**Quét trước, HEAD sau (P6-NghiTrucModal) / HEAD chấm trước (P13):** HEAD **được** mở nhóm `NGHI_TRUC` dù ngày đã `DI_LAM`/`DI_TRE` **hoặc chưa quét**. Mọi N.trực với `punchCount` 0–3 đi **wizard** (§4.13.8) — chọn `HALF_MORNING` / `HALF_AFTERNOON` / `NGHI_TRUC_FULL` (FULL disable khi đã có giờ). `VE_SOM` vẫn ô lý do 1 ngày. **Không** đè sang PHEP/HSQ/… khi đã presence (giữ §4.8). Admin vẫn đè mọi thủ công.
+**Giải trình (P8 / P16):** HEAD wizard một bước: lý do + loại (`HALF_AFTERNOON` \| `NGHI_TRUC_FULL`) + khoảng ngày → `PUT /api/attendance/nghi-truc-assign`. **Không** suy luận intent từ giờ quét. API Admin `payroll-fill/approve` **giữ** cho bản ghi `PENDING` cũ — wizard mới **không** tạo PENDING.
 
-Kiosk `MANUAL_LOCK`: `isManualStatus` **trừ** hybrid `isHybridKeepTimes` (`VE_SOM`, `NGHI_TRUC_HALF`) — vẫn nhận quét (OUT lấy MAX / IN chiều lần đầu). `NGHI_TRUC_FULL` + PHEP + HSQ nghỉ → từ chối quét. Implement: `FingerprintScanService` dùng `isHybridKeepTimes`, **cấm** khóa mọi `isManualStatus`.
+**Quét trước, HEAD sau (P6) / HEAD chấm trước (P13/P16):** HEAD **được** mở nhóm `NGHI_TRUC` dù ngày đã `DI_LAM`/`DI_TRE` **hoặc chưa quét**. Mọi N.trực `punchCount` 0–3 đi **wizard** — chỉ **nửa buổi chiều** / **1 ngày** (FULL disable khi đã có giờ). `VE_SOM` vẫn ô lý do 1 ngày.
+
+Kiosk (D2): `NGHI_TRUC_FULL` + PHEP + HSQ nghỉ → **từ chối mọi quét**. `NGHI_TRUC_HALF` → **cho quét sáng/trưa**, **từ chối chiều**. `VE_SOM` vẫn hybrid đủ 4 pha. Implement: `FingerprintScanService`.
 
 **`source` sau scan (P7b):** không luôn ghi `FINGERPRINT`.
 | `source` trước scan | Sau scan hợp lệ |
@@ -585,24 +606,25 @@ Kiosk `MANUAL_LOCK`: `isManualStatus` **trừ** hybrid `isHybridKeepTimes` (`VE_
 | Rule | Chi tiết |
 |------|----------|
 | DB | V19: `missing_punch_reason`, `payroll_intent`; V20: `payroll_fill_status` (`PENDING` \| `APPROVED`) |
-| PayrollIntent | `HALF_MORNING`, `HALF_AFTERNOON`, `NGHI_TRUC_FULL` — map sang `NGHI_TRUC_HALF` / `NGHI_TRUC_FULL`; **cấm** suy từ punch pattern |
-| API wizard | `PUT /api/attendance/nghi-truc-assign` — **HEAD** hoặc **Admin**; body: `empCode`, `fromDate`, `toDate`, `reason` (bắt buộc), `payrollIntent`, `note?` — atomic explain + chấm |
-| Điều kiện wizard | Quick-action **N.trực** mở wizard khi `punchCount` **0–3** (`needsNghiTrucWizard`) — gồm HEAD chấm **trước** khi NV quét (0 mốc) và thiếu 1–3 mốc. **Không** dùng `ManualStatusRangeModal` catalog cho N.trực trong các case này (catalog chỉ có `NGHI_TRUC_FULL` / `NGHI_TRUC_HALF`, **không** tách sáng/chiều) |
-| Skip (HEAD) | **Không** skip ngày `DI_LAM`/`DI_TRE` — wizard = post-scan override (§4.8); giữ giờ quét; **không** xóa `late_flag`. Chỉ skip: `NGHI_TRUC_FULL` + `punchCount > 0`; khóa mềm §4.7 |
-| Skip (ADMIN) | Giống HEAD (Admin **không** skip presence cho wizard) |
-| Preview | **Không** có API preview — ghi atomic một lần (khác `manual-range/preview`) |
-| `updatedCount=0` | BusinessException VN; nếu mọi ngày skip (vd. FULL khi đã có giờ) → message kèm số ngày bỏ qua |
-| Chấm lại | Nếu bản ghi đang `NGHI_TRUC_HALF` / `NGHI_TRUC_FULL` và `punchCount` 0–3, HEAD/Admin **được mở lại cùng wizard** để đổi `payrollIntent` sáng/chiều/cả ngày, sửa giải trình |
-| Sau wizard HALF | Giữ giờ quét; set `payroll_fill_status = PENDING` nếu còn ô null; `source = MIXED` nếu đã có giờ; **giữ** `late_flag` nếu đã set |
-| Sau wizard FULL | Xóa 4 mốc; `payroll_fill_status = null` |
-| Gate Admin fill tay | §4.6 — **cấm** khi `payroll_fill_status = PENDING`; dùng duyệt |
-| API Admin duyệt | `POST /api/admin/attendance/payroll-fill/approve` body: `empCode`, `date?` — điền **chỉ ô null** từ `WorkSchedule` (07:00, 11:00, 13:30, 16:30 mặc định); set `APPROVED` |
-| KPI complete | `isComplete = false` khi `PENDING`; sau `APPROVED` + HALF pattern hợp lệ → true |
+| PayrollIntent (wizard mới) | **`HALF_AFTERNOON`** · **`NGHI_TRUC_FULL`** — map `NGHI_TRUC_HALF` / `NGHI_TRUC_FULL`. **Cấm** gán mới `HALF_MORNING` (giữ enum để đọc bản ghi cũ). **Cấm** suy từ punch pattern |
+| API wizard | `PUT /api/attendance/nghi-truc-assign` — **HEAD** hoặc **Admin**; body: `empCode`, `fromDate`, `toDate`, `reason` (bắt buộc), `payrollIntent`, `note?` |
+| Điều kiện wizard | **N.trực** khi `punchCount` **0–3** — gồm HEAD chấm **trước** (0 mốc, vd. ngày mai). **Không** dùng `ManualStatusRangeModal` catalog cho N.trực |
+| Skip (HEAD) | **Không** skip `DI_LAM`/`DI_TRE`. Chỉ skip: `NGHI_TRUC_FULL` + `punchCount > 0`; khóa mềm hôm nay/quá khứ §4.7; **tương lai không skip khóa** |
+| Skip (ADMIN) | Giống HEAD |
+| Preview | **Không** có API preview — ghi atomic |
+| `updatedCount=0` | BusinessException VN |
+| Chấm lại | `NGHI_TRUC_*` + `punchCount` 0–3 → mở lại wizard; đổi **1 ngày ↔ nửa buổi chiều**; preload intent (`HALF_MORNING` cũ → mặc định nửa chiều) |
+| Sau wizard HALF | **Không** điền giờ hành chính; **không** `PENDING`; giữ giờ sáng; xóa `afternoon_in` / `afternoon_out`; `source = MIXED` nếu đã có giờ; **giữ** `late_flag` |
+| Sau wizard FULL (D1) | Xóa 4 mốc; `payroll_fill_status = null`; **cấm** 4 giờ giả |
+| Kiosk (D2) | FULL: từ chối mọi quét. HALF: cho sáng/trưa; từ chối chiều (message VN) |
+| KPI HALF | Đủ khi vào sáng + ra trưa, chiều trống. HEAD vừa lưu 0 mốc → **chưa** đủ (chờ NV quét sáng) |
+| KPI FULL | Đủ khi có `status` (không `PENDING` cũ) |
+| Gate Admin fill tay / duyệt | §4.6 / `payroll-fill/approve` — **legacy PENDING only** |
 | Clear | `clearAttendance` xóa `missing_punch_reason`, `payroll_intent`, `payroll_fill_status` |
-| FE HEAD | `NghiTrucAssignModal.jsx` — layout ngang desktop (P10); `FormFieldLabel` + `*` bắt buộc; mở lại wizard khi cần chấm lại; preload `staff.payrollIntent`; `NghiTrucRowNote` badge **Chờ Admin duyệt giờ** |
-| FE layout (P10) | Desktop `lg+`: modal rộng `max-w-4xl`, **không scroll dọc** — hàng trên = hint + giờ hiện có; hàng dưới = 2 cột **Giải trình** \| **Chấm nghỉ trực**; mobile `< lg` xếp dọc, scroll tối thiểu |
-| FE Admin | `canAdminApprovePayrollFill`; click badge **Chờ duyệt giờ** (P12) + menu **Duyệt bổ sung giờ**; `ApprovePayrollFillModal.jsx`; quick-action `N.trực` ở Chi tiết Đơn vị mở wizard khi `punchCount` 0–3 |
-| Deprecated P7 | `PUT /api/attendance/missing-punch-explain` + `MissingPunchExplainModal` — thay bằng wizard P8 |
+| FE HEAD / WPF | Wizard 2 option; hint không nhắc Admin duyệt giờ; `NghiTrucRowNote` subtitle **1 ngày** / **Nửa buổi chiều**. Desktop D-ATT.2: dialog lớn + **toast** Success/Warning/Danger sau `nghi-truc-assign` (`SPEC_DESKTOP` §2.18.2) |
+| FE layout (P10 / D-ATT.2) | Wizard lớn: radio card 2 loại, giờ 2×2, hint 1 dòng; Web `max-w-5xl` + `showWarning` khi skip; WPF `ToastHost` — `SPEC_DESKTOP` §2.18.2 |
+| FE Admin | Cùng wizard; badge **Chờ duyệt giờ** chỉ nếu còn `PENDING` cũ |
+| Deprecated P7 | `PUT /api/attendance/missing-punch-explain` — FE **không** gọi |
 
 #### 4.13.8a Giải trình thiếu giờ (P7 — deprecated, thay bởi P8)
 
@@ -619,8 +641,8 @@ Kiosk `MANUAL_LOCK`: `isManualStatus` **trừ** hybrid `isHybridKeepTimes` (`VE_
 
 - Một cột **Giờ** 2×2: Vào sáng · Ra trưa / Vào chiều · Ra chiều (HEAD + Admin Chi tiết ĐV + mobile).  
 - Cột **Máy**: **luôn hiện** `{label kiosk} · {hostname} · {displayIp(ip)}` qua `formatKioskMachine()` / `formatKioskMachineParts()` (`utils/kioskMachine.js`; hoặc `—` nếu chưa quét).  
-- Cột **Trạng thái (P11-StatusNghiTrucDetail):** badge catalog rút gọn **`NGHỈ TRỰC`** khi có `payrollIntent` / `missing_punch_reason`; **dưới badge** chỉ badge pending **`Chờ duyệt giờ`** (`text-4xs`, `whitespace-nowrap`, `truncate`, `title` đầy đủ) nếu `PENDING` — **cấm** nhãn intent / lý do trên roster (xem/sửa qua wizard **N.trực**). **Không** đặt cột Thao tác / Ghi chú.  
-- **Admin duyệt giờ (P12-AdminApproveUx):** Chi tiết ĐV — **click badge `Chờ duyệt giờ`** mở `ApprovePayrollFillModal`; **cấm** nút **Duyệt giờ** trùng trên cột Thao tác. Vẫn giữ menu **Vân tay → Duyệt bổ sung giờ**.  
+- Cột **Trạng thái (P11 / P16):** badge rút gọn **`NGHỈ TRỰC`**; **dưới badge** subtitle `text-4xs` muted: **`1 ngày`** (`NGHI_TRUC_FULL`) hoặc **`Nửa buổi chiều`** (`HALF_AFTERNOON` / `NGHI_TRUC_HALF` mới). Bản ghi cũ `HALF_MORNING`: subtitle **`Nửa buổi sáng`**. Badge **`Chờ duyệt giờ`** chỉ khi `PENDING` (legacy). **Cấm** hiện `missing_punch_reason` trên roster.  
+- **Admin duyệt giờ (P12):** chỉ hàng `PENDING` cũ — click badge mở `ApprovePayrollFillModal`; giữ menu **Vân tay → Duyệt bổ sung giờ**.  
 - Scan log modal: thêm cột Máy / IP.  
 - Excel: 4 giờ + lý do + máy + `+ Đi trễ` nếu `late_flag`.
 
@@ -633,6 +655,8 @@ Kiosk `MANUAL_LOCK`: `isManualStatus` **trừ** hybrid `isHybridKeepTimes` (`VE_
 ## 5. Data model — một nguồn cho mọi màn
 
 **Bắt buộc:** Chấm công HEAD, thống kê, Dashboard Admin (KPI/donut), Excel, báo cáo, AI đọc trạng thái → **cùng schema / cùng query nguồn**. Không bảng song song lệch nhau.
+
+**Đếm KPI (D-STAT.1):** Chấm công ngày / Tổng quan Admin — chip = `AttendanceValidity.isComplete`, chưa chấm = quân số − marked. **Thống kê** (`/api/attendance/statistics*`) — đếm **mọi** `attendance_records` trong khoảng (khớp bảng lịch sử); `status` trống → chip **CHƯA CHẤM**. **Cấm** dùng `isComplete` để loại dòng khỏi KPI thống kê.
 
 ### 5.1 `employee_fingerprints`
 
@@ -649,9 +673,29 @@ Template đăng ký: `emp_code`, `finger_index`, `template`, `template_len`, `zk
 | Backfill | Bản ghi active cũ: `Chưa ghi chú` (Flyway V15) |
 | ĐK lại (R1) | NV đã ĐK → **Bắt đầu đăng ký** → confirm ghi đè VN → 3 lần quét → dialog label mới → POST (deactivate cũ + lưu mới) |
 | Xóa trên Agent | `DELETE /api/kiosk/fingerprints/{empCode}` — soft-delete active; scope khoa token; confirm VN |
-| Xóa / enroll trên Web | **Cấm** — HEAD và ADMIN **không** `DELETE`/`POST enroll` template qua session Web (chốt A). Web chỉ GET trạng thái + `fingerLabel` |
+| Xóa trên WPF HEAD | `DELETE /api/head/fingerprints/{empCode}` — soft-delete; **chỉ NV thuộc khoa HEAD**; confirm VN; ghi audit `DELETE_HEAD` |
+| Xóa trên WPF ADMIN | `DELETE /api/admin/fingerprints/{empCode}` — soft-delete; **mọi NV**; confirm VN; ghi audit `DELETE_ADMIN` |
+| Enroll trên WPF (D1.1) | `POST /api/head/fingerprints/enroll` / `POST /api/admin/fingerprints/enroll` — JWT; USB ZK9500; audit `ENROLL_HEAD` / `ENROLL_ADMIN` |
+| Enroll trên Agent (legacy) | `POST /api/kiosk/fingerprints/enroll` — kiosk token + PIN mode switch |
+| Web React (legacy) | **Không** DELETE/enroll template — giữ P2.3 cho browser; WPF desktop là client chính D4 |
 | List kiosk staff | `GET /api/kiosk/staff` trả `fingerLabel` khi `fingerprintRegistered` |
-| Cấm phase này | Nhiều ngón active đồng thời; login session trên Agent; xóa/enroll template từ browser |
+| Cấm phase này | Nhiều ngón active đồng thời; login session trên Agent; xóa/enroll template từ **Web React** browser |
+
+### 5.3 `fingerprint_template_audit_logs` (P2.4 — WPF)
+
+Append-only nhật ký **đăng ký / xóa mẫu** (khác `fingerprint_scan_logs` = quét IN/OUT).
+
+| Cột | Ý nghĩa |
+|-----|---------|
+| `action` | `ENROLL_KIOSK` · `ENROLL_ADMIN` · `ENROLL_HEAD` · `DELETE_KIOSK` · `DELETE_HEAD` · `DELETE_ADMIN` |
+| `emp_code` / `dept_code` / `emp_fullname` | NV bị tác động |
+| `actor_username` / `actor_role` | Session HEAD/ADMIN (null nếu kiosk) |
+| `kiosk_label` | Nhãn token kiosk khi thao tác từ Agent |
+| `finger_label` | Ghi chú ngón tại thời điểm thao tác |
+| `client_ip` | IPv4 máy thực hiện (vd. `192.170.180.23`) — WPF/Agent gửi `X-Client-Ip`; BE ưu tiên header nếu IPv4 hợp lệ, không dùng loopback HTTP (`::1`) khi có LAN IP |
+| `created_at` | Thời điểm |
+
+ADMIN list: `GET /api/admin/fingerprints/audit-logs?from&to&deptCode&page&pageSize` — server pagination; WPF `FingerprintHistoryPage` (nav `fingerprint-history`).
 
 #### `zk_fid` — định danh SDK (P2.1a — bắt buộc)
 
@@ -1325,6 +1369,8 @@ Chuẩn tham chiếu: `Bảng điều khiển > Chi tiết Đơn vị` (desktop)
 
 **Mục đích:** phát hành / thu hồi / xoay token kiosk gắn **một** `deptCode` — nguồn quản lý tập trung (thay dần bootstrap YAML trên production).
 
+> **D5.6 (hiện hành):** Client = WPF Admin. **Không** PIN kiosk: không cột «PIN ĐĂNG KÝ», không menu Đặt PIN, list **không** trả `enrollPin`, **không** `POST /api/admin/fingerprint/kiosk-tokens/{id}/enroll-pin`. Enroll vân tay = JWT Tiện ích (`SPEC_DESKTOP` §2.17.7). Cột DB `enroll_pin` **giữ** (không DROP); thu hồi vẫn xóa PIN leftover. Đoạn PIN/`agent.properties` dưới đây là lịch sử Java — **cấm** implement lại.
+
 #### UI
 
 | Thành phần | Rule |
@@ -1377,18 +1423,18 @@ Chuẩn tham chiếu: `Bảng điều khiển > Chi tiết Đơn vị` (desktop)
 
 | Method | Path | Ghi chú |
 |--------|------|---------|
-| GET | `/api/admin/fingerprint/kiosk-tokens` | List + `token` + **`enrollPin`** khi active đã lưu — **không** trả `token_hash` |
+| GET | `/api/admin/fingerprint/kiosk-tokens` | List + `token` khi active — **không** trả `token_hash` · **không** trả `enrollPin` (D5.6) |
 | POST | `/api/admin/fingerprint/kiosk-tokens` | Body: `deptCode`, `label?` → lưu hash + plaintext; response có `token` |
-| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/enroll-pin` | Body: `{ "enrollPin": "8700" }` — chỉ token **active**; PIN **4–8 chữ số**; response DTO cập nhật |
-| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/label` | Body: `{ "label": "…" }` — chỉ token **active**; trim, không rỗng, max 100; **không** đổi token/PIN; response `KioskTokenDto` (P1.2d) |
-| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/revoke` | Thu hồi + xóa plaintext token + PIN |
-| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/rotate` | Xoay token; **giữ** PIN trên bản ghi mới |
+| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/enroll-pin` | **Đã xóa (D5.6)** — không implement lại |
+| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/label` | Body: `{ "label": "…" }` — chỉ token **active**; trim, không rỗng, max 100; **không** đổi token; response `KioskTokenDto` (P1.2d) |
+| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/revoke` | Thu hồi + xóa plaintext token (+ xóa `enroll_pin` leftover) |
+| POST | `/api/admin/fingerprint/kiosk-tokens/{id}/rotate` | Xoay token; **không** copy PIN (D5.6) |
 
-DB: `fingerprint_kiosk_tokens`: `token_hash` + `token_plaintext` + **`enroll_pin`** (Admin reveal; clear khi inactive).
+DB: `fingerprint_kiosk_tokens`: `token_hash` + `token_plaintext`. Cột **`enroll_pin` leftover D5.6** — **cấm DROP**; không trả ra API; clear khi thu hồi.
 
-**Cấm:** HEAD gọi API này; trả raw template vân tay; trả `token_hash` ra client; **tách** màn Settings riêng chỉ để quản lý PIN (PIN gắn cùng màn token).
+**Cấm:** HEAD gọi API này; trả raw template vân tay; trả `token_hash` ra client; trả `enrollPin`; endpoint enroll-pin.
 
-Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy từ cột PIN (ops). Chưa bắt buộc Agent kéo PIN từ API trong phase này.
+Agent hiện hành: `BV87.exe --agent` + `agent.config.json` (`kioskToken`). PIN/`agent.properties` = lịch sử Java.
 
 ### 10.2 Workflow đã xác nhận — Admin đổi token Agent để enroll từng khoa
 
@@ -1460,7 +1506,12 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 
 | Việc | Ai | Ghi chú |
 |------|-----|---------|
-| Enroll / delete template | **Chỉ Agent** + kiosk token | **Cấm** Web HEAD/ADMIN DELETE hoặc enroll template |
+| Enroll template (WPF USB) | HEAD / ADMIN session | `POST /api/head/fingerprints/enroll` · `POST /api/admin/fingerprints/enroll` |
+| Enroll template (Agent legacy) | Agent + kiosk token | WPF D1.1 thay enroll hàng ngày; Agent có thể giữ cho quét |
+| DELETE template (kiosk) | Agent + kiosk token | Soft-delete; scope khoa token; audit `DELETE_KIOSK` / `ENROLL_KIOSK` |
+| DELETE template (HEAD) | HEAD session | `DELETE /api/head/fingerprints/{empCode}` — khoa mình; audit `DELETE_HEAD` |
+| DELETE template (ADMIN) | ADMIN session | `DELETE /api/admin/fingerprints/{empCode}` — toàn viện; audit `DELETE_ADMIN` |
+| GET fingerprint audit logs | ADMIN | `GET /api/admin/fingerprints/audit-logs` — WPF Lịch sử vân tay |
 | GET status registered + `fingerLabel` | HEAD dept / ADMIN | Không raw template |
 | GET `/api/kiosk/health` | Agent + token kiosk | `ok`, `deptCode`, `deptCodeFormatted`, **`deptName`** (từ `departments`), `label` (nhãn token — **không** dùng làm tên đơn vị trên UI Agent) |
 | POST `/api/kiosk/heartbeat` | Agent + token kiosk | P4 §9.5.2 — cập nhật `last_heartbeat_at` |
@@ -1480,7 +1531,7 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 | POST `/api/admin/fingerprint/kiosk-tokens/{id}/revoke` | ADMIN | Thu hồi + xóa plaintext |
 | POST `/api/admin/fingerprint/kiosk-tokens/{id}/rotate` | ADMIN | Xoay; lưu + trả plaintext mới |
 | POST scan | Agent + token kiosk + LAN | Rule C; không assertCanWrite khóa sổ; khóa sau submit (§4.7) |
-| GET page / stats / dashboard | Session | Cùng nguồn mục 5 |
+| GET page / stats / dashboard | Session | Cùng nguồn mục 5. `StaffAttendanceDto.complete` = `AttendanceValidity.isComplete` (D-DATA.1) |
 | PUT attendance thủ công | HEAD chỉ status active có `manualAllowed = true`, không `groupParent`, không đè DI_LAM/DI_TRE (§4.8); khóa sau submit | |
 | Report submit | HEAD | COMPLETED = đủ hợp lệ §4.5 |
 | Head AI confirm-batch-attendance | **Reject** DI_LAM/DI_TRE | Mục 7; batch thủ công OK |
@@ -1522,7 +1573,9 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 | **P3f** | Harden quyền/UI: Admin Chi tiết ĐV = manual-range + soft clear (§4.11) + hint thiếu OUT (§4.5.1); `applyManualStatus` thống nhất batch/range (§4.8.1) |
 | **P3g** | Admin Chi tiết ĐV: menu dropdown **Vân tay** gom Điền giờ / Chi tiết quét / Đưa về chưa chấm (§10.6) |
 | **P2.2** | Agent/Web: `finger_label` bắt buộc; kiosk DELETE; ĐK lại R1 confirm ghi đè; 1 ngón active / NV; auth kiosk+PIN |
-| **P2.3** | Chốt A: CRUD template **chỉ Agent** — bỏ Web HEAD/ADMIN DELETE template; Web chỉ GET status + `fingerLabel` |
+| **P2.3** | Chốt A (Web React): CRUD template **chỉ Agent** trên browser — bỏ Web HEAD/ADMIN DELETE; Web chỉ GET status + `fingerLabel` |
+| **P2.4** | WPF D4: HEAD/ADMIN xóa vân tay + audit logs |
+| **D1.1** | WPF enroll USB sau login (Tiện ích); bỏ kiosk login; `ENROLL_HEAD` audit |
 | **P4a** | Agent: REJECTED + `message`; `device.autoOpen`; Startup; bat resolve `classes\production\…` (IntelliJ) rồi `out\` / `target` |
 | **P4b** | LAN gate kiosk; native `java.library.path` + preflight DLL; preview reset đổi mode; Agent HTTP/scan off EDT + in-flight; server bỏ tin `scannedAt` + debounce 2s + upsert attendance; staff meta không LOB; 1 token active/khoa |
 | **P4c** | Agent: open/close device + enroll/delete HTTP off EDT; preview in-memory; README IntelliJ VM = bat |
@@ -1634,7 +1687,9 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 - [x] **P2.2:** `DELETE /api/kiosk/fingerprints/{empCode}` + nút Xóa trên Agent
 - [x] **P2.2:** ĐK lại R1 confirm ghi đè; list kiosk/Web hiện `fingerLabel`
 - [x] **P2.2:** Auth Agent vẫn kiosk token + PIN (không login HEAD/Admin)
-- [x] **P2.3:** Bỏ `DELETE` template Web HEAD + ADMIN; FE ẩn nút xóa; CRUD mẫu chỉ Agent
+- [x] **P2.3:** Bỏ `DELETE` template **Web React** HEAD + ADMIN; FE browser ẩn nút xóa; enroll chỉ Agent
+- [x] **P2.4:** WPF — HEAD/ADMIN delete + audit logs; Flyway V24
+- [x] **D1.1:** WPF **Đăng ký vân tay** (Tiện ích); bỏ kiosk login; HEAD enroll API
 - [x] **P4a / B1:** Banner REJECTED = `TỪ CHỐI — {message}` (§9.3.1)
 - [x] **P4a:** `device.autoOpen` (+ retry) sau bootstrap; script Startup + runbook Agent
 - [x] **P4a:** `start-agent.bat` ưu tiên `classes\production\ZKFinger Demo2` (+ `fingerprint-agent` / `out\` / scan) — marker `FingerprintAgentApp.class`
@@ -1671,12 +1726,13 @@ Agent (P2.1d): vẫn đọc `enroll.pin` từ `agent.properties` — Admin copy 
 - [x] **P8-WizardPresenceFix:** wizard HEAD **không** skip `DI_LAM`/`DI_TRE` (post-scan §4.13.8); giữ `late_flag`; message VN khi skip hết ngày
 - [x] **P8-ReassignNghiTruc:** chấm lại wizard khi `NGHI_TRUC_HALF` + thiếu 1-3 mốc; preload `payrollIntent`; Admin Chi tiết ĐV mở wizard; Admin được gọi `nghi-truc-assign`
 - [x] **P9-RowHintDeclutter:** bỏ hint dòng `Thiếu dữ liệu chấm công` dưới ô giờ roster HEAD + Admin (desktop/mobile) — §4.5.1; giữ banner §4.5.2
-- [x] **P10-NghiTrucWizardLayout:** `NghiTrucAssignModal` layout ngang desktop — §4.13.8 FE layout
+- [x] **P10-NghiTrucWizardLayout:** `NghiTrucAssignModal` layout ngang desktop — §4.13.8 FE layout; **D-ATT.2** radio card + toast skip (`SPEC_DESKTOP` §2.18.2)
 - [x] **P11-StatusNghiTrucDetail:** badge `NGHỈ TRỰC` rút gọn + badge chờ duyệt (nếu PENDING) dưới cột Trạng thái — §4.13.6
 - [x] **P11b-PendingBadgeCompact:** copy **Chờ duyệt giờ** `text-4xs` một dòng — §4.13.6
 - [x] **P12-AdminApproveUx:** click badge **Chờ duyệt giờ** mở modal duyệt; **không** nút trùng cột Thao tác; giữ menu Vân tay — §4.13.6 / §4.13.8
-- [x] **P13-NghiTrucWizardZeroPunch:** N.trực `punchCount` 0–3 → wizard (HEAD chấm trước khi NV quét; đủ `HALF_MORNING` / `HALF_AFTERNOON` / FULL) — §4.13.8
+- [x] **P16-NghiTrucDutyRest:** wizard chỉ 1 ngày / nửa buổi chiều; FULL không giờ giả; HALF NV quét sáng; kiosk D2; subtitle roster; không PENDING wizard mới — §4.13.4 / §4.13.8 / §4.13.6
 - [x] **P14-PastUnlockAudit:** unlock theo `dept+date` (ngày quá khứ); HEAD ghi quá khứ chỉ khi đã unlock; nhật ký thao tác Web + màn Admin — §4.7 / §4.7.1
+- [x] **P17-HeadIncompleteExplainWrite:** HEAD chấm NV thiếu dữ liệu ngày quá khứ **và** hôm nay sau `lockTime` kèm giải trình, không chờ Admin — §4.7.2a
 - [x] **P15-HeadUnlockRequest:** HEAD gửi yêu cầu mở khóa ngày ≤ hôm nay; Admin xác nhận / từ chối + chuông — §4.7.2
 - [x] **P15-UnlockRequestNotifyType:** `notifications.type` VARCHAR(40) + V23; notify không rollback yêu cầu; API luôn `message` VN — §4.7.2
 - [x] **P15-UnlockRequestsAdminUi:** bảng/filter đồng bộ Tiện ích; badge nav số PENDING + `pending-count` API — §4.7.2

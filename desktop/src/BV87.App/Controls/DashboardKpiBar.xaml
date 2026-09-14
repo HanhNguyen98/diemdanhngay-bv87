@@ -1,0 +1,90 @@
+<UserControl x:Class="BV87.App.Controls.DashboardKpiBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:admin="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+             x:Name="Root">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Margin="0,0,32,0" MinWidth="180">
+            <TextBlock Text="{Binding KpiTotalText, ElementName=Root}"
+                       FontSize="40"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource NavyBrush}"/>
+            <TextBlock Text="{x:Static admin:AdminUiStrings.KpiTotal}"
+                       Foreground="{StaticResource ContentMutedBrush}"
+                       FontSize="{StaticResource FontSizeMd}"
+                       Margin="0,2,0,12"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <Ellipse Width="6" Height="6"
+                         Fill="{StaticResource ContentMutedBrush}"
+                         VerticalAlignment="Center"
+                         Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding ScopeLabel, ElementName=Root}"
+                           Foreground="{StaticResource ContentMutedBrush}"
+                           FontSize="{StaticResource FontSizeMd}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Ellipse Width="6" Height="6"
+                         Fill="{StaticResource DangerFgBrush}"
+                         VerticalAlignment="Center"
+                         Margin="0,0,8,0"/>
+                <TextBlock Foreground="{StaticResource ContentMutedBrush}"
+                           FontSize="{StaticResource FontSizeMd}"
+                           ToolTip="{x:Static admin:AdminUiStrings.UncheckedFilterTooltip}">
+                    <Run Text="{x:Static admin:AdminUiStrings.KpiUnchecked}"/>
+                    <Run Text=": "/>
+                    <Run Text="{Binding UncheckedCount, ElementName=Root, Mode=OneWay}"
+                         FontWeight="SemiBold"
+                         Foreground="{StaticResource DangerFgBrush}"/>
+                </TextBlock>
+            </StackPanel>
+        </StackPanel>
+
+        <ItemsControl Grid.Column="1"
+                      ItemsSource="{Binding KpiItems, ElementName=Root}"
+                      VerticalAlignment="Center">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel HorizontalAlignment="Right"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="12,6" CornerRadius="16" Margin="0,0,8,8" BorderThickness="1">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource InfoBgBrush}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource PrimaryLightBorderBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Count}" Value="0">
+                                        <Setter Property="Background" Value="{StaticResource NeutralBgBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock FontSize="{StaticResource FontSizeMd}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource InfoFgBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Count}" Value="0">
+                                            <Setter Property="Foreground" Value="{StaticResource NeutralFgBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                            <Run Text="{Binding BadgeLabel, Mode=OneWay}"/>
+                            <Run Text=": "/>
+                            <Run Text="{Binding Count, Mode=OneWay}" FontWeight="SemiBold"/>
+                        </TextBlock>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>

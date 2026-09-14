@@ -1,0 +1,82 @@
+<shell:AppDialogWindow x:Class="BV87.App.Views.Admin.Catalog.StaffTransferHistoryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:BV87.App.Shell"
+        Title="Lịch sử luân chuyển"
+        Width="900"
+        Height="480"
+        MinWidth="720"
+        MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource SurfacePageBrush}">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="TitleText" Grid.Row="0" FontSize="16" FontWeight="SemiBold"
+                   Foreground="{StaticResource NavyBrush}" Margin="0,0,0,12"/>
+
+        <TextBlock x:Name="ErrorText" Grid.Row="1" Foreground="{StaticResource DangerFgBrush}"
+                   TextWrapping="Wrap" Margin="0,0,0,8" Visibility="Collapsed"/>
+
+        <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+            <Grid>
+                <TextBlock x:Name="LoadingText" Text="Đang tải danh mục..."
+                           Foreground="{StaticResource ContentMutedBrush}" Margin="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock x:Name="EmptyText" Text="Chưa có lịch sử luân chuyển"
+                           Foreground="{StaticResource ContentMutedBrush}" Margin="20"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                <DataGrid x:Name="HistoryGrid" Style="{StaticResource AdminDataGridStyle}"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="TỪ ĐƠN VỊ" Binding="{Binding FromDeptDisplay}" Width="*" MinWidth="120">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="ĐẾN ĐƠN VỊ" Binding="{Binding ToDeptDisplay}" Width="*" MinWidth="120">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="TỪ NGÀY" Binding="{Binding FromDateDisplay}" Width="90">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="ĐẾN NGÀY" Binding="{Binding ToDateDisplay}" Width="90">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="LÝ DO" Binding="{Binding ReasonDisplay}" Width="*" MinWidth="100">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="NGƯỜI TẠO" Binding="{Binding CreatedByDisplay}" Width="100">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="THỜI GIAN" Binding="{Binding CreatedAtDisplay}" Width="130">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Đóng" Padding="16,8" Click="Close_Click"/>
+        </StackPanel>
+    </Grid>
+</shell:AppDialogWindow>

@@ -1,0 +1,82 @@
+<UserControl x:Class="BV87.App.Controls.ExcelTaskMenu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:constants="clr-namespace:BV87.Core.Constants;assembly=BV87.Core">
+    <Grid>
+        <ToggleButton x:Name="MenuButton"
+                      Style="{StaticResource ExcelTaskMenuToggleStyle}"
+                      IsEnabled="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      Checked="MenuButton_Checked"
+                      Unchecked="MenuButton_Unchecked">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="{StaticResource IconFont}"
+                           Text="&#xE8A5;"
+                           FontSize="14"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0"/>
+                <TextBlock x:Name="MenuLabelText"
+                           Text="{x:Static constants:ExcelUiStrings.MenuLabel}"
+                           VerticalAlignment="Center"/>
+                <TextBlock FontFamily="{StaticResource IconFont}"
+                           Text="&#xE70D;"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           Margin="6,0,0,0"
+                           RenderTransformOrigin="0.5,0.5">
+                    <TextBlock.RenderTransform>
+                        <RotateTransform x:Name="ChevronRotate" Angle="0"/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+            </StackPanel>
+        </ToggleButton>
+
+        <Popup x:Name="MenuPopup"
+               PlacementTarget="{Binding ElementName=MenuButton}"
+               Placement="Bottom"
+               StaysOpen="False"
+               AllowsTransparency="True"
+               PopupAnimation="Fade"
+               HorizontalOffset="0"
+               VerticalOffset="4">
+            <Border Background="{StaticResource SurfaceWhiteBrush}"
+                    BorderBrush="{StaticResource LineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="4"
+                    MinWidth="220">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.12"/>
+                </Border.Effect>
+                <StackPanel>
+                    <Button Style="{StaticResource ExcelTaskMenuItemStyle}"
+                            Click="TemplateButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE896;" FontSize="13"
+                                       Foreground="{StaticResource ContentMutedBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{x:Static constants:ExcelUiStrings.Template}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ExcelTaskMenuItemStyle}"
+                            Click="ImportButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE898;" FontSize="13"
+                                       Foreground="{StaticResource ContentMutedBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{x:Static constants:ExcelUiStrings.Import}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ExcelTaskMenuItemStyle}"
+                            Click="ExportButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE8A5;" FontSize="13"
+                                       Foreground="{StaticResource ContentMutedBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{x:Static constants:ExcelUiStrings.Export}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

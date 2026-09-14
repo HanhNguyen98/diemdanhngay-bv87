@@ -12,6 +12,7 @@ public class AdminStaffDto {
     private final Integer deptCode;
     private final String deptCodeFormatted;
     private final String deptName;
+    private final String unitCode;
     private final String rankName;
     private final String positionName;
     private final boolean active;

@@ -1,3 +1,4 @@
+-- Leftover D5: AI UI/API đã xóa. Bảng có thể còn trên prod — KHÔNG DROP.
 -- Chạy một lần trên production nếu DB đã tồn tại trước khi có bảng này
 CREATE TABLE IF NOT EXISTS ai_pending_actions (
     action_id        VARCHAR(36)  NOT NULL,

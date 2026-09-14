@@ -13,10 +13,20 @@ public enum PayrollIntent {
 
     public String getLabel() {
         return switch (this) {
-            case HALF_MORNING -> "Nghỉ trực nửa buổi (buổi sáng)";
-            case HALF_AFTERNOON -> "Nghỉ trực nửa buổi (buổi chiều)";
-            case NGHI_TRUC_FULL -> "Nghỉ trực 1 buổi (cả ngày)";
+            case HALF_MORNING -> "Nghỉ trực nửa buổi sáng";
+            case HALF_AFTERNOON -> "Nghỉ trực nửa buổi chiều";
+            case NGHI_TRUC_FULL -> "Nghỉ trực 1 ngày";
             case EXPLAIN_ONLY -> "Chờ Admin bổ sung giờ";
+        };
+    }
+
+    /** Roster subtitle under NGHỈ TRỰC badge — SPEC P16. */
+    public String getRosterSubtitle() {
+        return switch (this) {
+            case HALF_MORNING -> "Nửa buổi sáng";
+            case HALF_AFTERNOON -> "Nửa buổi chiều";
+            case NGHI_TRUC_FULL -> "1 ngày";
+            case EXPLAIN_ONLY -> null;
         };
     }
 
@@ -45,6 +55,6 @@ public enum PayrollIntent {
     }
 
     public boolean isNghiTrucAssignable() {
-        return this == HALF_MORNING || this == HALF_AFTERNOON || this == NGHI_TRUC_FULL;
+        return this == HALF_AFTERNOON || this == NGHI_TRUC_FULL;
     }
 }

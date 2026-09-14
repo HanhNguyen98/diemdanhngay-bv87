@@ -7,7 +7,6 @@ import com.bv87.diemdanh.dto.LoginRequest;
 import com.bv87.diemdanh.dto.LoginResponse;
 import com.bv87.diemdanh.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +20,6 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
-
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(authService.login(request, httpRequest));
-    }
 
     @PostMapping("/desktop/login")
     public ResponseEntity<DesktopLoginResponse> desktopLogin(
@@ -54,11 +46,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+    public ResponseEntity<Void> logout() {
         return ResponseEntity.noContent().build();
     }
 }

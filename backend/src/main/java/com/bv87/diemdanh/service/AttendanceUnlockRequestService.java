@@ -243,6 +243,7 @@ public class AttendanceUnlockRequestService {
                 .deptCode(row.getDeptCode())
                 .deptCodeFormatted(row.getDeptCode() != null ? CodeFormatter.formatDeptCode(row.getDeptCode()) : null)
                 .deptName(dept != null ? dept.getDeptName() : null)
+                .unitCode(dept != null ? dept.getUnitCode() : null)
                 .reason(row.getReason())
                 .status(row.getStatus())
                 .statusLabel(row.getStatus() != null ? row.getStatus().getLabel() : "")

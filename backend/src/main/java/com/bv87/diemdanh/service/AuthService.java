@@ -15,15 +15,12 @@ import com.bv87.diemdanh.security.LoginRateLimitService;
 import com.bv87.diemdanh.util.VietnamTimeService;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,31 +36,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-        loginRateLimitService.assertNotBlocked(httpRequest, request.getUsername());
-
-        try {
-            Authentication auth = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-
-            loginRateLimitService.clearFailures(httpRequest, request.getUsername());
-
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(auth);
-            SecurityContextHolder.setContext(context);
-
-            HttpSession session = httpRequest.getSession(true);
-            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
-
-            return buildResponse((AuthUser) auth.getPrincipal());
-        } catch (BadCredentialsException ex) {
-            loginRateLimitService.recordFailure(httpRequest, request.getUsername());
-            throw ex;
-        }
-    }
-
     /**
-     * Desktop JWT login — no HTTP session (SPEC_DESKTOP §2).
+     * Desktop JWT login — no HTTP session (SPEC_DESKTOP §2 / D5).
      *
      * @param request credentials
      * @param httpRequest used for login rate limiting
@@ -108,6 +82,13 @@ public class AuthService {
         return (AuthUser) auth.getPrincipal();
     }
 
+    /**
+     * Updates the signed-in account password. Current password is not required (ADMIN and HEAD).
+     *
+     * @param authUser signed-in user
+     * @param request new password and confirmation
+     * @throws BusinessException when confirmation does not match, account is missing, or the new password equals the current hash
+     */
     @Transactional
     public void changePassword(AuthUser authUser, ChangePasswordRequest request) {
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
@@ -116,10 +97,6 @@ public class AuthService {
 
         Account account = accountRepository.findById(authUser.getAccount().getId())
                 .orElseThrow(() -> new BusinessException("Tài khoản không tồn tại"));
-
-        if (!passwordEncoder.matches(request.getCurrentPassword(), account.getPasswordHash())) {
-            throw new BusinessException("Mật khẩu hiện tại không đúng");
-        }
 
         if (passwordEncoder.matches(request.getNewPassword(), account.getPasswordHash())) {
             throw new BusinessException("Mật khẩu mới phải khác mật khẩu hiện tại");

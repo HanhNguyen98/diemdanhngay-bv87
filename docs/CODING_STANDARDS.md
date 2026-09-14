@@ -4,8 +4,9 @@
 
 | Role / feature | Spec file |
 |----------------|-----------|
-| ADMIN | `docs/SPEC_ADMIN.md` |
-| HEAD | `docs/SPEC_HEAD.md` |
+| Client WPF (UI) | `docs/SPEC_DESKTOP.md` |
+| ADMIN (nghiệp vụ + API) | `docs/SPEC_ADMIN.md` |
+| HEAD (nghiệp vụ + API) | `docs/SPEC_HEAD.md` |
 | Vân tay ZK9500 / Agent / IN-OUT | `docs/SPEC_FINGERPRINT.md` |
 
 ### Do not invent code outside requirements
@@ -40,7 +41,9 @@ public boolean isDepartmentLocked(Integer deptCode, LocalDate date) { ... }
 throw new AttendanceLockedException(); // message defined in exception class
 ```
 
-## Frontend example
+## UI strings (WPF — D5)
+
+Client UI lives in `desktop/` (`BV87.Core/Constants`). The JS snippets below are **historical** names from the removed web SPA; do not add a React frontend.
 
 ```javascript
 // constants/attendance.js — Vietnamese UI labels

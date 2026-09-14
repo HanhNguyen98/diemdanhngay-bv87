@@ -16,11 +16,10 @@ public class KioskTokenDto {
     private final Integer deptCode;
     private final String deptCodeFormatted;
     private final String deptName;
+    private final String unitCode;
     private final String label;
     /** Plaintext when active; null when revoked or legacy row without stored plaintext. */
     private final String token;
-    /** Enroll PIN when active and set; null otherwise (SPEC P2.1e). */
-    private final String enrollPin;
     private final boolean active;
     private final Instant createdAt;
     /** Last Agent heartbeat; null if never. */

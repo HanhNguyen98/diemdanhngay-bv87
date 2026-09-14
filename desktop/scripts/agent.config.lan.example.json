@@ -1,0 +1,12 @@
+{
+  "apiBaseUrl": "http://192.170.182.14:8081",
+  "kioskToken": "",
+  "lanOnlyEnabled": true,
+  "soundEnabled": true,
+  "deviceAutoOpen": true,
+  "deviceAutoOpenRetries": 5,
+  "deviceAutoOpenRetryMs": 800,
+  "heartbeatEnabled": true,
+  "heartbeatIntervalSeconds": 30,
+  "templateReloadMinutes": 30
+}

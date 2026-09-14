@@ -4,6 +4,7 @@ import com.bv87.diemdanh.dto.FingerprintScanRequest;
 import com.bv87.diemdanh.dto.FingerprintScanResultDto;
 import com.bv87.diemdanh.dto.KioskTemplateDto;
 import com.bv87.diemdanh.entity.*;
+import com.bv87.diemdanh.enums.PayrollIntent;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AttendanceRecordRepository;
 import com.bv87.diemdanh.repository.EmployeeFingerprintRepository;
@@ -105,6 +106,13 @@ public class FingerprintScanService {
 
         if (phase == WorkSchedule.PunchPhase.REJECTED) {
             return reject(emp, ctx, scannedAt, request.getScore(), "Ngoài khung giờ vào/ra. Không ghi nhận.");
+        }
+
+        if (existing != null && AttendanceValidity.NGHI_TRUC_HALF.equals(existing.getStatus())) {
+            String halfReject = nghiTrucHalfScanRejectMessage(existing, phase);
+            if (halfReject != null) {
+                return reject(emp, ctx, scannedAt, request.getScore(), halfReject);
+            }
         }
 
         return applyPhase(emp, ctx, scannedAt, request.getScore(), existing, day, phase, schedule);
@@ -262,6 +270,22 @@ public class FingerprintScanService {
         r.setAttendanceDate(day);
         r.setStatus(null);
         return r;
+    }
+
+    private static String nghiTrucHalfScanRejectMessage(
+            AttendanceRecord record, WorkSchedule.PunchPhase phase) {
+        PayrollIntent intent = PayrollIntent.fromCode(record.getPayrollIntent());
+        boolean restMorning = intent == PayrollIntent.HALF_MORNING;
+        if (restMorning
+                && (phase == WorkSchedule.PunchPhase.MORNING_IN || phase == WorkSchedule.PunchPhase.NOON_OUT)) {
+            return "Nhân viên đang nghỉ trực nửa buổi sáng. Không ghi nhận giờ buổi sáng.";
+        }
+        if (!restMorning
+                && (phase == WorkSchedule.PunchPhase.AFTERNOON_IN
+                || phase == WorkSchedule.PunchPhase.AFTERNOON_OUT)) {
+            return "Nhân viên đang nghỉ trực nửa buổi chiều. Không ghi nhận giờ buổi chiều.";
+        }
+        return null;
     }
 
     private FingerprintScanResultDto reject(
