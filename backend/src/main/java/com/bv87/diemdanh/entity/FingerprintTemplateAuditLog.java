@@ -21,7 +21,7 @@ public class FingerprintTemplateAuditLog {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 40)
+    @Column(name = "action", nullable = false, length = 40, columnDefinition = "VARCHAR(40)")
     private FingerprintTemplateAuditAction action;
 
     @Column(name = "emp_code", nullable = false)
