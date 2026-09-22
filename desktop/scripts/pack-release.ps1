@@ -80,39 +80,17 @@ if (Test-Path $agentExample) {
     Copy-Item $agentExample (Join-Path $stageDir "agent.config.json.example") -Force
 }
 
-$guide = @"
-BV87 Desktop — Hướng dẫn cài đặt (LAN bệnh viện)
-==============================================
-
-1) Giải nén toàn bộ thư mục này vào PC (ví dụ C:\BV87).
-
-2) Admin / Trưởng đơn vị:
-   - Chạy BV87.exe
-   - appsettings.json đã trỏ máy chủ: $($defaults.hospitalApiBaseUrl)
-   - Đăng nhập tài khoản HEAD hoặc ADMIN
-
-3) Máy kiosk chấm công:
-   - scripts\init-agent-config.ps1 -KioskToken "<token-tu-admin>"
-   - Chạy BV87.exe --agent
-   - Cài autostart: scripts\install-agent-autostart.ps1
-   - Cài watchdog: scripts\install-watchdog.ps1
-
-4) Yêu cầu:
-   - PC phải trong mạng LAN bệnh viện (cấm truy cập qua Internet / Cloudflare)
-   - Máy chủ Spring Boot + MySQL chạy trên server LAN (client không nối DB trực tiếp)
-   - Một gói ZIP dùng cho Admin, Trưởng đơn vị (HEAD) và Kiosk Agent (--agent)
-   - Cài .NET 8 Desktop Runtime x64 trên mỗi PC (ZIP không kèm runtime)
-   - Gỡ Agent Java (fingerprint-agent.jar) trên cùng máy kiosk
-   - Chỉ một cửa sổ BV87.exe --agent trên mỗi máy
-
-5) IT:
-   - Build gói: desktop\scripts\pack-release.ps1 (Release — LanOnlyEnabled bắt buộc trong exe)
-   - Server: docker compose KHÔNG bật profile tunnel / Cloudflare
-   - Token: dán vào agent.config.json (kioskToken), KHÔNG dùng agent.properties cho WPF
-   - scripts\start-agent.bat (kiosk)
-
-"@
-Set-Content -Path (Join-Path $stageDir "HUONG-DAN-CAI-DAT.txt") -Value $guide -Encoding UTF8
+$apiUrl = [string]$defaults.hospitalApiBaseUrl
+$guideTemplatePath = Join-Path $PSScriptRoot "HUONG-DAN-CAI-DAT.template.txt"
+if (-not (Test-Path $guideTemplatePath)) {
+    throw "Missing guide template: $guideTemplatePath"
+}
+# Read template as UTF-8 (BOM optional); write ship file as UTF-8 with BOM for Notepad
+$utf8 = New-Object System.Text.UTF8Encoding $false
+$utf8Bom = New-Object System.Text.UTF8Encoding $true
+$guide = [System.IO.File]::ReadAllText($guideTemplatePath, $utf8).Replace("{{API_BASE_URL}}", $apiUrl)
+$guidePath = Join-Path $stageDir "HUONG-DAN-CAI-DAT.txt"
+[System.IO.File]::WriteAllText($guidePath, $guide, $utf8Bom)
 
 if (-not (Test-Path $OutputRoot)) {
     New-Item -ItemType Directory -Path $OutputRoot | Out-Null

@@ -49,6 +49,7 @@
 | Client → Server | HTTP tới `ApiBaseUrl` (Admin/Duty/Head) hoặc `apiBaseUrl` (Agent) — IP nội bộ |
 | Phân phối user | IT chạy `pack-release.ps1` → ZIP **một gói** gửi Admin + DUTY + HEAD + Agent |
 | Cấu hình | ZIP: `appsettings.json` (`LanOnlyEnabled: true`) + `agent.config.json.example`; kiosk: `init-agent-config.ps1` |
+| `HUONG-DAN-CAI-DAT.txt` | Trong ZIP · từ `desktop/scripts/HUONG-DAN-CAI-DAT.template.txt` · **UTF-8 có BOM** · path đầy đủ `C:\BV87\` / `C:\BV87Agent\scripts\` · placeholder `{{API_BASE_URL}}` |
 | Chặn Internet (client) | `LanEndpointGuard` + **Release exe** (`LanDeploymentPolicy`) — **không** tắt được bằng sửa config |
 | Chặn Internet (server) | `KioskLanGateFilter` — `/api/kiosk/**` chỉ CIDR LAN (prod `lan-gate-enabled: true`) |
 | Truy cập dữ liệu | Trong LAN + đăng nhập JWT (Admin/Duty/HEAD) hoặc token kiosk (Agent) |

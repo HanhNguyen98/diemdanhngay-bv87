@@ -106,7 +106,7 @@ URL trong ZIP lấy từ `desktop\deploy.defaults.json` (mặc định `http://1
 |-----------|---------|
 | `BV87.exe` + DLL + `lib\` | Tất cả |
 | `appsettings.json` (`LanOnlyEnabled: true`, URL LAN) | ADMIN / HEAD |
-| `HUONG-DAN-CAI-DAT.txt` | Cài đặt nhanh trên máy user |
+| `HUONG-DAN-CAI-DAT.txt` | Cài đặt nhanh trên máy user — UTF-8 BOM + path đầy đủ (`C:\BV87\`, `C:\BV87Agent\scripts\`) |
 | `scripts\` | IT cài kiosk |
 | `agent.config.json.example` | Mẫu kiosk |
 

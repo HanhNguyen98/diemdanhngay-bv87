@@ -1,0 +1,84 @@
+﻿BV87 Desktop - Hướng dẫn cài đặt (LAN bệnh viện)
+================================================
+
+Mở file bằng Notepad. Một gói ZIP dùng cho Admin, Trưởng đơn vị (HEAD) và máy kiosk.
+
+------------------------------------------------
+A) Cài .NET 8 Desktop Runtime x64 (mỗi máy, nếu chưa có)
+------------------------------------------------
+1. Mở: https://dotnet.microsoft.com/download/dotnet/8.0
+2. Tải: .NET Desktop Runtime 8.x - Windows x64
+3. Cài xong; khởi động lại nếu Windows yêu cầu.
+   ZIP không kèm runtime. Cần Runtime, không cần .NET SDK.
+
+------------------------------------------------
+B) Admin / Trưởng đơn vị
+------------------------------------------------
+1. Giải nén toàn bộ ZIP vào:
+      C:\BV87\
+   Cần thấy:
+      C:\BV87\BV87.exe
+      C:\BV87\appsettings.json
+      C:\BV87\lib\
+      C:\BV87\scripts\
+      C:\BV87\HUONG-DAN-CAI-DAT.txt
+
+2. Chạy:
+      C:\BV87\BV87.exe
+   PowerShell:
+      & "C:\BV87\BV87.exe"
+
+3. Đăng nhập tài khoản ADMIN hoặc HEAD.
+
+4. API trong appsettings.json:
+      {{API_BASE_URL}}
+   PC phải trong mạng LAN viện.
+   Cấm Internet / Cloudflare.
+   Client không nối MySQL trực tiếp.
+
+------------------------------------------------
+C) Máy kiosk (IT - một lần / máy)
+------------------------------------------------
+1. Giải nén ZIP vào:
+      C:\BV87Agent\
+   Cần thấy: C:\BV87Agent\BV87.exe và C:\BV87Agent\scripts\
+
+2. Admin: Cài đặt -> Token Kiosk -> phát hành token (gửi IT).
+
+3. Mở PowerShell (Run as Administrator):
+
+      cd C:\BV87Agent\scripts
+      Set-ExecutionPolicy -Scope Process Bypass
+
+      .\init-agent-config.ps1 -ApiBaseUrl "{{API_BASE_URL}}" -KioskToken "<token-admin-cap>"
+
+      .\install-agent-autostart.ps1
+      .\install-watchdog.ps1
+
+   Tạo/sửa: C:\BV87Agent\agent.config.json (kioskToken).
+   Không dùng agent.properties.
+
+4. Chạy Agent (một trong hai):
+      C:\BV87Agent\BV87.exe --agent
+   hoặc:
+      C:\BV87Agent\scripts\start-agent.bat
+
+5. Chỉ một cửa sổ BV87.exe --agent / máy.
+   Gỡ Agent Java cũ (fingerprint-agent.jar) nếu còn.
+   Đăng ký vân tay: đăng nhập -> Tiện ích -> Đăng ký vân tay
+   (không đăng ký trên cửa sổ --agent).
+
+------------------------------------------------
+D) Cập nhật phiên bản mới
+------------------------------------------------
+1. Đóng hết BV87.exe (và --agent).
+2. Giải nén ZIP mới đè lên C:\BV87\ (hoặc C:\BV87Agent\).
+3. Máy kiosk: giữ C:\BV87Agent\agent.config.json.
+4. Chạy lại BV87.exe / BV87.exe --agent.
+
+------------------------------------------------
+E) IT - đóng gói / server
+------------------------------------------------
+- Build: desktop\scripts\pack-release.ps1
+- Server Docker: không bật tunnel / Cloudflare
+- Hướng dẫn đầy đủ: docs\HUONG_DAN_SU_DUNG.md
