@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.Core.Constants;
 using BV87.Core.Helpers;
@@ -17,8 +18,11 @@ public partial class FillAttendanceTimesDialog : AppDialogWindow
     {
         InitializeComponent();
 
-        TitleText.Text = AdminUiStrings.FillTimesTitle;
-        SubtitleText.Text = $"{staff.Fullname} · {staff.EmpCodeFormatted ?? staff.EmpCode.ToString()}";
+        Title = AdminUiStrings.FillTimesTitle;
+        DialogContextHeaderHelper.SetPerson(
+            ContextHeader,
+            staff.Fullname,
+            $"{staff.DeptDisplay} · {AdminUtilitiesFormatHelper.FormatDateOnly(date)}");
         HintText.Text = AdminUiStrings.FillTimesHint;
         IntentLabelText.Text = AdminUiStrings.FillTimesHeadReasonIntent;
         IntentValueText.Text = staff.PayrollIntentLabel ?? "—";

@@ -23,7 +23,7 @@ public class AttendanceReportService {
 
     @Transactional
     public void blockReport(AuthUser authUser, ReportBlockRequest request) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được khóa gửi báo cáo");
         }
         Integer deptCode = request.getDeptCode();
@@ -46,7 +46,7 @@ public class AttendanceReportService {
 
     @Transactional
     public void unblockReport(AuthUser authUser, Integer deptCode) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được mở khóa gửi báo cáo");
         }
         var today = timeService.today();

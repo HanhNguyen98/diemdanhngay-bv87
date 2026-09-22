@@ -21,6 +21,8 @@ public sealed class AdminDashboardViewModel : ViewModelBase
     private List<DepartmentListItem> _catalogDepartments = [];
     private int? _deptFilter;
     private int? _deptFilterDraft;
+    private DateOnly _draftDate;
+    private DateOnly _appliedDate;
     private int _currentPage = 1;
     private int _pageSize = 20;
     private bool _isLoading;
@@ -35,14 +37,17 @@ public sealed class AdminDashboardViewModel : ViewModelBase
     public AdminDashboardViewModel(AdminApiClient adminApi)
     {
         _adminApi = adminApi;
+        var today = AttendanceFormatHelper.TodayVietnam();
+        _draftDate = today;
+        _appliedDate = today;
 
         PagedDepartments = new ObservableCollection<DeptProgressRowViewModel>();
         KpiItems = new ObservableCollection<StatusBreakdownItem>();
         DeptFilterOptions = new ObservableCollection<DeptFilterOption>();
 
         RefreshCommand = new RelayCommand(async () => await LoadAsync(force: true));
-        ApplyDeptFilterCommand = new RelayCommand(() => ListLoadBusy.RunRefreshing(v => IsRefreshing = v, ApplyDeptFilter));
-        ResetDeptFilterCommand = new RelayCommand(() => ListLoadBusy.RunRefreshing(v => IsRefreshing = v, ResetDeptFilter));
+        ApplyDeptFilterCommand = new RelayCommand(async () => await ApplyFiltersAsync());
+        ResetDeptFilterCommand = new RelayCommand(async () => await ResetFiltersAsync());
         GoToPageCommand = new RelayCommand<int>(
             ChangePage,
             page => page >= 1 && page <= TotalPages);
@@ -146,6 +151,8 @@ public sealed class AdminDashboardViewModel : ViewModelBase
         }
     }
 
+    public DateOnly AppliedDate => _appliedDate;
+
     public string AttendanceDateText =>
         _dashboard?.AttendanceDate?.ToString("dd/MM/yyyy") ?? "—";
 
@@ -158,6 +165,25 @@ public sealed class AdminDashboardViewModel : ViewModelBase
     {
         get => _deptFilterDraft;
         set => SetProperty(ref _deptFilterDraft, value);
+    }
+
+    public DateTime? DraftDatePicker
+    {
+        get => _draftDate.ToDateTime(TimeOnly.MinValue);
+        set
+        {
+            if (value == null)
+            {
+                return;
+            }
+
+            var next = DateOnly.FromDateTime(value.Value);
+            if (_draftDate != next)
+            {
+                _draftDate = next;
+                OnPropertyChanged();
+            }
+        }
     }
 
     public int CurrentPage => _currentPage;
@@ -281,7 +307,7 @@ public sealed class AdminDashboardViewModel : ViewModelBase
 
         try
         {
-            _dashboard = await _adminApi.GetDashboardAsync();
+            _dashboard = await _adminApi.GetDashboardAsync(_appliedDate);
             _allDepartments = _dashboard.Departments ?? [];
             RefreshDeptFilterOptions();
             RefreshKpi();
@@ -366,26 +392,47 @@ public sealed class AdminDashboardViewModel : ViewModelBase
         OnPropertyChanged(nameof(DisplayKpiUnchecked));
     }
 
-    private void ApplyDeptFilter()
+    private async Task ApplyFiltersAsync()
     {
+        var dateChanged = _appliedDate != _draftDate;
         _deptFilter = _deptFilterDraft;
+        _appliedDate = _draftDate;
         _currentPage = 1;
+        if (dateChanged)
+        {
+            await LoadAsync(force: true);
+            return;
+        }
+
+        ListLoadBusy.RunRefreshing(v => IsRefreshing = v, ApplyClientDeptFilter);
+    }
+
+    private void ApplyClientDeptFilter()
+    {
         RefreshKpi();
         ApplyPaging(resetPage: true);
         OnPropertyChanged(nameof(KpiScopeLabel));
         OnPropertyChanged(nameof(PageSubtitle));
     }
 
-    private void ResetDeptFilter()
+    private async Task ResetFiltersAsync()
     {
+        var today = AttendanceFormatHelper.TodayVietnam();
+        var dateChanged = _appliedDate != today;
         _deptFilter = null;
         _deptFilterDraft = null;
         OnPropertyChanged(nameof(SelectedDeptFilterDraft));
+        _draftDate = today;
+        _appliedDate = today;
+        OnPropertyChanged(nameof(DraftDatePicker));
         _currentPage = 1;
-        RefreshKpi();
-        ApplyPaging(resetPage: true);
-        OnPropertyChanged(nameof(KpiScopeLabel));
-        OnPropertyChanged(nameof(PageSubtitle));
+        if (dateChanged)
+        {
+            await LoadAsync(force: true);
+            return;
+        }
+
+        ListLoadBusy.RunRefreshing(v => IsRefreshing = v, ApplyClientDeptFilter);
     }
 
     private void ChangePage(int page)
@@ -458,7 +505,7 @@ public sealed class AdminDashboardViewModel : ViewModelBase
             return;
         }
 
-        var date = _dashboard?.AttendanceDate ?? AttendanceFormatHelper.TodayVietnam();
+        var date = _appliedDate;
         DeptDetailRequested?.Invoke(this, new DeptDetailNavigationRequest
         {
             DeptCode = dept.DeptCode.Value,
@@ -481,7 +528,7 @@ public sealed class AdminDashboardViewModel : ViewModelBase
 
         try
         {
-            var result = await _adminApi.SendRemindersAsync(deptCodes);
+            var result = await _adminApi.SendRemindersAsync(deptCodes, _appliedDate);
             if (result.Sent == 0)
             {
                 ShellToast.Warning("Cảnh báo: không gửi được nhắc nhở; các đơn vị chưa có HEAD.");

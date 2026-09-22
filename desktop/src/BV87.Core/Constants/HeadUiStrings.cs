@@ -30,9 +30,21 @@ public static class HeadUiStrings
         public const string ViewingHistoryEditableSuffix = "— có thể chỉnh sửa";
         public const string ReadOnlyBadge = "CHẾ ĐỘ XEM";
         public const string IncompleteExplainBanner =
-            "Có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do giải trình khi lưu. Nhân viên đã đủ dữ liệu chỉ sửa khi Admin mở khóa.";
-        public const string IncompleteExplainNoteLabel = "Lý do giải trình (bắt buộc)";
-        public const string IncompleteExplainNeedReason = "Vui lòng nhập lý do giải trình thiếu dữ liệu chấm công.";
+            "Có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do chấm bổ sung khi lưu. Nhân viên đã đủ dữ liệu chỉ sửa khi Admin mở khóa.";
+        public const string IncompleteExplainNoteLabel = "Lý do chấm bổ sung (bắt buộc)";
+        public const string IncompleteExplainNeedReason = "Vui lòng nhập lý do chấm bổ sung.";
+        public const string UnlockRequestAction = "Gửi yêu cầu mở khóa";
+        public const string UnlockRequestReasonPrompt = "Nhập lý do yêu cầu mở khóa (bắt buộc):";
+        public const string UnlockRequestPending =
+            "Đã gửi yêu cầu mở khóa — đang chờ Admin xác nhận.";
+        public const string UnlockRequestSent = "Đã gửi yêu cầu mở khóa.";
+        public const string UnlockRequestNeedReason = "Vui lòng nhập lý do yêu cầu mở khóa.";
+        public const string UnlockRequestTooltipEnabled =
+            "Gửi yêu cầu Admin mở khóa để sửa nhân viên đã đủ dữ liệu.";
+        public const string UnlockRequestTooltipDisabledIncomplete =
+            "Chỉ cần khi muốn sửa nhân viên đã đủ dữ liệu. Nhân viên chưa chấm / thiếu dữ liệu vẫn chấm được kèm lý do bổ sung.";
+        public const string UnlockRequestTooltipPending =
+            "Đã gửi yêu cầu — đang chờ Admin xác nhận.";
         public const string LoadError = "Không tải được dữ liệu Chấm công.";
         public const string VeSomSaved = "Đã lưu lý do về sớm.";
         public const string ColEmpCode = "MÃ NV";
@@ -42,7 +54,7 @@ public static class HeadUiStrings
         public const string ColTimes = "GIỜ";
         public const string ColMachine = "MÁY";
         public const string ColStatus = "TRẠNG THÁI";
-        public const string ColNote = "GHI CHÚ";
+        public const string ColNote = "LÝ DO CHẤM BỔ SUNG";
     }
 
     public static class Statistics
@@ -63,7 +75,6 @@ public static class HeadUiStrings
         public const string MaxRangeExceeded = "Khoảng thời gian tối đa là 366 ngày";
         public const string InvalidRange = "Ngày bắt đầu phải trước ngày kết thúc";
         public const string KpiUnit = "LƯỢT CHẤM CÔNG";
-        public const string KpiHint = "Theo bản ghi đã có — không phải quân số ngày";
         public const string StatusChipTooltip =
             "Đếm mọi bản ghi có trạng thái này trong khoảng đã lọc (kể cả chưa đủ giờ).";
         public const string UncheckedChipTooltip =

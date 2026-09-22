@@ -25,7 +25,7 @@ public partial class HeadStaffFingerprintPage : UserControl
             return;
         }
 
-        _viewModel = new HeadStaffFingerprintViewModel(App.HeadApi);
+        _viewModel = new HeadStaffFingerprintViewModel(App.HeadApi, App.Sessions.Session.User?.DeptName);
         _viewModel.DeleteFingerprintRequested += OnDeleteFingerprintRequested;
         _viewModel.EditAvatarRequested += OnEditAvatarRequested;
         DataContext = _viewModel;
@@ -58,7 +58,11 @@ public partial class HeadStaffFingerprintPage : UserControl
             return;
         }
 
-        var dialog = new StaffAvatarDialog(row.Fullname, row.EmpCodeFormatted, row.AvatarUrl)
+        var dialog = new StaffAvatarDialog(
+            row.Fullname,
+            row.EmpCodeFormatted,
+            row.AvatarUrl,
+            App.Sessions.Session.User?.DeptName)
         {
             Owner = Window.GetWindow(this)
         };

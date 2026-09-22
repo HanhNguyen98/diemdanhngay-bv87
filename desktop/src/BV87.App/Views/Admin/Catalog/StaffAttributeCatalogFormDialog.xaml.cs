@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.App.ViewModels;
 using BV87.Core.Api;
@@ -33,7 +34,7 @@ public partial class StaffAttributeCatalogFormDialog : AppDialogWindow
             ? (_isEdit ? CatalogUiStrings.Ranks.FormTitleEdit : CatalogUiStrings.Ranks.FormTitleCreate)
             : (_isEdit ? CatalogUiStrings.Positions.FormTitleEdit : CatalogUiStrings.Positions.FormTitleCreate);
 
-        TitleText.Text = Title;
+        UpdateContextHeader(isRank);
         FormCodeLabel = isRank ? CatalogUiStrings.Ranks.FormCode : CatalogUiStrings.Positions.FormCode;
         FormNameLabel = isRank ? CatalogUiStrings.Ranks.FormName : CatalogUiStrings.Positions.FormName;
         FormSortLabel = isRank ? CatalogUiStrings.Ranks.FormSortOrder : CatalogUiStrings.Positions.FormSortOrder;
@@ -59,6 +60,21 @@ public partial class StaffAttributeCatalogFormDialog : AppDialogWindow
     public string FormNameLabel { get; }
     public string FormSortLabel { get; }
     public string ActiveLabel { get; }
+
+    private void UpdateContextHeader(bool isRank)
+    {
+        if (!_isEdit || _initial == null)
+        {
+            DialogContextHeaderHelper.SetBadge(
+                ContextHeader,
+                isRank
+                    ? CatalogUiStrings.Ranks.FormHeaderBadgeCreate
+                    : CatalogUiStrings.Positions.FormHeaderBadgeCreate);
+            return;
+        }
+
+        DialogContextHeaderHelper.SetPerson(ContextHeader, _initial.Name, _initial.CodeFormatted);
+    }
 
     private async Task LoadNextCodeAsync(bool isRank)
     {

@@ -9,6 +9,9 @@ public sealed class StaffAttendanceRow : IPageRowNumber
     public int EmpCode { get; set; }
     public string? EmpCodeFormatted { get; set; }
     public string Fullname { get; set; } = string.Empty;
+    public int? DeptCode { get; set; }
+    public string? DeptCodeFormatted { get; set; }
+    public string DeptDisplay { get; set; } = string.Empty;
     public string? RankName { get; set; }
     public string? PositionName { get; set; }
     public string? Status { get; set; }

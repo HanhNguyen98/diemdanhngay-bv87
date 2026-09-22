@@ -33,6 +33,7 @@ public class AuditService {
     private final AuditLogRepository repository;
     private final DepartmentRepository departmentRepository;
     private final ObjectMapper objectMapper;
+    private final AccountScreenService accountScreenService;
 
     @Transactional
     public void log(AuthUser authUser, String action, Map<String, Object> details) {
@@ -77,7 +78,7 @@ public class AuditService {
             String username,
             int page,
             int pageSize) {
-        if (!authUser.isAdmin() && !authUser.isHead()) {
+        if (!canViewAttendanceAuditLogs(authUser)) {
             throw new AccessDeniedException("Không có quyền xem nhật ký thao tác");
         }
         Integer scopedDept = deptCode;
@@ -110,6 +111,13 @@ public class AuditService {
                 .totalItems(result.getTotalElements())
                 .totalPages(Math.max(result.getTotalPages(), 1))
                 .build();
+    }
+
+    private boolean canViewAttendanceAuditLogs(AuthUser authUser) {
+        if (authUser.isAdmin() || authUser.isHead()) {
+            return true;
+        }
+        return authUser.isDuty() && accountScreenService.hasScreen(authUser, "admin.audit-logs");
     }
 
     private AttendanceAuditLogItemDto toItem(AuditLog row, Map<Integer, Department> depts) {

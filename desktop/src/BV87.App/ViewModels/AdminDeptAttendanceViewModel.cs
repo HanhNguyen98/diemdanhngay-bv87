@@ -56,6 +56,8 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
         _adminApi = adminApi;
         _attendanceApi = attendanceApi;
         _initialDeptCode = initialDeptCode;
+        _draftDeptCode = initialDeptCode;
+        _appliedDeptCode = initialDeptCode;
         _draftDate = initialDate ?? AttendanceFormatHelper.TodayVietnam();
         _appliedDate = _draftDate;
 
@@ -65,7 +67,7 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
         DeptFilterOptions = new ObservableCollection<DeptFilterOption>();
 
         RefreshCommand = new RelayCommand(async () => await LoadAsync(force: true));
-        ApplyFilterCommand = new RelayCommand(async () => await ApplyFilterAsync(), () => _draftDeptCode != null);
+        ApplyFilterCommand = new RelayCommand(async () => await ApplyFilterAsync());
         ResetFilterCommand = new RelayCommand(async () => await ResetFiltersAsync());
         GoToPageCommand = new RelayCommand<int>(
             ChangePage,
@@ -73,6 +75,7 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
         UnlockCommand = new RelayCommand(async () => await UnlockAsync(), CanUnlock);
         RelockCommand = new RelayCommand(async () => await RelockAsync(), CanRelock);
         ApproveUnlockRequestCommand = new RelayCommand(async () => await ApproveUnlockRequestAsync(), CanApproveUnlockRequest);
+        RejectUnlockRequestCommand = new RelayCommand(() => RejectUnlockDialogRequested?.Invoke(this, EventArgs.Empty), CanApproveUnlockRequest);
         ExportCommand = new RelayCommand(ExportReport, () => _allStaff.Count > 0 && !IsLoading);
         QuickActionCommand = new RelayCommand<QuickActionItem>(async action =>
         {
@@ -97,8 +100,11 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
     public ICommand UnlockCommand { get; }
     public ICommand RelockCommand { get; }
     public ICommand ApproveUnlockRequestCommand { get; }
+    public ICommand RejectUnlockRequestCommand { get; }
     public ICommand ExportCommand { get; }
     public ICommand QuickActionCommand { get; }
+
+    public event EventHandler? RejectUnlockDialogRequested;
 
     public int? SelectedDeptFilterDraft
     {
@@ -191,13 +197,15 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
     }
 
     public string DeptTitle =>
-        _summary?.DeptNameDisplay ?? _summary?.DeptName
-        ?? DeptFilterOptions.FirstOrDefault(d => d.DeptCode == _appliedDeptCode)?.Label
-        ?? AdminUiStrings.DeptDetailTitle;
+        IsAllDepartments
+            ? AdminUiStrings.DeptFilterAll
+            : _summary?.DeptNameDisplay ?? _summary?.DeptName
+                ?? DeptFilterOptions.FirstOrDefault(d => d.DeptCode == _appliedDeptCode)?.Label
+                ?? AdminUiStrings.DeptDetailTitle;
 
     public string ProgressText => _summary == null
         ? "—"
-        : $"Đã chấm {_summary.MarkedCount}/{_summary.Total} ({_summary.ProgressPercent}%) · {AdminUiStrings.ProgressScope}";
+        : $"Đã chấm {_summary.MarkedCount}/{_summary.Total} ({_summary.ProgressPercent}%) · {(IsAllDepartments ? AdminUiStrings.ProgressScopeHospital : AdminUiStrings.ProgressScope)}";
 
     public string PageSubtitle => $"{ProgressText} · Ngày {AttendanceDateText}";
 
@@ -235,9 +243,13 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
 
     public bool ShowQuickPanel => SelectedStaff != null;
 
+    public bool ShowDeptColumn => IsAllDepartments;
+
     public bool ShowUnlockButton => CanUnlock();
     public bool ShowRelockButton => CanRelock();
     public bool ShowApproveUnlockButton => CanApproveUnlockRequest();
+
+    private bool IsAllDepartments => _appliedDeptCode == null;
 
     private bool IsAppliedToday => _appliedDate == AttendanceFormatHelper.TodayVietnam();
 
@@ -247,6 +259,7 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
         {
             _departments = await _adminApi.ListDepartmentsAsync();
             DeptFilterOptions.Clear();
+            DeptFilterOptions.Add(new DeptFilterOption(null, AdminUiStrings.DeptFilterAll));
             foreach (var dept in _departments.OrderBy(d => d.DeptCode))
             {
                 DeptFilterOptions.Add(new DeptFilterOption(dept.DeptCode, dept.DisplayLabel));
@@ -273,42 +286,36 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
             ErrorMessage = ex.Message;
         }
 
-        if (_appliedDeptCode != null)
-        {
-            await LoadAsync(force: false);
-        }
+        await LoadAsync(force: false);
     }
 
     private void ApplyDefaultDept(int? preferredDeptCode)
     {
-        if (_departments.Count == 0)
+        if (preferredDeptCode != null)
         {
-            return;
+            var match = _departments.FirstOrDefault(d => d.DeptCode == preferredDeptCode);
+            _draftDeptCode = match?.DeptCode;
+            _appliedDeptCode = _draftDeptCode;
+        }
+        else
+        {
+            _draftDeptCode = null;
+            _appliedDeptCode = null;
         }
 
-        var ordered = _departments.OrderBy(d => d.DeptCode).ToList();
-        var match = preferredDeptCode != null
-            ? ordered.FirstOrDefault(d => d.DeptCode == preferredDeptCode)
-            : null;
-        _draftDeptCode = match?.DeptCode ?? ordered[0].DeptCode;
-        _appliedDeptCode = _draftDeptCode;
         OnPropertyChanged(nameof(SelectedDeptFilterDraft));
+        OnPropertyChanged(nameof(ShowDeptColumn));
     }
 
     private async Task ApplyFilterAsync()
     {
-        if (_draftDeptCode == null)
-        {
-            ErrorMessage = "Chọn đơn vị trước khi tìm kiếm.";
-            return;
-        }
-
         _appliedDeptCode = _draftDeptCode;
         _appliedDate = _draftDate;
         _appliedSearch = SearchText.Trim();
         _appliedStatusFilter = StatusFilter;
         _currentPage = 1;
         OnPropertyChanged(nameof(AttendanceDateText));
+        OnPropertyChanged(nameof(ShowDeptColumn));
         UpdateUnlockButtons();
         await LoadAsync(force: true);
     }
@@ -335,11 +342,6 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
 
     private async Task LoadAsync(bool force)
     {
-        if (_appliedDeptCode == null)
-        {
-            return;
-        }
-
         if (_isLoading && !force)
         {
             return;
@@ -350,9 +352,9 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
 
         try
         {
-            var page = await _attendanceApi.GetAttendancePageAsync(_appliedDeptCode.Value, _appliedDate);
-            _summary = page.Summary;
-            _allStaff = page.Staff ?? [];
+            var (summary, staff) = await LoadRosterAsync();
+            _summary = summary;
+            _allStaff = staff;
 
             UpdateLockState();
             ApplySearchFilters();
@@ -360,6 +362,7 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
             OnPropertyChanged(nameof(DeptTitle));
             OnPropertyChanged(nameof(ProgressText));
             OnPropertyChanged(nameof(PageSubtitle));
+            OnPropertyChanged(nameof(ShowDeptColumn));
             UpdateUnlockButtons();
         }
         catch (ApiException ex)
@@ -377,8 +380,93 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
         }
     }
 
+    private async Task<(AttendanceSummary? Summary, List<StaffAttendanceRow> Staff)> LoadRosterAsync()
+    {
+        if (_appliedDeptCode != null)
+        {
+            var page = await _attendanceApi.GetAttendancePageAsync(_appliedDeptCode.Value, _appliedDate);
+            var staff = page.Staff ?? [];
+            StampDeptDisplay(staff);
+            return (page.Summary, staff);
+        }
+
+        if (_departments.Count == 0)
+        {
+            return (BuildAllDeptSummary(0, 0, 0), []);
+        }
+
+        var pages = await Task.WhenAll(
+            _departments
+                .OrderBy(d => d.DeptCode)
+                .Select(d => _attendanceApi.GetAttendancePageAsync(d.DeptCode, _appliedDate)));
+
+        var merged = new List<StaffAttendanceRow>();
+        long total = 0;
+        long marked = 0;
+        long uncheckedCount = 0;
+        foreach (var page in pages)
+        {
+            var staff = page.Staff ?? [];
+            StampDeptDisplay(staff);
+            merged.AddRange(staff);
+            total += page.Summary?.Total ?? staff.Count;
+            marked += page.Summary?.MarkedCount ?? 0;
+            uncheckedCount += page.Summary?.UncheckedCount ?? 0;
+        }
+
+        merged.Sort((a, b) =>
+        {
+            var dept = (a.DeptCode ?? int.MaxValue).CompareTo(b.DeptCode ?? int.MaxValue);
+            return dept != 0 ? dept : a.EmpCode.CompareTo(b.EmpCode);
+        });
+
+        return (BuildAllDeptSummary(total, marked, uncheckedCount), merged);
+    }
+
+    private AttendanceSummary BuildAllDeptSummary(long total, long marked, long uncheckedCount)
+    {
+        var percent = total == 0 ? 0 : (int)Math.Round(100d * marked / total);
+        return new AttendanceSummary
+        {
+            AttendanceDate = _appliedDate,
+            DeptName = AdminUiStrings.DeptFilterAll,
+            DeptNameDisplay = AdminUiStrings.DeptFilterAll,
+            Total = total,
+            MarkedCount = marked,
+            UncheckedCount = uncheckedCount,
+            ProgressPercent = percent,
+            Editable = true
+        };
+    }
+
+    private void StampDeptDisplay(IReadOnlyList<StaffAttendanceRow> staff)
+    {
+        var labels = _departments.ToDictionary(d => d.DeptCode, d => d.DisplayLabel);
+        foreach (var row in staff)
+        {
+            if (row.DeptCode != null && labels.TryGetValue(row.DeptCode.Value, out var label))
+            {
+                row.DeptDisplay = label;
+            }
+            else
+            {
+                row.DeptDisplay = row.DeptCodeFormatted ?? string.Empty;
+            }
+        }
+    }
+
     private void UpdateLockState()
     {
+        if (IsAllDepartments)
+        {
+            _tableDisabled = false;
+            ShowLockBanner = false;
+            LockBannerText = null;
+            OnPropertyChanged(nameof(LockBannerText));
+            CommandManager.InvalidateRequerySuggested();
+            return;
+        }
+
         var editable = _summary?.Editable ?? false;
         var reportBlocked = _summary?.ReportBlocked ?? false;
         var isToday = IsAppliedToday;
@@ -405,7 +493,8 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
                 || s.EmpCode.ToString().Contains(q)
                 || (s.EmpCodeFormatted ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
                 || (s.PositionName ?? "").ToLowerInvariant().Contains(q)
-                || (s.RankName ?? "").ToLowerInvariant().Contains(q));
+                || (s.RankName ?? "").ToLowerInvariant().Contains(q)
+                || s.DeptDisplay.ToLowerInvariant().Contains(q));
         }
 
         filtered = _appliedStatusFilter switch
@@ -542,6 +631,26 @@ public sealed class AdminDeptAttendanceViewModel : ViewModelBase
         catch (ApiException)
         {
             ShellToast.Danger(ToastCopy.Fail("duyệt", "yêu cầu mở khóa", ToastCopy.Dept(DeptTitle)));
+        }
+    }
+
+    public async Task RejectUnlockRequestAsync(string? note)
+    {
+        if (_summary?.UnlockRequestId == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _adminApi.RejectUnlockRequestAsync(_summary.UnlockRequestId.Value, note);
+            ErrorMessage = null;
+            ShellToast.Success(ToastCopy.Ok("từ chối", "yêu cầu mở khóa", ToastCopy.Dept(DeptTitle)));
+            await LoadAsync(force: true);
+        }
+        catch (ApiException)
+        {
+            ShellToast.Danger(ToastCopy.Fail("từ chối", "yêu cầu mở khóa", ToastCopy.Dept(DeptTitle)));
         }
     }
 

@@ -138,7 +138,7 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
                         <DataGridTemplateColumn Header="{x:Static strings:UtilitiesUiStrings+UnlockRequests.ColStatus}"
-                                                Width="140">
+                                                Width="170">
                             <DataGridTemplateColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader"
                                        BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>

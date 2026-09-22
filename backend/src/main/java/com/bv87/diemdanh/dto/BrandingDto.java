@@ -7,13 +7,14 @@ import lombok.Getter;
 @Builder
 public class BrandingDto {
     private final String portalTitle;
+    private final String portalSubtitle;
     private final String logoUrl;
     private final String loginAvatarUrl;
     /** HH:mm — giờ chốt sổ Chấm công */
     private final String attendanceLockTime;
     /** HH:mm — giờ bắt đầu cho phép Chấm công */
     private final String attendanceOpenTime;
-    /** HH:mm — giờ tự động gửi nhắc nhở */
+    /** HH:mm — persisted; not used to schedule reminders (D-UAT.4). */
     private final String attendanceReminderTime;
     private final String morningInOfficial;
     private final String noonOutOfficial;

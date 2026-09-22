@@ -35,7 +35,7 @@ public partial class HeadAttendancePage : UserControl
             return;
         }
 
-        var vm = new HeadAttendanceViewModel(App.AttendanceApi, user.DeptCode.Value);
+        var vm = new HeadAttendanceViewModel(App.AttendanceApi, user.DeptCode.Value, user.DeptName);
         DataContext = vm;
 
         if (_initialDate != null && vm.SelectDateCommand.CanExecute(_initialDate))

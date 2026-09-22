@@ -34,6 +34,7 @@ public static class UtilitiesUiStrings
         public const string Reject = "Từ chối";
         public const string Empty = "Không có yêu cầu.";
         public const string RejectTitle = "Từ chối yêu cầu mở khóa";
+        public const string RejectBadge = "TỪ CHỐI YÊU CẦU";
         public const string RejectHint = "Có thể ghi lý do từ chối (không bắt buộc).";
         public const string RejectPlaceholder = "Lý do từ chối...";
         public const string ApproveSuccess = "Đã mở khóa ngày công cho Trưởng đơn vị.";
@@ -44,7 +45,7 @@ public static class UtilitiesUiStrings
     public static class ReminderHistory
     {
         public const string PageTitle = "LỊCH SỬ GỬI NHẮC NHỞ";
-        public const string PageSubtitle = "Theo dõi nhắc nhở chấm công thủ công và tự động";
+        public const string PageSubtitle = "Nhắc thủ công theo đơn vị. Bản ghi tự động cũ vẫn xem được.";
         public const string StatsTitle = "Thống kê theo ĐƠN VỊ";
         public const string StatsTotalLabel = "Tổng lần nhắc";
         public const string StatsEmpty = "Không có dữ liệu!";
@@ -135,6 +136,7 @@ public static class UtilitiesUiStrings
         public const string PreviewGateHint = "Chưa nhấn Bắt đầu đăng ký. Chọn nhân viên rồi bấm Bắt đầu đăng ký trước khi quét.";
         public const string EnrollStep = "Lần quét";
         public const string FingerLabelTitle = "Ghi chú ngón tay";
+        public const string FingerLabelBadge = "GHI CHÚ NGÓN TAY";
         public const string FingerLabelHint = "Ví dụ: Ngón cái tay phải";
         public const string FingerLabelRequired = "Vui lòng nhập ghi chú ngón tay.";
         public const string OverwriteTitle = "Ghi đè đăng ký vân tay";

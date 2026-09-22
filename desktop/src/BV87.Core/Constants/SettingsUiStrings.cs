@@ -35,8 +35,7 @@ public static class SettingsUiStrings
         public const string MinLength = "Mật khẩu mới phải có ít nhất 6 ký tự";
 
         public const string AdminResetSectionTitle = "Đặt lại mật khẩu người dùng";
-        public const string AdminResetSectionHint =
-            "Khi người dùng quên mật khẩu, Quản trị viên có thể đặt mật khẩu mới cho tài khoản tại đây.";
+       
         public const string AdminResetUserLabel = "Tên nhân viên";
         public const string AdminResetDeptLabel = "Đơn vị";
         public const string AdminResetSearchLabel = "Tìm theo tên, tên đăng nhập";
@@ -49,7 +48,9 @@ public static class SettingsUiStrings
     public static class Accounts
     {
         public const string PageTitle = "PHÂN QUYỀN";
-        public const string PageSubtitle = "Quản lý tài khoản Quản trị viên và Trưởng đơn vị";
+        public const string PageSubtitle = "Quản lý tài khoản Quản trị viên, Trực ban và Trưởng đơn vị";
+        public const string HubTabAccounts = "Tài khoản";
+        public const string HubTabGroups = "Nhóm quyền";
         public const string NewButton = "Thêm tài khoản";
         public const string SearchPlaceholder = "Tìm tên đăng nhập, họ tên, mã NV, phòng ...";
         public const string RoleFilterLabel = "Vai trò";
@@ -57,6 +58,7 @@ public static class SettingsUiStrings
         public const string RoleAll = "Tất cả vai trò";
         public const string StatusAll = "Tất cả trạng thái";
         public const string RoleAdmin = "Quản trị viên";
+        public const string RoleDuty = "Trực ban bệnh viện";
         public const string RoleHead = "Trưởng đơn vị";
         public const string Active = "Đang hoạt động";
         public const string Inactive = "Ngưng hoạt động";
@@ -64,15 +66,42 @@ public static class SettingsUiStrings
         public const string ColUsername = "TÊN ĐĂNG NHẬP";
         public const string ColEmpCode = "MÃ NV";
         public const string ColFullname = "HỌ VÀ TÊN";
-        public const string ColRole = "VAI TRÒ";
+        public const string ColRole = "NHÓM QUYỀN";
         public const string ColDept = "ĐƠN VỊ";
         public const string ColStatus = "TRẠNG THÁI";
         public const string ColActions = "THAO TÁC";
         public const string ActionsMenuLabel = "Thao tác";
         public const string FormTitleCreate = "Thêm tài khoản";
+        public const string FormHeaderBadgeCreate = "THÊM TÀI KHOẢN";
         public const string FormTitleEdit = "Cập nhật tài khoản";
         public const string DeleteTitle = "Xóa tài khoản";
         public const string ResetPasswordAction = "Đặt lại MK";
+        public const string GrantScreensAction = "Cấp màn hình";
+        public const string GrantScreensTitle = "Cấp màn hình";
+        public const string GrantScreensBadge = "CẤP QUYỀN MÀN HÌNH";
+        public const string GrantScreensSave = "Lưu phân quyền màn hình";
+        public const string GrantScreensHint =
+            "Tick màn hình để cấp toàn bộ thao tác trong màn đó. Bỏ hết tick rồi Lưu để về mặc định theo vai trò.";
+        public const string GrantScreensUsingDefaults = "Đang dùng màn mặc định theo vai trò (chưa ghi đè).";
+        public const string GrantScreensFlash = "Đã cập nhật phân quyền màn hình.";
+        public const string GrantScreensClearsGroup =
+            "Lưu tùy chọn màn hình sẽ bỏ gắn nhóm quyền trên tài khoản này.";
+        public const string FormPermissionGroup = "Nhóm quyền";
+        public const string FormPermissionGroupDefault = "— Chọn nhóm quyền —";
+        public const string FormPermissionGroupBootstrapAdmin = "— Full quyền (admin hệ thống) —";
+        public const string FormPermissionGroupHint =
+            "Vai trò đăng nhập suy từ màn hình trong nhóm đã chọn.";
+        public const string PermissionGroupRequired = "Vui lòng chọn nhóm quyền";
+        public const string FormDept = "Đơn vị";
+        public const string FormDeptPlaceholder = "— Chọn đơn vị —";
+        public const string FormDeptRequired = "Vui lòng chọn đơn vị";
+        public const string FormEmployee = "Nhân viên";
+        public const string FormEmployeePlaceholder = "— Chọn nhân viên —";
+        public const string FormEmployeeRequired = "Vui lòng chọn nhân viên";
+        public const string FormEmployeeHint =
+            "Chọn đơn vị trước, rồi chọn nhân viên thuộc đơn vị đó.";
+        public const string FormDeptFromEmployee = "Đơn vị (theo nhân viên)";
+        public const string ColPermissionGroup = "NHÓM QUYỀN";
         public const string ResetPasswordTitle = "Đặt lại mật khẩu";
         public const string ResetPasswordSubmit = "Đặt lại mật khẩu";
         public const string ResetPasswordConfirm = "Xác nhận mật khẩu mới";
@@ -83,31 +112,31 @@ public static class SettingsUiStrings
         public const string FormPasswordEditHint = "Để trống nếu không đổi mật khẩu";
         public const string FormFullname = "Họ và tên";
         public const string FormRole = "Vai trò";
-        public const string FormEmployee = "Nhân viên";
-        public const string FormEmployeePlaceholder = "— Chọn nhân viên trong danh mục —";
-        public const string FormEmployeeRequired = "Vui lòng chọn nhân viên cho tài khoản Trưởng phòng";
-        public const string FormDeptFromEmployee = "Đơn vị (theo nhân viên)";
+        public const string FormEmployeeRequiredHead = "Vui lòng chọn nhân viên cho tài khoản Trưởng đơn vị";
+        public const string FormEmployeeRequiredDuty = "Vui lòng chọn nhân viên cho tài khoản Trực ban";
         public const string FormHeadDeptTaken =
             "Đơn vị này đã có tài khoản Trưởng đơn vị. Vui lòng sửa hoặc xóa tài khoản hiện có trước khi tạo mới.";
         public const string FormHeadDeptNote =
             "Mỗi đơn vị chỉ được một tài khoản Trưởng đơn vị. Muốn thay người, hãy sửa hoặc xóa tài khoản hiện có.";
+        public const string FormDutyDeptNote =
+            "Trực ban gắn với nhân viên và đơn vị công tác. Quyền vận hành vẫn toàn viện (Tổng quan / Chi tiết).";
         public const string FormActive = "Đang hoạt động";
         public const string UsernameRequired = "Tên đăng nhập là bắt buộc";
         public const string PasswordRequired = "Mật khẩu là bắt buộc khi tạo tài khoản";
         public const string FullnameRequired = "Họ và tên là bắt buộc";
-        public const string CannotDeleteSelf = "Không thể xóa tài khoản đang đăng nhập";
+        public const string CannotDeleteSelf = "Không thể ngưng tài khoản đang đăng nhập";
         public const string FlashCreate = "Đã thêm tài khoản thành công.";
         public const string FlashUpdate = "Đã cập nhật tài khoản thành công.";
-        public const string FlashDeleteFail = "Không thể xóa tài khoản. Vui lòng thử lại.";
+        public const string FlashDeleteFail = "Không thể ngưng tài khoản. Vui lòng thử lại.";
 
         public static string DeleteMessage(string username) =>
-            $"Bạn có chắc muốn xóa tài khoản \"{username}\"? Thao tác không thể hoàn tác.";
+            $"Chuyển tài khoản \"{username}\" sang ngưng hoạt động? Tài khoản sẽ không đăng nhập được nữa.";
 
         public static string ResetPasswordDesc(string fullname, string username) =>
             $"Đặt mật khẩu mới cho tài khoản \"{fullname}\" ({username}).";
 
         public static string FlashDeleteSuccess(string username) =>
-            $"Đã xóa tài khoản \"{username}\" thành công.";
+            $"Đã chuyển tài khoản \"{username}\" sang ngưng hoạt động.";
 
         public static string FlashResetPasswordSuccess(string username) =>
             $"Đã đặt lại mật khẩu cho \"{username}\" thành công.";
@@ -120,6 +149,52 @@ public static class SettingsUiStrings
         }
     }
 
+    public static class PermissionGroups
+    {
+        public const string PageTitle = "NHÓM QUYỀN";
+        public const string PageSubtitle = "Mẫu tập màn hình theo vai trò — gắn khi tạo/sửa tài khoản ở tab Tài khoản";
+        public const string NewButton = "Thêm nhóm";
+        public const string RoleFilterLabel = "Vai trò";
+        public const string RoleAll = "Tất cả vai trò";
+        public const string UnitLabel = "nhóm";
+        public const string ColName = "TÊN NHÓM";
+        public const string ColRole = "VAI TRÒ";
+        public const string ColScreens = "SỐ MÀN";
+        public const string ColAccounts = "TÀI KHOẢN";
+        public const string ColStatus = "TRẠNG THÁI";
+        public const string ColActions = "THAO TÁC";
+        public const string ActionsMenu = "Thao tác";
+        public const string Active = "Đang dùng";
+        public const string Inactive = "Ngưng";
+        public const string FormTitleCreate = "Thêm nhóm quyền";
+        public const string FormTitleEdit = "Sửa nhóm quyền";
+        public const string FormBadgeCreate = "THÊM NHÓM QUYỀN";
+        public const string FormBadgeEdit = "SỬA NHÓM QUYỀN";
+        public const string FormName = "Tên nhóm";
+        public const string FormRole = "Phạm vi (tự suy từ màn)";
+        public const string FormScreens = "Màn hình trong nhóm";
+        public const string FormActive = "Đang dùng";
+        public const string NameRequired = "Tên nhóm là bắt buộc";
+        public const string ScreensRequired = "Chọn ít nhất một màn hình";
+        public const string ScreensMixedShell =
+            "Một nhóm chỉ được chọn màn của một loại tài khoản (Quản trị / Trực ban / Trưởng đơn vị).";
+        public const string DeactivateTitle = "Ngưng nhóm quyền";
+        public const string FlashCreate = "Đã thêm nhóm quyền.";
+        public const string FlashUpdate = "Đã cập nhật nhóm quyền.";
+        public const string FlashDeactivate = "Đã ngưng nhóm quyền.";
+        public const string LoadError = "Không tải được danh sách nhóm quyền.";
+
+        public static string DeactivateMessage(string name) =>
+            $"Ngưng nhóm \"{name}\"? Tài khoản đang gắn nhóm sẽ về mặc định/tùy chỉnh khi đăng nhập lại nếu nhóm không còn hiệu lực.";
+
+        public static class Stats
+        {
+            public const string Total = "Tổng nhóm";
+            public const string Active = "Đang dùng";
+            public const string Inactive = "Đã ngưng";
+        }
+    }
+
     public static class System
     {
         public const string PageTitle = "CÀI ĐẶT HỆ THỐNG";
@@ -127,8 +202,11 @@ public static class SettingsUiStrings
         public const string SectionSystemName = "1. Tên hệ thống";
         public const string SectionBranding = "2. Giao diện & thương hiệu";
         public const string SectionWorkHours = "3. Giờ làm việc hành chính";
-        public const string SectionLock = "4. Khóa mềm ngày công & nhắc thiếu dữ liệu";
+        public const string SectionLock = "4. Khóa mềm ngày công";
         public const string PortalTitle = "Tên hiển thị";
+        public const string PortalSubtitle = "Phụ đề";
+        public const string TitleRequired = "Tên hệ thống không được để trống.";
+        public const string SubtitleRequired = "Phụ đề không được để trống.";
         public const string Logo = "Logo hệ thống";
         public const string LogoSelected = "Đã chọn logo";
         public const string LogoRemove = "Xóa logo";
@@ -166,7 +244,6 @@ public static class SettingsUiStrings
         public const string ReminderTime = "Giờ nhắc thiếu dữ liệu chấm công";
         public const string ReminderTimeHint =
             "Nhắc trưởng đơn vị các khoa còn thiếu giờ vào/ra hoặc chưa chấm (theo ngày hôm qua). Admin vẫn nhắc thủ công từ bảng điều khiển.";
-        public const string TitleRequired = "Tên hệ thống không được để trống.";
         public const string LockTimeRequired = "Giờ khóa mềm không được để trống.";
         public const string ReminderTimeRequired = "Giờ nhắc nhở không được để trống.";
         public const string SaveSuccess = "Đã lưu cấu hình hệ thống thành công.";
@@ -205,11 +282,13 @@ public static class SettingsUiStrings
         public const string StatusRevoked = "Đã thu hồi";
         public const string RenameLabel = "Đổi nhãn";
         public const string RenameLabelTitle = "Đổi nhãn kiosk";
+        public const string RenameLabelBadge = "ĐỔI NHÃN KIOSK";
         public const string RenameLabelField = "Nhãn";
         public const string RenameLabelRequired = "Nhập nhãn (tối đa 100 ký tự).";
         public const string RenameLabelSubmit = "Lưu nhãn";
         public const string RenameLabelSuccess = "Đã cập nhật nhãn kiosk.";
         public const string IssueTitle = "Phát hành token kiosk";
+        public const string IssueBadge = "PHÁT HÀNH TOKEN";
         public const string IssueSubtitle = "Sao chép token vào agent.config.json (kioskToken) cạnh BV87.exe trên máy khoa, rồi chạy BV87.exe --agent.";
         public const string DeptLabel = "Đơn vị";
         public const string DeptRequired = "Chọn đơn vị.";
@@ -227,6 +306,7 @@ public static class SettingsUiStrings
             "Token cũ sẽ bị thu hồi. Dán token mới vào agent.config.json (kioskToken) rồi khởi động lại Agent (BV87.exe --agent).";
         public const string RotateSubmit = "Xoay token";
         public const string IssuedTitle = "Token mới — lưu vào Agent";
+        public const string IssuedBadge = "TOKEN MỚI";
         public const string IssuedHint = "Sao chép vào agent.config.json (kioskToken) cạnh BV87.exe. Token cũng hiện trên danh sách khi đang dùng.";
         public const string Empty = "Chưa có token kiosk nào.";
         public const string LoadError = "Không tải được danh sách token.";

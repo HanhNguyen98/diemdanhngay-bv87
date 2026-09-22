@@ -26,7 +26,7 @@
 | Phạm vi | Toàn viện — mọi đơn vị (`dept_code`) |
 | Session | JWT desktop (`POST /api/auth/desktop/login`) — **cấm** cookie session / `POST /api/auth/login` (D5) |
 | Public không auth | `POST /api/auth/desktop/login`, `POST /api/auth/desktop/refresh`, `GET /api/public/branding`, `GET /actuator/health` |
-| Admin API | `/api/admin/**` bắt buộc `@PreAuthorize("hasRole('ADMIN')")` — **không** còn `/api/admin/ai/**` (D5) |
+| Admin API | Class `/api/admin/**`: `@PreAuthorize("hasAnyRole('ADMIN','DUTY')")` — DUTY **chỉ** endpoint dashboard/chấm công (`SPEC_DUTY` §4). Catalog / accounts / kiosk / audit / reminder-history: thêm `@PreAuthorize("hasRole('ADMIN')")`. **Không** còn `/api/admin/ai/**` (D5) |
 
 ---
 
@@ -169,10 +169,10 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 
 | Method | Path | Mục đích |
 |--------|------|----------|
-| GET | `/api/admin/dashboard` | KPI toàn viện + list summary từng Đơn vị (ngày hôm nay) |
+| GET | `/api/admin/dashboard` | KPI toàn viện + list summary từng Đơn vị. Query `date` optional ISO `yyyy-MM-dd` (D-UAT.3); **omit = hôm nay VN**. Vẫn **một** GET — **cấm** N+1 |
 | GET | `/api/admin/system/storage` | Dung lượng ổ máy chủ từ `disk-status.json` — banner Tổng quan (D-DISK.1). `level`: `ok` \| `warning` \| `danger`. Thiếu file → `ok` + `message=null` |
 | GET | `/api/attendance/summaries` | Chỉ Admin — tổng hợp toàn viện theo `date` |
-| GET | `/api/attendance/page?deptCode=&date=` | Chi tiết 1 đơn vị (summary + staff) — Admin **bắt buộc** truyền `deptCode` |
+| GET | `/api/attendance/page?deptCode=&date=` | Chi tiết 1 đơn vị (summary + staff) — Admin **bắt buộc** truyền `deptCode`. WPF «Tất cả đơn vị» (D-UAT.2) = client gọi **từng** khoa rồi gộp roster — **cấm** omit `deptCode` |
 
 ### 6.2 KPI & bảng tiến độ
 
@@ -188,12 +188,13 @@ Breakpoint chính: **`lg` = 1024px** (`hidden lg:flex`, `lg:hidden`).
 - **Toolbar Tiến độ Chấm công (P16-DashboardRefreshDup):** card **Tiến độ Chấm công** trên **Tổng quan chung** — toolbar chỉ **một** nút **Làm mới** (`DashboardToolbar` → `refresh` / `GET /api/admin/dashboard`). Bộ lọc đơn vị: dropdown + nút **Tìm kiếm** (icon kính lúp); **cấm** thêm nút icon vòng (`RotateCcw`) cạnh **Làm mới** — xóa lọc bằng chọn lại «Tất cả đơn vị» trên dropdown.
 - **Không** thêm cột / KPI ngoài DTO đã review trừ khi cập nhật SPEC
 
-### 6.3 Reminder (P5)
+### 6.3 Reminder (P5 / D-UAT.4)
 
-- Manual: `POST /api/admin/attendance/reminders` body `{ deptCodes: [] }` — khoa còn thiếu dữ liệu chấm công
+- **Chỉ thủ công:** Admin bấm **Gửi nhắc nhở** trên Tổng quan → dialog chọn **từng đơn vị** → `POST /api/admin/attendance/reminders`
+- Body `{ deptCodes: [] , date?: "yyyy-MM-dd" }` — `date` = ngày đang Apply trên Tổng quan (D-UAT.3); **omit** = D−1 (client cũ)
 - Chỉ gửi tới account `HEAD` active; thiếu HEAD → `SKIPPED_NO_HEAD`
-- Auto: `reminderTime`; tối đa 1 lần AUTO/ngày; target = **ngày hôm qua** còn item §4.5.2
-- History: `GET /api/admin/attendance/reminder-history?from=&to=`
+- **Cấm** job AUTO theo `reminderTime` / cron phút — **cấm** tự gửi theo giờ cố định
+- History: `GET /api/admin/attendance/reminder-history?from=&to=` — bản ghi `AUTO` cũ vẫn xem; **không** tạo AUTO mới
 - **Thống kê theo ĐƠN VỊ (P-RemindChart):** donut/pie cố định chiều cao **≤ 240px** — **Top 10** đơn vị theo `sentCount` + 1 lát **Khác** (gom phần còn lại); **cấm** 32 lát riêng. Legend scroll `max-h-40`. Giữa donut: tổng lần nhắc. Tiêu đề card **một dòng** mobile (`whitespace-nowrap`; total xuống dòng dưới `< sm`). Chi tiết đầy đủ + Excel ở bảng phía dưới — không đổi API.
 - Missing punches: `GET /api/attendance/missing-punches`
 
@@ -244,6 +245,8 @@ Xóa chỉ khi nhóm không còn Đơn vị.
 
 **API / DB (giữ tương thích):** mã (INT), tên, nhóm, unitCode, `location`, `locationImageUrl`, head, active — BE có thể còn trường vị trí từ dữ liệu cũ; **UI không expose**.
 
+**Xóa Đơn vị (soft `active=false`):** chỉ chặn khi còn nhân viên **`active=true`**. NV đã ngưng (D-STAFF.2) **không** cản soft-delete Đơn vị (H4).
+
 **UI danh mục Đơn vị (P6-DeptCatalog / D-UI.44):**
 
 - Cột **MÃ ĐƠN VỊ** = khóa chính `dept_code` padded (`deptCodeFormatted`, 01…). Cột `unitCode` = **KÝ HIỆU ĐƠN VỊ** (vd. A2 / C11) — **cấm** hai cột cùng nhãn «MÃ ĐƠN VỊ».
@@ -258,14 +261,35 @@ Xóa chỉ khi nhóm không còn Đơn vị.
 
 | Method | Path |
 |--------|------|
-| GET | `/staff?search&deptCode&page&pageSize` |
+| GET | `/staff?search&deptCode&active&page&pageSize` |
 | GET | `/staff/next-code?deptCode=` |
 | GET/PUT/DELETE | `/staff/{empCode}` |
+| GET | `/staff/{empCode}/deactivate-preview` |
 
 `GET /staff` trả `unitCode` + `deptName` (D-UI.44 — UI cột ĐƠN VỊ = `{unitCode} - {tên}`).
+Query `active` (optional Boolean): `true` = đang hoạt động · `false` = ngưng · **bỏ trống** = tất cả.
 | GET | `/staff/{empCode}/department-history` |
 | POST | `/staff/{empCode}/transfer` |
 | POST | `/staff` |
+
+- **Xóa = ngưng hoạt động (D-STAFF.2 / soft deactivate) — không xóa cứng row `employees`:**
+  - `GET /staff/{empCode}/deactivate-preview` → flags cảnh báo cho UI confirm (không chặn):
+    | Field | Ý nghĩa |
+    |-------|---------|
+    | `alreadyInactive` | NV đã `active=false` |
+    | `isDepartmentCatalogHead` | Đang gán `departments.head_emp_code` |
+    | `headDepartmentLabel` | Nhãn đơn vị đang làm trưởng (nếu có) |
+    | `hasAttendanceRecords` | Đã có ≥1 bản ghi chấm công |
+    | `linkedActiveAccountUsernames` | Tài khoản **active** gắn `emp_code` (sẽ bị tắt) |
+  - `DELETE /staff/{empCode}` (sau confirm):
+    1. NV không tồn tại → 400 VN
+    2. Đã ngưng → 400 *「Nhân viên đã ngưng hoạt động」*
+    3. Set `employees.active = false` — **cấm** `deleteById` / CASCADE xóa attendance
+    4. Mọi `accounts` gắn `emp_code` đang `active` → `active=false` (không đăng nhập / không dùng được nữa)
+    5. Nếu là trưởng catalog → clear `head_emp_code` (Admin phải cấp trưởng + account cho người khác)
+    6. Response message VN thành công (có thể nhắc đã thu hồi trưởng / đã tắt tài khoản)
+  - **Cấm** chặn DELETE vì đã có chấm công / gắn tài khoản / đang là trưởng — chỉ **cảnh báo** trên confirm UI
+  - UI confirm (WPF D-STAFF.2): liệt kê các hệ quả từ preview rồi vẫn cho **Ngưng hoạt động**
 
 - **Luân chuyển đơn vị — API riêng (P6-Adminc):**  
   - `POST /api/admin/staff/{empCode}/transfer`  
@@ -276,7 +300,7 @@ Xóa chỉ khi nhóm không còn Đơn vị.
   - Toast FE: *「Đã chuyển đơn vị. Vân tay vẫn dùng được tại mọi máy quét.」* (hoặc toast thu hồi HEAD nếu áp dụng).
 - **UI Chuyển đơn vị (P6-Admin / P6-Adminc):** nút **「Chuyển đơn vị」** trên grid/card (Admin only); modal chỉ chọn đơn vị đích + lý do (+ thu hồi HEAD); **không** sửa họ tên/cấp bậc/chức vụ; FE gọi **`POST …/transfer`** — **không** dùng `PUT /staff/{empCode}` cho nút này. Vân tay theo `emp_code` — không migrate bảng riêng.
 - **Form Sửa (`PUT /staff/{empCode}`):** vẫn được đổi đơn vị kèm `transferReason` (tương thích). Khi giữ nguyên `rankName`/`positionName` đang lưu trên hồ sơ (legacy ngoài catalog active) → **không** từ chối validate catalog; chỉ validate khi Admin **đổi sang** tên mới. **Khuyến nghị UX:** ưu tiên nút Chuyển đơn vị cho luân chuyển thuần.
-- **Ô Đơn vị đích (P6-Adminb):** `SearchableSelect` (`frontend/src/components/shared/SearchableSelect.jsx`). Options **hai dạng thống nhất**:
+- **Ô Đơn vị đến (P6-Adminb):** `SearchableSelect` (`frontend/src/components/shared/SearchableSelect.jsx`). Options **hai dạng thống nhất**:
   | Dạng | `options` | `value` / `onChange` | Hiện list |
   |------|-----------|----------------------|-----------|
   | Chuỗi (form Sửa NV cấp bậc/chức vụ, lọc Đơn vị) | `string[]` | chính chuỗi đó | chính chuỗi |
@@ -336,14 +360,42 @@ Base: `/api/admin/accounts`
 |------|----------|
 | Stats | `GET /accounts/stats` |
 | List | `GET /accounts?search&role&status&page&pageSize` (max pageSize backend 500) |
-| Create/Update/Delete | POST/PUT/DELETE |
+| Create/Update/Delete | POST/PUT/DELETE — **DELETE = soft deactivate** (`accounts.active=false`), **cấm** `deleteById` (tránh FK notifications / locks / report) — H3 |
 | Reset password | `POST /accounts/{id}/reset-password` — mật khẩu ≥ 6 ký tự |
 | Admin — màn Đổi mật khẩu | **ADMIN only.** Self: **không** ô mật khẩu hiện tại (parity HEAD). Reset user: dropdown **Đơn vị** + dropdown **Tên nhân viên** lọc theo đơn vị và ô tìm; cùng API reset; parity Desktop §2.19.1 · Web follow-up |
-| Không xóa | Tài khoản đang đăng nhập |
-| HEAD account | Bắt buộc chọn `empCode` trong danh mục; **mỗi đơn vị tối đa 1 HEAD active**; sync `department.headEmpCode` |
-| ADMIN account | Có thể gắn / không gắn employee; fullname bắt buộc nếu không gắn |
+| Không ngưng | Tài khoản đang đăng nhập |
+| Đã ngưng | `DELETE` lại → 400 *「Tài khoản đã ngưng hoạt động」* |
+| HEAD account | Bắt buộc chọn `empCode` trong danh mục; **mỗi đơn vị tối đa 1 HEAD active**; sync `department.headEmpCode`; khi ngưng HEAD → clear `head_emp_code` nếu khớp |
+| DUTY account | Bắt buộc chọn `empCode` → gắn `dept` + họ tên từ NV (`SPEC_DUTY` §5). **Không** max-1-HEAD; NV đã gắn tài khoản active khác → lỗi |
+| ADMIN account | Có thể gắn / không gắn employee; fullname bắt buộc nếu không gắn; **không** bắt buộc đơn vị |
 
 Messages uniqueness HEAD: đúng chuỗi `HEAD_DEPT_TAKEN_MESSAGE` trong `AdminAccountService`.
+
+### 8.1 Screen ACL (D-ACL.1)
+
+Binding `SPEC_DUTY` §7 · Desktop §2.19.2b.
+
+| API | Chi tiết |
+|-----|----------|
+| `GET /api/admin/screens` | Catalog đủ màn: `code`, `navId`, `mode`, `label`, `displayLabel` (đã hậu tố nếu trùng), `group` |
+| `GET /api/admin/accounts/{id}/screens` | `{ screenCodes, usingDefaults }` — `usingDefaults=true` khi chưa có dòng DB |
+| `PUT /api/admin/accounts/{id}/screens` | Body `{ screenCodes: string[] }` — replace; validate allowed-for-role + denylist; rỗng = xóa override → về default |
+| Login / `GET /api/auth/me` | Thêm `screenCodes: string[]` = **effective** (default hoặc override) |
+
+**Cấm** non-ADMIN gọi API screens. **Cấm** grant ngoài allowed-for-role.
+
+### 8.2 Nhóm quyền (D-ACL.2 / P2)
+
+Binding `SPEC_DUTY` §7.1 · Desktop §2.19.2c.
+
+| API | Chi tiết |
+|-----|----------|
+| `GET /api/admin/permission-groups?role=` | List nhóm (lọc `roleScope` optional) |
+| `POST /api/admin/permission-groups` | Body `{ name, screenCodes[], active? }` — **`roleScope` suy từ màn** (client **cấm** bắt buộc gửi) |
+| `PUT /api/admin/permission-groups/{id}` | Sửa — đồng bộ `accounts.role` của TK đang gắn nếu `roleScope` đổi |
+| `DELETE /api/admin/permission-groups/{id}` | Soft `active=false` |
+| Account upsert | `permissionGroupId` **bắt buộc** (trừ seed `admin`) · `role` optional — server gán từ nhóm |
+| Effective | Theo `SPEC_DUTY` §7.1 |
 
 ---
 
@@ -351,9 +403,11 @@ Messages uniqueness HEAD: đúng chuỗi `HEAD_DEPT_TAKEN_MESSAGE` trong `AdminA
 
 | API | Nội dung |
 |-----|----------|
-| GET/PUT `/api/admin/settings/branding` | Tên hệ thống, logo, ảnh nền login, giờ nhắc, khóa mềm; **giờ hành chính 4 mốc + 5 biên khung quét + grace** (`SPEC_FINGERPRINT` §4.13.1) |
+| GET/PUT `/api/admin/settings/branding` | Tên hệ thống (`portalTitle` + `portalSubtitle`), logo, ảnh nền login, khóa mềm, giờ hành chính 4 mốc + 5 biên khung quét + grace (`SPEC_FINGERPRINT` §4.13.1). Field `attendanceReminderTime` **còn** trên API/DB (không xóa cột) — **cấm** dùng để chạy job nhắc (D-UAT.4) |
 
-- Nhắc tự động (fallback 08:00) có thể giữ.
+- **D-UAT.5 `portalSubtitle`:** VARCHAR(200); mặc định **Chương trình chấm công**; hiện dòng 2 dưới `portalTitle` trên sidebar/login WPF. GET luôn trả giá trị đã resolve. PUT: gửi chuỗi → lưu (trim; trống → mặc định); omit → giữ DB (client cũ). Flyway **V25** / local `ddl-auto: update`.
+
+- **Cấm** nhắc tự động theo giờ cố định (`reminderTime` / cron). Admin chỉ gửi thủ công theo đơn vị từ Tổng quan.
 - **Không** dùng “giờ mở / giờ chốt sổ 06:00–16:00” để khóa Chấm công HEAD / gửi báo cáo (đã bỏ theo `SPEC_FINGERPRINT` / `SPEC_HEAD`).
 - `settings-system` là form dài (section 1–4 + thanh Lưu): **phải cuộn trong `AdminShell` `<main>`** (§3.1). **Cấm** clip mép dưới mục 3 (Khung nhận quét / Grace) hoặc che bằng footer.
 - Section **3. Giờ làm việc hành chính** (`SystemSettingsPage`) — binding UI (P7 layout, **cấm tràn ngang**; **cấm cắt dọc**):
@@ -370,14 +424,14 @@ Messages uniqueness HEAD: đúng chuỗi `HEAD_DEPT_TAKEN_MESSAGE` trong `AdminA
 | Token | Semantic Tailwind; **cấm** hex cứng |
 
 - Labels: `ADMIN_UI.settings.system` (`workHoursMilestoneTitle`, `workHoursMidpointTitle`, `workHoursGraceTitle`, `resetWorkHours`, label ngắn **Vào sáng** / **Ra trưa**… — không nhét “(mốc chuẩn)” vào từng label ô).
-- Section **4. Khóa mềm ngày công & nhắc thiếu dữ liệu** — binding UI (label **1 hàng**, không rút copy):
+- Section **4. Khóa mềm ngày công** (D-UAT.4) — **cấm** ô `reminderTime` trên WPF:
 
 | Khối | Rule |
 |------|------|
-| Grid | `grid-cols-1 sm:grid-cols-2 gap-4` — full width card; **cấm** `max-w-xl` (cột quá hẹp → wrap label) |
-| Label | Copy giữ nguyên `lockTime` / `reminderTime` trong `ADMIN_UI`. Từ `sm`: **`whitespace-nowrap`** — **cấm** xuống dòng `Giờ nhắc thiếu dữ liệu chấm công`. Mobile 1 cột (`max-sm`) được wrap nếu viewport hẹp |
-| Ô time | Compact: `w-44` (không `w-full`) — số giờ sát icon đồng hồ; hint vẫn full width cột |
-| Token | Semantic Tailwind; **cấm** hex cứng |
+| Grid | **Một** cột `lockTime` full width card — **cấm** cột giờ nhắc |
+| Label | Copy `lockTime` — **cấm** xuống dòng nhãn khóa mềm |
+| Ô time | Compact: Width hợp lý (parity `w-44`) — hint full width |
+| Token | Semantic; **cấm** hex cứng |
 
 ### 9.1 Quản lý token vân tay (P1.2)
 
@@ -485,12 +539,17 @@ Chương trình chạy đồng thời:
 - [ ] Method public có JavaDoc; không dead code
 - [ ] Đã kiểm tra layout mobile (`max-lg`) và desktop (`lg`)
 - [ ] `AdminShell` `<main>`: `.mobile-page-y` + `lg:overflow-y-auto` — `settings-system` cuộn dọc được, không clip mục 3
-- [ ] `settings-system` mục 4: label `reminderTime` 1 hàng (`sm+`); ô time compact `w-44` (không `w-full` / không `max-w-xl`)
+- [x] D-UAT.4 Cài đặt mục 4: **cấm** ô `reminderTime` — nhắc chỉ thủ công Tổng quan
+- [x] D-UAT.5 `portalSubtitle` — Cài đặt mục 1; sidebar/login dưới tên viện
 - [ ] Không tự ý sinh code ngoài yêu cầu / ngoài SPEC
 - [x] Biometric tuân `SPEC_FINGERPRINT.md` (không lộ template public; Web React không DELETE — P2.3; WPF ADMIN/HEAD xóa + audit — P2.4)
-- [x] **P6-Adminb:** `SearchableSelect` string \| `{ value, label }`; modal Chuyển đơn vị chọn Đơn vị đích không crash
+- [x] **P6-Adminb:** `SearchableSelect` string \| `{ value, label }`; modal Chuyển đơn vị chọn Đơn vị đến không crash
 - [x] **P6-Adminc:** `POST /staff/{empCode}/transfer` body chỉ deptCode + lý do (+ revoke HEAD); modal không PUT hồ sơ
 - [x] **P6-Admind:** Lịch sử luân chuyển hiện **Từ → Đến** + ai / khi / lý do
+- [x] **D-STAFF.2:** Xóa NV = soft deactivate + tắt account gắn + clear trưởng; preview cảnh báo; lọc `active` — §7.3
+- [x] **H3:** Xóa tài khoản = soft deactivate (`active=false`) — §8
+- [x] **H4:** Soft-delete Đơn vị chỉ chặn khi còn NV `active=true` — §7.2
+- [x] **H1:** Whitelist DUTY utilities API = `hasScreen` (reminder/audit/fp-history/unlock list) — `SPEC_DUTY` §4/§7
 - [x] **P6-DeptCatalog:** Danh mục Đơn vị — bỏ Vị trí toàn FE; cột Trưởng đơn vị xếp dọc (tên + `headRank`)
 - [x] **D-UI.44:** Cột KÝ HIỆU ĐƠN VỊ (`unitCode`); nhãn ghép `{unitCode} - {tên}` trên màn Admin khác
 - [x] **P6-StatusKpi5Col:** Dashboard + Chi tiết ĐV — status KPI `grid-cols-5`; Tổng tách hàng riêng
@@ -539,7 +598,7 @@ Chi tiết: `docs/SPEC_FINGERPRINT.md`.
 
 ## 16. Phạm vi CẤM (out of scope trừ khi sửa spec)
 
-- Thêm role mới ngoài `ADMIN` / `HEAD`
+- Thêm role mới ngoài `ADMIN` / `HEAD` / `DUTY` (`SPEC_DUTY.md`)
 - Cho HEAD gọi `/api/admin/**`
 - Đổi giờ mặc định / timezone ngoài Settings + `VietnamTimeService`
 - Hardcode hex / đổi UI font chính sang EB Garamond / Inter / Roboto / Arial (stack chuẩn = **Montserrat**)

@@ -19,7 +19,7 @@
 | **Mobile layout** | **Không port** — WPF desktop ≥1280px |
 | **AI Trợ lý** | **Đã xóa** `/api/*/ai/**` (D5) — không gọi, không thêm lại |
 | **Backend** | **Giữ** Spring Boot + MySQL + Flyway |
-| **Client** | **1 exe** — mode `head` \| `admin` (JWT); **cấm** kiosk không đăng nhập trên login (D1.1) |
+| **Client** | **1 exe** — mode `head` \| `admin` \| `duty` (JWT); **cấm** kiosk không đăng nhập trên login (D1.1) |
 | **Enroll USB** | **WPF** sau login — Admin/HEAD → **Tiện ích → Đăng ký vân tay** (§2.17.7); JWT API, không PIN kiosk |
 | **Quét IN/OUT** | `BV87.exe --agent` (§2.22) — **không** trên login; **cấm** Java agent trong repo |
 | **Thứ tự** | Cập nhật SPEC → implement → checklist |
@@ -34,10 +34,10 @@
 | Framework | **WPF** (.NET 8, `net8.0-windows`) |
 | Pattern | MVVM; thư mục `desktop/src/BV87.App`, `desktop/src/BV87.Core` |
 | Phân phối | ZIP portable (`desktop/scripts/pack-release.ps1`); kèm `appsettings.json` + `scripts/` |
-| CLI mode | Admin/HEAD: `BV87.exe` (login) hoặc `--mode=admin\|head` · Kiosk quét: **`BV87.exe --agent`** — **cấm** `--mode=kiosk` |
+| CLI mode | Admin/HEAD/DUTY: `BV87.exe` (login) hoặc `--mode=admin\|head\|duty` · Kiosk quét: **`BV87.exe --agent`** — **cấm** `--mode=kiosk` |
 | API base | `ApiBaseUrl` / `apiBaseUrl` — **prod LAN** `http://192.170.182.14:8081`; dev local `http://localhost:8082` |
 | LAN only | `lanOnlyEnabled: true` trên gói phân phối — client **cấm** trỏ API public/Cloudflare; parity CIDR §8.1 |
-| Một exe | Admin + Head (login JWT) + Agent (`--agent`) — cùng `BV87.exe` |
+| Một exe | Admin + Duty + Head (login JWT) + Agent (`--agent`) — cùng `BV87.exe` |
 | **Cấm public** | **Không** Cloudflare tunnel / Internet cho chấm công — DB + API chỉ server LAN |
 
 ### 1.1 Triển khai LAN (bệnh viện)
@@ -46,12 +46,12 @@
 |-----|---------|
 | Server | 1 máy LAN: Spring Boot + MySQL — **cấm** Cloudflare Tunnel / SPA Nginx |
 | Cổng LAN (D5) | Docker publish **`${ATTENDANCE_PORT:-8081}:8080`** trên `diemdanh-backend` — WPF/Agent gọi `/api/*` thẳng Spring |
-| Client → Server | HTTP tới `ApiBaseUrl` (Admin/Head) hoặc `apiBaseUrl` (Agent) — IP nội bộ |
-| Phân phối user | IT chạy `pack-release.ps1` → ZIP **một gói** gửi Admin + HEAD + Agent |
+| Client → Server | HTTP tới `ApiBaseUrl` (Admin/Duty/Head) hoặc `apiBaseUrl` (Agent) — IP nội bộ |
+| Phân phối user | IT chạy `pack-release.ps1` → ZIP **một gói** gửi Admin + DUTY + HEAD + Agent |
 | Cấu hình | ZIP: `appsettings.json` (`LanOnlyEnabled: true`) + `agent.config.json.example`; kiosk: `init-agent-config.ps1` |
 | Chặn Internet (client) | `LanEndpointGuard` + **Release exe** (`LanDeploymentPolicy`) — **không** tắt được bằng sửa config |
 | Chặn Internet (server) | `KioskLanGateFilter` — `/api/kiosk/**` chỉ CIDR LAN (prod `lan-gate-enabled: true`) |
-| Truy cập dữ liệu | Trong LAN + đăng nhập JWT (Admin/HEAD) hoặc token kiosk (Agent) |
+| Truy cập dữ liệu | Trong LAN + đăng nhập JWT (Admin/Duty/HEAD) hoặc token kiosk (Agent) |
 | Dev local | Repo `Debug` + `lanOnlyEnabled: false` + `localhost:8082` |
 
 **Deliverables packaging**
@@ -128,10 +128,11 @@ Web và WPF có thể cùng `ApiBaseUrl` (dev `localhost:8082`, prod LAN) mà **
 | Mục | Quy tắc |
 |-----|---------|
 | ADMIN | Login thành công → **thẳng** `MainShellWindow` mode **admin** — **cấm** màn chọn mode |
+| DUTY | Login thành công → **thẳng** `MainShellWindow` mode **duty** — `SPEC_DUTY` |
 | HEAD | Login thành công → **thẳng** `MainShellWindow` mode **head** |
 | Kiosk login | **Cấm** — không nút «Chế độ kiosk» trên login |
 | Khôi phục session | **Không** tự mở shell lúc khởi động; sau **Đăng nhập** thành công → mở shell theo `user.role` (hoặc `lastMode` nếu có) |
-| CLI | `BV87.exe --mode=admin\|head` override; **`--mode=kiosk` bị bỏ qua** (không mở shell kiosk) |
+| CLI | `BV87.exe --mode=admin\|head\|duty` override; **`--mode=kiosk` bị bỏ qua** (không mở shell kiosk) |
 | `ModeSelectWindow` | **Đã xóa** (D5) — login gọi `OpenShellAfterLogin` (CLI `--mode` hoặc `OpenShellForCurrentUser`) |
 
 
@@ -147,22 +148,27 @@ Web và WPF có thể cùng `ApiBaseUrl` (dev `localhost:8082`, prod LAN) mà **
 | Icon font (D1.1u) | **Giữ** `Segoe MDL2 Assets` (`IconFont`) — sidebar glyph, không đổi sang Times New Roman |
 | MessageBox (D1.1u) | Dialog hệ thống Windows — font OS mặc định (Segoe UI); không custom trong ticket này |
 | Nav HEAD | Chấm công · Thống kê · Nhân viên · **Tiện ích** (Đăng ký vân tay) · Đổi mật khẩu |
-| Nav ADMIN | Tổng quan · Chi tiết đơn vị · Danh mục… · Cài đặt (placeholder D3–D4) |
+| Nav ADMIN | Tổng quan · Chi tiết đơn vị · Danh mục… · Cài đặt |
+| Nav DUTY | **Chỉ** Tổng quan chung · Chi tiết đơn vị · Đổi mật khẩu — **cấm** catalog / tiện ích nhật ký / kiosk / hệ thống / enroll toàn viện (`SPEC_DUTY`) |
 | Nav KIOSK | **Không** — quét IN/OUT chỉ `BV87.exe --agent` (§2.22) |
 
 ### 2.6 Branding & logo (D0.2 + D5.5)
 
 | Mục | Quy tắc |
 |-----|---------|
-| Nguồn chính | `GET /api/public/branding` — `portalTitle`, `logoUrl`, `loginAvatarUrl` (data URL, parity Web `AppBrandingContext`) |
-| Fallback | **`Resources/Images/hospital-logo.png`** (bundled, cùng nguồn `fingerprint-agent/src/branding/hospital-logo.png`) + `DefaultPortalTitle` **BỆNH VIỆN QUÂN Y 87** khi API/cache trống hoặc lỗi mạng |
+| Nguồn chính | `GET /api/public/branding` — `portalTitle`, `portalSubtitle`, `logoUrl`, `loginAvatarUrl` (data URL) |
+| Fallback | **`Resources/Images/hospital-logo.png`** (bundled) + `DefaultPortalTitle` **BỆNH VIỆN QUÂN Y 87** + `DefaultPortalSubtitle` **Chương trình chấm công** khi API/cache trống hoặc lỗi mạng |
 | Cache offline | `%LocalAppData%/BV87/branding-cache.json` — lần tải API thành công cuối |
 | Service | `AppBrandingService` + `PublicApiClient` — `EnsureLoadedAsync` lúc startup; `ReloadAsync` sau **Lưu cài đặt** Hệ thống |
-| Component | `Controls/HospitalLogo` — logo + phụ đề động |
-| Vị trí bắt buộc | Sidebar `MainShellWindow`, màn **Đăng nhập** |
-| Login WPF | Ảnh nền full-window từ `loginAvatarUrl` + overlay 25% đen (parity `LoginPage.jsx`); header: logo + `portalTitle` + phụ đề **Chương trình chấm công** |
+| Component | `Controls/HospitalLogo` — logo + tên viện (`portalTitle`) + phụ đề (`portalSubtitle`) |
+| Vị trí bắt buộc | Sidebar `MainShellWindow` (trên menu trái), màn **Đăng nhập** |
+| Sidebar / Login | Dòng 1 = `portalTitle` (navy) · dòng 2 = `portalSubtitle` (muted) — **cấm** đè dòng 2 bằng `deptName` HEAD · **cấm** hardcode phụ đề khi đã có API |
+| Login WPF | Ảnh nền full-window từ `loginAvatarUrl` + overlay 25% đen; header: logo + `portalTitle` + `portalSubtitle` |
 | Icon cửa sổ — chrome | `MainShellWindow`, `LoginWindow`, `AgentScanWindow` — **chỉ** logo bundled `Resources/Images/hospital-logo.png` (`WindowBrandingHelper.ApplyHospitalIcon`) · **cấm** `logoUrl` API trên title bar · **cấm** icon Windows mặc định |
+| Icon file `.exe` / shortcut (D-PACK.1) | `ApplicationIcon` = `Resources/Images/app.ico` (multi-size từ logo BV) nhúng vào `BV87.exe` — Explorer + **Send to desktop** + taskbar shortcut dùng icon này · **cấm** để icon cửa sổ generic Windows khi phân phối ZIP |
 | Icon cửa sổ — dialog (D-UI.35) | Mọi `*Dialog` module chính — **Window.Icon** = glyph **Segoe MDL2 Assets** (cùng họ sidebar `ShellNavIcons`) render 32px (`WindowBrandingHelper.ApplyGlyphIcon`) · gán **trước** `ShowDialog` (`Initialized` / constructor — **cấm** chờ `Loaded`) · **cấm** logo BV trên title bar dialog · **cấm** icon Windows mặc định · map: `DialogWindowIcons` §2.6.1 |
+| Title chrome dialog (D-UI.60) | Mọi `*Dialog` — **`Window.Title`** = tiêu đề nghiệp vụ (câu tiếng Việt) · chữ **kế glyph** trên title bar · gán XAML hoặc constructor **trước** `ShowDialog` — **cấm** chrome trống |
+| Header in-card (D-UI.61) | **`DialogContextHeader`** — **cấm** lặp `Window.Title` trong card · chỉ xác nhận ngữ cảnh, **căn giữa** · hint/footnote **dưới** header, không gộp subtitle dài |
 | MessageBox icon | `Show(owner)` thừa hưởng icon chủ (dialog → glyph; shell → logo BV) |
 | Title bar | **Một** câu cố định `ShellUiStrings.WindowTitle` = **`BVQY87 - Chương trình chấm công`** — **cấm** `BV87 — Trưởng đơn vị` / `BV87 — Quản trị viên` / `BV87 — {portalTitle}` trên `MainShellWindow` và `LoginWindow` |
 | Cấm | Text **`BV87`** làm logo/wordmark thay ảnh |
@@ -191,7 +197,7 @@ Glyph = `ShellNavIcons.GetGlyph(navId)` trừ khi ghi chú mã riêng. Font `Ico
 | `AttendanceStatusCatalogFormDialog` | `E734` | nav `statuses` |
 | `FingerLabelDialog` | `E962` | nav `fingerprint-enroll` |
 | Token kiosk (`Issue` / `Issued` / `Pin` / `Label`) | `E7F8` | nav `settings-kiosk` |
-| `AccountFormDialog` | `E72C` | nav `settings-permissions` |
+| `AccountFormDialog` · `AccountScreensDialog` | `E72C` | nav `settings-permissions` |
 | `ResetPasswordDialog` | `E72E` | nav `password` |
 | `UnlockRejectDialog` | `E785` | nav `unlock-requests` |
 | Dialog chưa map | `E81E` | `ShellNavIcons` default |
@@ -199,6 +205,28 @@ Glyph = `ShellNavIcons.GetGlyph(navId)` trừ khi ghi chú mã riêng. Font `Ico
 | ID | Nội dung | Trạng thái |
 |----|----------|------------|
 | D-UI.35 | Dialog `Window.Icon` = glyph MDL2 — không logo BV | [x] |
+| D-UI.60 | Dialog `Window.Title` kế glyph chrome — cấm chrome trống (§2.6) | [x] |
+| D-UI.61 | Dialog in-card `DialogContextHeader` — không lặp title chrome (§2.6.2) | [x] |
+| D-UI.61b | Rollout toàn bộ `*Dialog` còn lại | [x] |
+
+#### 2.6.2 Dialog context header (D-UI.61)
+
+Control: `BV87.App.Controls.DialogContextHeader` · helper `DialogContextHeaderHelper`.
+
+| Mode | Dòng 1 (`PrimaryText`) | Dòng 2 (`SecondaryText`) | Ví dụ |
+|------|--------------------------|---------------------------|--------|
+| **Person** | Họ tên **IN HOA**, SemiBold, `NavyBrush`, căn giữa | Tên đơn vị, 13px, `ContentMutedBrush` | `ResetPasswordDialog` · `StaffTransferDialog` · `StaffCatalogFormDialog` (edit) |
+| **ActionBadge** | Nhãn ngắn **IN HOA**, SemiBold, căn giữa — **không** dòng 2 | — | Create forms · kiosk issue… |
+| **GrantScreens** | `CẤP QUYỀN MÀN HÌNH` (badge) | **`{Họ tên} — {Đơn vị}`** căn giữa (không uppercase bắt buộc) · thiếu đơn vị → chỉ họ tên · ADMIN không ĐV → họ tên / username | `AccountScreensDialog` |
+| **Create badge** | Nhãn tạo mới IN HOA | — | `StaffCatalogFormDialog` (create) → `FormHeaderBadgeCreate` |
+
+| Rule | Chi tiết |
+|------|----------|
+| Chrome vs card | `Window.Title` = hành động (`Đặt lại mật khẩu`, `Cập nhật nhân viên`…) · card **cấm** lặp |
+| Hint | Footnote form… **dưới** header nếu cần · **`AccountScreensDialog`:** **cấm** `GrantScreensHint` / `GrantScreensUsingDefaults` dưới badge (D-ACL.1d) · **cấm** `username — role · …` trên header |
+| Margin | Header `Margin="0,0,0,16"` trước form |
+| Pilot (done) | `ResetPasswordDialog` · `AccountScreensDialog` · `StaffCatalogFormDialog` · `StaffTransferDialog` |
+| Rollout (D-UI.61b) | Mọi `*Dialog` còn lại — cùng control · checklist [x] |
 
 ### 2.7 Design system & Shell v2 (D-UI)
 
@@ -396,7 +424,9 @@ Mọi `DatePicker` WPF (filter, pill ngày, wizard nghỉ trực, lịch thủ c
 
 #### 2.7.7 Page title IN HOA (D-UI.40)
 
-Mọi H1 màn WPF (`PageHeader.Title` / `PageTitleStyle`). **Cấm** đổi wording — chỉ hoa/thường. **Cấm** `ToUpper` lúc bind, converter, `Typography.Capitals`. Literal IN HOA trong constants.
+Mọi H1 màn WPF (`PageHeader.Title` / `PageTitleStyle`). **Cấm** đổi wording constant — chỉ hoa/thường. **Cấm** `ToUpper` lúc bind, converter, `Typography.Capitals` trên **toàn bộ** H1. Literal IN HOA trong constants.
+
+**Ngoại lệ HEAD (D-HEAD.1):** H1 = `{PageTitle} > {deptName}` — `deptName` IN HOA bằng `ToUpper(vi-VN)` trong `HeadPageTitleFormatter` (§2.7.18). Constant `PageTitle` **không** chứa tên đơn vị.
 
 | In scope | Out of scope |
 |----------|----------------|
@@ -431,6 +461,28 @@ Tổng quan: **cấm** hardcode `Title=` trên XAML — bind `OverviewPageTitle`
 | D-UI.40a | SPEC §2.7.7 | [x] |
 | D-UI.40b | Constants `PageTitle` + Tổng quan bind `OverviewPageTitle` | [x] |
 
+#### 2.7.18 HEAD — H1 kèm tên đơn vị (D-HEAD.1)
+
+Mọi màn **mode Head** sau login. ADMIN / DUTY **không** áp dụng.
+
+| Mục | Quy tắc |
+|-----|---------|
+| Format | `{PageTitle} > {TÊN ĐƠN VỊ}` — ví dụ `CHẤM CÔNG HẰNG NGÀY > PHÒNG KẾ HOẠCH - TỔNG HỢP` |
+| `PageTitle` | Constant IN HOA hiện có (`HeadUiStrings` / enroll / đổi MK) — **cấm** nhét tên khoa vào constant |
+| Tên đơn vị | `UserProfile.DeptName` (JWT login) — **chỉ** `dept_name` · **cấm** `unitCode` / mã `dept_code` trên H1 |
+| Hoa | `ToUpper(vi-VN)` trong `HeadPageTitleFormatter.Format` — **cấm** converter XAML · **cấm** invent tiền tố «PHÒNG» nếu DB không có |
+| Thiếu tên | Chỉ `{PageTitle}` |
+| Separator | ` > ` (khoảng trắng, `>`, khoảng trắng) |
+| Phạm vi | Chấm công · Thống kê · Nhân viên · Đăng ký vân tay (HEAD) · Đổi mật khẩu (HEAD) |
+| Cấm | `PageSubtitle` cho tên khoa · đổi H1 ADMIN/DUTY |
+
+Bỏ `HeadUiStrings.Statistics.KpiHint` (dòng hint dưới **LƯỢT CHẤM CÔNG**). Tooltip chip UNCHECKED **giữ** (`UncheckedChipTooltip`).
+
+| ID | Nội dung | Trạng thái |
+|----|----------|------------|
+| D-HEAD.1a | SPEC §2.7.18 / HEAD §7.2 | [x] |
+| D-HEAD.1b | Gỡ KpiHint + H1 HEAD `{title} > {dept}` | [x] |
+
 #### 2.7.8 Toolbar compact — filter liền kề + Excel header (D-UI.41)
 
 Chỉ layout XAML / copy placeholder. **Cấm** đổi API, command mới (trừ bind command **đã có**), công thức đếm.
@@ -438,7 +490,7 @@ Chỉ layout XAML / copy placeholder. **Cấm** đổi API, command mới (trừ
 | Màn | Rule |
 |-----|------|
 | HEAD Thống kê | **Cấm** `PageSubtitle` · **Xuất Excel** ra khỏi `PageHeader.ActionsContent` → **phải** cùng hàng filter (sau Làm mới; cột `*` **chỉ** đẩy Excel, **không** đẩy Tìm kiếm/Xóa/Làm mới) · panel lỗi **Collapsed** khi trống (parity D-UI.38) |
-| Admin Tổng quan | Filter: **Lọc đơn vị** · Combo · **Tìm kiếm** · **Xóa lọc** · **Làm mới** **liền kề** Combo — **cấm** cột `*` giữa Combo và nút · **Làm mới** **không** trên `PageHeader` (giữ **Gửi nhắc nhở**) |
+| Admin Tổng quan | Filter: **Lọc đơn vị** · Combo · **Chọn ngày** · DatePicker · **Tìm kiếm** · **Xóa lọc** · **Làm mới** **liền kề** — label **`FilterToolbarLabelStyle`** (parity Chi tiết, D-UAT.6) — **cấm** `FontSize="20"` · **cấm** cột `*` giữa control và nút · **Làm mới** **không** trên `PageHeader` (giữ **Gửi nhắc nhở**) · ngày = draft đến Tìm kiếm (D-UAT.3 / D-UI.48) |
 | Admin Chi tiết | Hàng 1: … **Tìm kiếm** · **Xóa lọc** (`ResetFilterCommand` đã có) · **Làm mới** — bind nút còn thiếu §2.11.5 |
 | Catalog 5 màn | **Làm mới** sau **Xóa lọc** trên filter card (`FilterToolbarPrimaryButtonStyle`) · **cấm** Làm mới trên `PageHeader` · `ExcelTaskMenu` **ngay sau** nút Thêm (Đơn vị: sau **Thêm đơn vị**; Cấp bậc/Chức vụ/Trạng thái/NV: sau **Thêm …**) · TextBox tìm: `Tag` = `SearchPlaceholder` (watermark `FilterTextBoxStyle`) |
 
@@ -616,7 +668,7 @@ Mọi **cột / ô chỉ đọc** hiện giờ trên WPF. **Cấm** đổi paylo
 |-----|---------|
 | Clock | `{HH:mm} {AM\|PM}` — `HH` = **00–23** (vd. `07:00 AM`, `13:00 PM`) · **cấm** 12h `01:00 PM` |
 | AM / PM | `hour < 12` → `AM` · `hour ≥ 12` → `PM` · `00:00` = AM · `12:00` = PM |
-| Punch GIỜ | `FormatPunchTimes` = chỉ `FormatClockDisplay` nối ` · ` (vd. `07:53 AM`) — **cấm** tiền tố `S` / `Tr` / `C` / `R` · HEAD Chấm công + Admin Chi tiết · MinWidth **280** |
+| Punch GIỜ | `FormatPunchTimes` = chỉ `FormatClockDisplay` nối ` · ` (vd. `07:53 AM`) — **cấm** tiền tố `S` / `Tr` / `C` / `R` · HEAD Chấm công MinWidth **280** · **Admin Chi tiết ĐV**: Width **160** (D-UI.60) |
 | Datetime log | `dd/MM/yyyy HH:mm AM\|PM` (`FormatLogDateTime`) — empty → `—` |
 | Ô nhập | Điền giờ / Cài đặt hệ thống / API times — **giữ** `HH:mm` không hậu tố |
 
@@ -625,6 +677,20 @@ Mọi **cột / ô chỉ đọc** hiện giờ trên WPF. **Cấm** đổi paylo
 | D-UI.54a | SPEC §2.7.19 / §2.17.0 / §2.20.1 | [x] |
 | D-UI.54b | `AttendanceFormatHelper` + `AdminUtilitiesFormatHelper` | [x] |
 | D-UI.54c | Cột GIỜ MinWidth 280 · scan / wizard / Excel | [x] |
+
+#### 2.7.20 Nhóm quyền — filter liền kề + cột chia đều (D-UI.62)
+
+Chỉ layout `PermissionGroupsPage` (tab **Nhóm quyền** hub Phân quyền). **Cấm** đổi API / command.
+
+| Mục | Quy tắc |
+|-----|---------|
+| Filter | Label **Vai trò** + Combo · **Tìm kiếm** · **Xóa lọc** · **Làm mới** **liền kề** (D-UI.41) — **cấm** cột `*` giữa Combo và nút · **cấm** đẩy nút sát mép phải |
+| Bảng | **STT** token · **TÊN NHÓM** Width **160** · cột còn lại (**VAI TRÒ** · **SỐ MÀN** · **TÀI KHOẢN** · **TRẠNG THÁI** · **THAO TÁC**) mỗi cột `Width="*"` MinWidth **120** — chia đều phần còn lại (parity D-UI.46 Phân quyền) |
+
+| ID | Nội dung | Trạng thái |
+|----|----------|------------|
+| D-UI.62a | SPEC §2.7.20 / §2.19.2c | [x] |
+| D-UI.62b | `PermissionGroupsPage` filter + cột | [x] |
 
 ### 2.9 Màn Đăng nhập — polish (D-UI.2)
 
@@ -684,7 +750,7 @@ Màn: `AdminDashboardOverviewPage` · VM: `AdminDashboardViewModel` · Component
 | Footer page size | ComboBox **cùng chiều cao** nút **Trước** / **Sau**; cùng family border/radius (`LineBrush`, corner 8) |
 | Chiều cao pagination | **MinHeight 36px** cho Button pagination và ComboBox page size (`PaginationButtonStyle`, `PaginationComboBoxStyle`) |
 | Label «Hiển thị» | Căn giữa dọc với ComboBox và nút |
-| Toolbar lọc đơn vị | Hàng «Lọc đơn vị» + ComboBox + **Tìm kiếm** + **Xóa lọc** + **Làm mới** **liền kề** Combo — **cấm** cột `*` giữa Combo và nút (D-UI.41) |
+| Toolbar lọc đơn vị | Hàng «Lọc đơn vị» + ComboBox + **Chọn ngày** + DatePicker + **Tìm kiếm** + **Xóa lọc** + **Làm mới** **liền kề** — **cấm** cột `*` giữa control và nút (D-UI.41 / D-UAT.3) |
 | Layout filter | `Grid` 1 hàng hoặc `VerticalAlignment="Center"` trên tất cả control; ComboBox và nút **MinHeight 38px** |
 | Phạm vi ticket | STT + filter toolbar — xem §2.8.1; pagination — **§2.10** (chuẩn toàn app) |
 
@@ -797,12 +863,12 @@ Reference: mockup MediAdmin Dashboard · Màn: `AdminDashboardOverviewPage` · C
 
 | Vùng | Quy tắc |
 |------|---------|
-| Shell header | Brand cố định **«BV87 — Quản trị»** trái — **cấm** đổi theo nav; phải: **`NotificationBell`** (§2.20.5) · separator · avatar · `RoleLabel` · logout icon |
+| Shell header | Brand cố định **«BV87 — Quản trị»** trái — **cấm** đổi theo nav; phải: **`NotificationBell`** (§2.20.5) · separator · avatar · **`Username` đăng nhập** (vd. `giamdoc`) · logout icon — **cấm** hiện `RoleLabel` / «Quản trị viên» cố định |
 | PageHeader (D-UI.40 / D-UI.43) | Title `TỔNG QUAN CHUNG` (`AdminUiStrings.OverviewPageTitle`) — IN HOA · **cấm** `PageSubtitle` · §2.7.7 / §2.7.10 |
-| Page actions | **Gửi nhắc nhở** = `SecondaryButtonStyle` + icon Send trên `PageHeader` · **Làm mới** trên filter card (D-UI.41) — **cấm** Làm mới trên header |
+| Page actions | **Gửi nhắc nhở** = `SecondaryButtonStyle` + icon Send trên `PageHeader` · dialog chọn **từng đơn vị** · `POST` kèm `date` đã Apply · **cấm** auto theo giờ · **Làm mới** trên filter card (D-UI.41) — **cấm** Làm mới trên header |
 | KPI card | Component **`DashboardKpiBar`**: trái số **40px** Navy + «Tổng quân số» + bullet Phạm vi (muted) + bullet Chưa chấm (danger) |
 | KPI pills phải | `WrapPanel` căn phải; `Count == 0` → `KpiChipNeutralStyle`; **`Count > 0`** → `KpiChipActiveStyle` (info highlight) |
-| Filter card | Label **SemiBold** + ComboBox **trái** + **Tìm kiếm** + **Xóa lọc** + **Làm mới** **liền kề** Combo (D-UI.41) — **cấm** cột `*` đẩy nút phải · **cấm** Làm mới trên `PageHeader` |
+| Filter card | Label **`FilterToolbarLabelStyle`** (`FontSizeMd`, parity Chi tiết §2.11.4) + ComboBox **trái** + **Chọn ngày** + DatePicker (`FilterDatePickerStyle`) + **Tìm kiếm** + **Xóa lọc** + **Làm mới** **liền kề** (D-UI.41 / D-UAT.3 / D-UAT.6) — **cấm** `FontSize="20"` · **cấm** cột `*` đẩy nút phải · **cấm** Làm mới trên `PageHeader` · **cấm** live khi đổi ngày |
 | Styles mới | `PrimaryLightButtonStyle`, `NavyButtonStyle`, `KpiChipNeutralStyle`, `KpiChipActiveStyle` trong `ThemeResources` / `ControlStyles` |
 | Parity Web | Tham chiếu logic màu `DashboardKpiBar.jsx`; layout desktop **ưu tiên mockup pill**, không gộp filter vào page toolbar |
 
@@ -827,13 +893,15 @@ Màn: `AdminDeptAttendanceDetailPage` · VM: `AdminDeptAttendanceViewModel` · C
 | Mục | Quy tắc |
 |-----|---------|
 | PageHeader (D-UI.40) | Title `CHI TIẾT ĐƠN VỊ` (`AdminUiStrings.DeptDetailTitle`) — IN HOA · §2.7.7 |
-| KPI dashboard card | **Không** hiển thị card KPI inline — tiến độ `PageHeader.Subtitle` ngay dưới title (`Đã chấm … · toàn đơn vị` · ngày) — D-UI.39 / D-UI.45 · **cấm** `ActionsContent` |
+| KPI dashboard card | **Không** hiển thị card KPI inline — tiến độ `PageHeader.Subtitle` ngay dưới title (`Đã chấm … · toàn đơn vị` / **Tất cả** → `toàn viện` · ngày) — D-UI.39 / D-UI.45 / D-UAT.2 · **cấm** `ActionsContent` |
 | «Chưa chấm» | ComboBox tooltip `UncheckedFilterTooltip` — `!isComplete` · **cấm** hiểu là chưa có trạng thái |
 | Filter | **Một** card gộp: đơn vị · ngày · ô tìm NV · trạng thái · **Tìm kiếm** · **Xóa lọc** · **Làm mới** · unlock/relock/approve · **Xuất báo cáo** |
+| Combo đơn vị (D-UAT.2) | **Tất cả đơn vị** (`DeptCode=null`, `AdminUiStrings.DeptFilterAll`) + danh sách khoa `OrderBy(DeptCode)` — **cấm** chỉ list khoa, không có Tất cả |
 | Lọc client-side | Search + trạng thái **draft** — apply khi **Tìm kiếm** cùng đơn vị/ngày (D-UI.48) · **cấm** live khi gõ/đổi combo · **cấm** card filter riêng thứ hai |
 | Layout page | 5 hàng Grid: header · lock banner · messages · filter card · card bảng `*` `MinHeight=0` |
 | Card bảng | Pattern §2.8: tiêu đề · `DataGrid` scroll · `TablePaginationBar` · panel «Chấm nhanh» (chỉ khi có `SelectedStaff`) |
 | DataGrid scroll | `VerticalScrollBarVisibility=Auto`; `HorizontalScrollBarVisibility=Auto`; `MinWidth=860` |
+| Cột GIỜ / LÝ DO (D-UI.60) | **GIỜ** Width **160** (MinWidth **140**) — hẹp hơn D-UI.54 mặc định · **LÝ DO CHẤM BỔ SUNG** Width `*` MinWidth **240** — đủ hiện hết header |
 | Phân trang | **Bắt buộc** `TablePaginationBar` §2.10; `UnitLabel` = `nhân viên` |
 | Chấm nhanh | Trong card bảng, dưới pagination; `MaxHeight=120` + scroll nếu nhiều nút |
 | Parity Web | Web vẫn có KPI bar — desktop **bỏ** theo ticket; modal Excel/quét/giờ — phase A-08 |
@@ -863,6 +931,7 @@ Parity `DepartmentCatalogPage` filter · pattern menu `StaffCatalogPage` D4.4.1.
 | Label filter | **`FilterToolbarLabelStyle`** — cấm `FontSizeSm` + `ContentMutedBrush` |
 | Nút filter | **`FilterToolbarPrimaryButtonStyle`** (primary light §2.7.1) / **`FilterToolbarSecondaryButtonStyle`** — cấm `PrimaryButtonStyle` / `SecondaryButtonStyle` thuần |
 | Approve unlock | **`FilterToolbarNavyButtonStyle`** (navy) — không dùng primary light |
+| Reject unlock (H2) | **`FilterToolbarSecondaryButtonStyle`** + chữ danger — cạnh Xác nhận khi PENDING · `UnlockRejectDialog` |
 | DatePicker | **`FilterDatePickerStyle`** — Height **42**, căn baseline ComboBox |
 | Baseline | ComboBox · DatePicker · TextBox · nút — **MinHeight 42–44**, `VerticalAlignment="Center"` |
 | THAO TÁC UI | **Một** nút `DeptDetailActionsMenu` — width **120** |
@@ -883,12 +952,12 @@ Bổ sung §2.11.4 — hàng 1 filter **một dòng**, thứ tự cố định t
 | Mục | Quy tắc |
 |-----|---------|
 | Hàng 1 (trái → phải) | **Chọn đơn vị** · **Chọn ngày** · ô tìm (placeholder) · **Trạng thái** · **Tìm kiếm** · **Xóa lọc** · **Làm mới** |
-| Hàng 2 | Giữ nguyên §2.11.4 — unlock / export |
+| Hàng 2 | Giữ nguyên §2.11.4 — unlock / export · **Xác nhận yêu cầu** + **Từ chối yêu cầu** (H2 / `SPEC_DUTY` §3) khi có PENDING — Từ chối mở `UnlockRejectDialog` → `POST …/unlock-requests/{id}/reject` |
 | Label ô tìm | **Cấm** «Họ tên» cạnh ô (D-UI.49) — watermark đủ nghĩa |
 | TextBox tìm | `FilterTextBoxStyle` · Width **360** · `Tag`/`ToolTip` = `DeptDetailSearchPlaceholder` |
 | Làm mới | **`FilterToolbarPrimaryButtonStyle`** (§2.7.1) trong hàng 1 — icon `&#xE72C;` + spin khi `IsRefreshing` · `RefreshCommand` |
 | PageHeader | **Không** có nút Làm mới trong `ActionsContent` |
-| Tìm kiếm vs Làm mới | **Tìm kiếm** = `ApplyFilterCommand` (apply đơn vị + ngày draft) · **Làm mới** = `RefreshCommand` (reload API) |
+| Tìm kiếm vs Làm mới | **Tìm kiếm** = `ApplyFilterCommand` (apply đơn vị + ngày draft; đơn vị **được** `null` = Tất cả) · **Làm mới** = `RefreshCommand` (reload API) |
 | DatePicker | `FilterDatePickerStyle` — text **căn giữa** theo chiều dọc trong ô 42px · hiển thị **`dd/MM/yyyy`** (§2.7.6) |
 
 | ID | Nội dung | Trạng thái |
@@ -909,8 +978,8 @@ Audit WPF: cùng chữ «Chưa chấm / số NV / khoa» nhưng công thức l�
 | WPF row | `IsUnchecked = !IsComplete`; `Complete` từ API, fallback `AttendanceCompleteness` (mirror Web) |
 | Badge | Giữ `statusLabel` / «Đi làm» khi đã có status — **không** đổi badge thành «Chưa chấm» chỉ vì thiếu giờ |
 | KPI HEAD | Hiện **mọi** pill `Count > 0` — **cấm** `.Take(8)` cắt so với `MarkedCount` |
-| Default khoa Chi tiết | `OrderBy(DeptCode)` — khoa mã nhỏ nhất khi vào nav trực tiếp. **Cấm** `_departments[0]` theo thứ tự API |
-| Nav Tổng quan → Chi tiết | Menu **Quản lý** item đầu **Xem chi tiết** → `dashboard-dept` kèm `deptCode` + `attendanceDate` (ngày dashboard = hôm nay VN) |
+| Default khoa Chi tiết | Nav sidebar **không** `deptCode`: **Tất cả đơn vị** (D-UAT.2). Nav **Xem chi tiết** từ Tổng quan: giữ `deptCode` đã chọn. **Cấm** ép khoa mã nhỏ nhất khi user có thể chọn Tất cả |
+| Nav Tổng quan → Chi tiết | Menu **Quản lý** item đầu **Xem chi tiết** → `dashboard-dept` kèm `deptCode` + `attendanceDate` (**ngày đã Apply** trên Tổng quan — D-UAT.3) |
 | Shell | `NavigateToDeptDetail(deptCode, date)` set draft+applied trên `AdminDeptAttendanceDetailPage` rồi load |
 | Combo lọc Tổng quan | Chỉ khoa **có trong payload dashboard** (active hôm nay) + «Tất cả» — **cấm** catalog inactive làm KPI trống |
 | Subtitle Tổng quan | **Cấm** `PageHeader.Subtitle` (D-UI.43) — phạm vi khoa nằm ở filter đã Apply, không dưới title |
@@ -921,6 +990,66 @@ Audit WPF: cùng chữ «Chưa chấm / số NV / khoa» nhưng công thức l�
 | D-DATA.1b | API `complete` trên `StaffAttendanceDto` | [x] |
 | D-DATA.1c | WPF filter + `AttendanceCompleteness` + bỏ Take(8) | [x] |
 | D-DATA.1d | Nav Tổng quan → Chi tiết + default `OrderBy` + combo dashboard | [x] |
+
+#### 2.11.7 Admin Chi tiết đơn vị — Tất cả đơn vị (D-UAT.2)
+
+UAT: bộ lọc **Chọn đơn vị** trên `AdminDeptAttendanceDetailPage` (ADMIN) phải chọn được **Tất cả đơn vị** — parity combo Tổng quan / danh mục NV.
+
+| Mục | Quy tắc |
+|-----|---------|
+| Combo | Hàng đầu: `DeptFilterOption(null, DeptFilterAll)` rồi từng khoa |
+| Tìm kiếm / Xóa lọc | `null` = Tất cả — **cấm** chặn `ApplyFilter` vì chưa chọn khoa; **cấm** message «Chọn đơn vị trước khi tìm kiếm» |
+| Xóa lọc | Combo → **Tất cả đơn vị** · ngày hôm nay VN · xóa ô tìm · trạng thái Tất cả · reload |
+| Load Tất cả | Client gọi `GET /api/attendance/page?deptCode=&date=` **từng** khoa trong combo · gộp roster · cộng `Total` / `MarkedCount` / `UncheckedCount` · `ProgressPercent` |
+| API | **Cấm** omit `deptCode` trên `/api/attendance/page` (SPEC_ADMIN §6.1 vẫn bắt buộc 1 khoa / request) |
+| Subtitle | Tất cả → `Đã chấm {marked}/{total} ({%}%) · toàn viện · Ngày …` — **cấm** chữ «toàn đơn vị» khi đang Tất cả |
+| Cột ĐƠN VỊ | Hiện khi applied = Tất cả (sau Họ tên); ẩn khi 1 khoa — `ShowDeptColumn` + code-behind (parity `GroupColumn` danh mục đơn vị) |
+| Unlock / Relock / Approve | **Ẩn** khi Tất cả — thao tác khóa theo **một** khoa |
+| Lock banner | **Ẩn** khi Tất cả — không trộn `lockMessage` nhiều khoa; chấm nhanh để API từ chối nếu khoa NV đang khóa |
+| Ô tìm | Khi Tất cả, khớp thêm nhãn đơn vị (`DeptDisplay`) |
+
+| ID | Nội dung | Trạng thái |
+|----|----------|------------|
+| D-UAT.2a | SPEC §2.11.7 | [x] |
+| D-UAT.2b | Combo Tất cả + load gộp + cột ĐƠN VỊ | [x] |
+
+#### 2.8.3 Admin Tổng quan — lọc ngày (D-UAT.3)
+
+UAT: màn `AdminDashboardOverviewPage` thêm **Chọn ngày** ngay **sau** combo **Lọc đơn vị**, trước **Tìm kiếm**.
+
+| Mục | Quy tắc |
+|-----|---------|
+| Vị trí | **Lọc đơn vị** · Combo · **Chọn ngày** (`AdminUiStrings.FilterDateLabel`) · `DatePicker` Width **140** · **Tìm kiếm** · **Xóa lọc** · **Làm mới** |
+| DatePicker | `FilterDatePickerStyle` · `dd/MM/yyyy` (§2.7.6) · **draft** đến Tìm kiếm / Xóa lọc / Làm mới (D-UI.48) — **cấm** reload khi đổi ngày trên picker |
+| Mặc định | Hôm nay VN |
+| Xóa lọc | Combo → **Tất cả đơn vị** · ngày → hôm nay VN · reload nếu ngày đổi |
+| Tìm kiếm | Apply combo + ngày draft. Ngày đổi → `GET /api/admin/dashboard?date=` rồi lọc khoa client. Ngày giữ nguyên → chỉ lọc khoa client (như cũ) |
+| Làm mới | Reload API **ngày đã Apply** + **giữ** combo đã Apply |
+| API | `GET /api/admin/dashboard?date=` optional ISO `yyyy-MM-dd`; omit = hôm nay. Vẫn **một** request — **cấm** N+1 `/attendance/page` |
+| Nav Chi tiết | **Xem chi tiết** mang `date` đã Apply trên Tổng quan |
+
+| ID | Nội dung | Trạng thái |
+|----|----------|------------|
+| D-UAT.3a | SPEC §2.8.3 / §6.1 ADMIN | [x] |
+| D-UAT.3b | API `date` + DatePicker Tổng quan | [x] |
+
+#### 2.8.4 Admin Tổng quan — nhắc thủ công theo đơn vị (D-UAT.4)
+
+UAT: **Gửi nhắc nhở** chỉ khi Admin chọn đơn vị và bấm Gửi — **cấm** tự gửi theo giờ `reminderTime`.
+
+| Mục | Quy tắc |
+|-----|---------|
+| Nút | `PageHeader` **Gửi nhắc nhở** — dialog `ReminderDialog` checkbox từng khoa còn thiếu trên **ngày đã Apply** |
+| Gửi | `POST /api/admin/attendance/reminders` `{ deptCodes, date }` — `date` = ngày Apply Tổng quan |
+| Scheduler | **Xóa** `AttendanceReminderScheduler` / `@Scheduled` cron nhắc — **cấm** `sendAutoRemindersIfDue` |
+| Cài đặt | Section 4 **chỉ** khóa mềm — **cấm** ô «Giờ nhắc thiếu dữ liệu chấm công» |
+| Lịch sử | Combo Loại gửi Tự động vẫn lọc bản ghi AUTO **cũ** — không tạo AUTO mới |
+| Body HEAD | Không ghép «Nhắc lúc HH:mm» (không còn giờ job) |
+
+| ID | Nội dung | Trạng thái |
+|----|----------|------------|
+| D-UAT.4a | SPEC §2.8.4 / ADMIN §6.3 | [x] |
+| D-UAT.4b | Tắt cron + ẩn ô giờ nhắc + POST `date` | [x] |
 
 ### 2.12 Admin catalog — Cấp bậc & Chức vụ (D4.0 / D4.1 / A-04.0–A-04.2)
 
@@ -1173,7 +1302,7 @@ Reference Web: `StaffPage.jsx` · API `/api/admin/staff` (paginated) · transfer
 | PageHeader | Chỉ `PageTitle` — **cấm** subtitle (D-UI.36) |
 | Phân trang | **Server-side** — `RegistryPageDto`; vẫn dùng `TablePaginationBar` (§2.10.2 exception) |
 | Stat grid | **Tổng nhân viên** · **Đang hoạt động** · **Ngưng hoạt động** — từ `GET /admin/stats` |
-| Lọc | ComboBox đơn vị + TextBox tìm (watermark) + **Tìm kiếm** / **Xóa lọc** / **Làm mới** (D-UI.41) → query API — **cấm** Làm mới trên `PageHeader` |
+| Lọc | ComboBox đơn vị + ComboBox **trạng thái hoạt động** (Tất cả / Đang hoạt động / Ngưng hoạt động) + TextBox tìm (watermark) + **Tìm kiếm** / **Xóa lọc** / **Làm mới** (D-UI.41) → query API `deptCode` + `active` + `search` — **cấm** Làm mới trên `PageHeader` |
 | Bảng | **STT** · **ĐƠN VỊ** (`{unitCode} - {tên}` — D-UI.44) · **ẢNH ĐẠI DIỆN** · **MÃ NV** · **HỌ TÊN** · **CẤP BẬC** · **CHỨC VỤ** · **TRẠNG THÁI** · **VÂN TAY** · **THAO TÁC** (menu — §2.15.1) |
 | Cột THAO TÁC | Nút **«Thao tác»** → `ContextMenu` (Sửa · Chuyển ĐV · Lịch sử · Xóa vân tay · Xóa); width **120**; **Xóa vân tay** enable khi `fingerprintRegistered`; confirm VN → `DELETE /api/admin/fingerprints/{empCode}` |
 | CRUD form | Tên · đơn vị · cấp bậc/chức vụ (ComboBox catalog) · active · **ảnh đại diện**; đổi đơn vị khi sửa → lý do + thu hồi HEAD nếu cần |
@@ -1182,6 +1311,7 @@ Reference Web: `StaffPage.jsx` · API `/api/admin/staff` (paginated) · transfer
 | Avatar upload | **D-STAFF.1** — form Sửa/Tạo + menu THAO TÁC **Ảnh đại diện** → `StaffAvatarDialog` (§2.15.3). `avatarUrl` data URL JPG/PNG/GIF/WEBP ≤ 5MB (`ImageDataUrlHelper`). HEAD: `HeadStaffFingerprintPage` — `PATCH /api/head/staff/{empCode}/avatar` |
 | Excel | **A-08.4** — §2.16.6 |
 | Xóa vân tay | Menu **Xóa vân tay** — ADMIN mọi NV; `SPEC_FINGERPRINT` §5.1 P2.4 |
+| Xóa NV (D-STAFF.2) | = **ngưng hoạt động** (`SPEC_ADMIN` §7.3) · trước confirm: `GET …/deactivate-preview` · hộp xác nhận liệt kê cảnh báo (trưởng ĐV / đã có chấm công / tài khoản sẽ tắt) rồi **vẫn cho** xác nhận · `DELETE` soft-deactivate · toast lỗi/thành công = **message API** (cấm toast chung nuốt lý do) |
 
 #### 2.15.1 Danh mục Nhân viên — layout & menu thao tác (D4.4.1)
 
@@ -1449,7 +1579,7 @@ Shared: `UtilitiesUiStrings` · `AdminUtilitiesFormatHelper` (datetime `dd/MM/yy
 |-----|---------|
 | Nav id | `fingerprint-enroll` — nhóm **Tiện ích** (ADMIN + HEAD) |
 | View | `FingerprintEnrollPage` |
-| PageHeader HEAD (D-UI.37 / D-UI.43) | Chỉ `PageTitle` — **cấm** `PageSubtitle` (ADMIN **cũng** cấm — D-UI.43) |
+| PageHeader HEAD (D-UI.37 / D-UI.43 / D-HEAD.1) | `ĐĂNG KÝ VÂN TAY > {TÊN ĐƠN VỊ}` · **cấm** `PageSubtitle` (ADMIN **cũng** cấm subtitle — D-UI.43; ADMIN **không** suffix khoa) |
 | Auth | JWT session — **không** kiosk token; **không** PIN enroll Agent |
 | Thiết bị | USB ZK9500 — **`lib\libzkfp.dll`** + **`lib\libzkfpcsharp.dll`** (wrapper C# chính thức) → copy build ra **`lib\` cạnh exe**; fallback System32 nếu thiếu (dev) |
 | Native load (D1.1l) | Trước SDK: `SetDllDirectory(lib\)` + load **`libzkfp.dll`**; gọi API qua **`libzkfpcsharp.zkfp2`** |
@@ -1502,9 +1632,10 @@ Shared: `UtilitiesUiStrings` · `AdminUtilitiesFormatHelper` (datetime `dd/MM/yy
 | Âm thanh (D1.1t) | Phản hồi âm thanh khi banner **Success / Warning / Danger** trên màn enroll — **không** kêu banner **Info** (quét 1/3, 2/3, đang ghép) |
 | Success sound (D1.1t) | POST enroll OK → `scan-success.wav` (parity Agent §9.3.1) |
 | Fail sound (D1.1t) | Merge fail, SDK lỗi, API fail, `EnrollFailed` → `scan-fail.wav` |
-| Warning sound (D1.1t) | Ngón trùng, chưa đủ 3 lần, hủy label, chặn bắt đầu, auto-connect fail → `SystemSounds.Exclamation` (2 nhịp ngắn fallback) |
+| Warning sound (D1.1t) | Ngón trùng, chưa đủ 3 lần, hủy label, chặn bắt đầu, auto-connect fail → 2 nốt PCM peak ≥ **0.90 FS**; fallback `SystemSounds.Exclamation` |
 | Sound thread (D1.1t) | Phát async background — **không** block UI / SdkThread; `DesktopSoundService` |
 | Sound assets (D1.1t) | `Assets/Sounds/scan-success.wav`, `scan-fail.wav` — embedded resource; fallback PCM/`SystemSounds` |
+| Sound volume (D-UAT.1) | Enroll **và** Agent chấm công: WAV peak-normalize — success ≥ **0.90 FS**, fail **cao hơn** success (≥ **0.97 FS**, P2.1i). Phát `MediaPlayer.Volume = 1.0` (max player — **cấm** đổi Windows mixer). Fallback `SoundPlayer` PCM đã normalize. **Cấm** `Console.Beep` làm âm chính |
 | Danh sách NV (D1.1w) | **Đổi** `ListBox` → **`DataGrid`** read-only (`AdminDataGridStyle`); header: **STT** · **Mã NV** · **Họ tên** · **Trạng thái đăng ký** |
 | Cột cell (D1.1ab / D-UI.53) | **STT** `DataGridSttColumnWidth` + `DataGridSttCellStyle` · **Mã NV** 96 + **Họ tên** **220** · cell `AdminDataGridTextCellStyle` — **cấm** `PrimaryBrush` / `SemiBold` trên mã / tên · **cấm** Họ tên `Width=*` |
 | Cột trạng thái (D1.1ab) | Width `*` MinWidth **220** — badge + `TextTrimming` · **cấm** Họ tên `Width=*` chiếm chỗ trạng thái |
@@ -1659,6 +1790,7 @@ Parity §2.11.4 / §2.11.5 / §2.14.3 / §2.10 — nhóm **Tiện ích** ADMIN.
 | D1.1r | Verify enroll E2E + gỡ panel debug; ghi §2.17.7.1 kiến trúc SDK (§2.17.7) | [x] |
 | D1.1s | Layout 3 nhóm: bộ lọc / danh sách NV / quét vân tay (§2.17.7) | [x] |
 | D1.1t | Enroll sound feedback: success/fail/warning WAV + async service (§2.17.7) | [x] |
+| D-UAT.1 | Tăng volume âm quét enroll + chấm công — peak-normalize WAV + `MediaPlayer` 1.0 (§2.17.7 / §2.22) | [x] |
 | D1.1u | Typography global Times New Roman + scale token (§2.1) | [x] |
 | D1.1v | Tăng font size thêm +2pt toàn app (§2.1) | [x] |
 | D1.1w | Enroll staff list: DataGrid + header STT/Mã NV/Họ tên/Trạng thái (§2.17.7) | [x] |
@@ -1738,16 +1870,16 @@ Parity Web `FlashBanner` / `useFlashMessage` (4.5s). Binding nghiệp vụ P16 k
 | D-ATT.2d | Wire HEAD + Admin toast sau wizard | [x] |
 | D-ATT.2e | Web modal + FlashBanner warning khi skip | [x] |
 
-#### 2.18.4 HEAD chấm NV thiếu dữ liệu + giải trình (D-ATT.3 / P17)
+#### 2.18.4 HEAD chấm NV thiếu dữ liệu + lý do chấm bổ sung (D-ATT.3 / P17)
 
-Binding `SPEC_FINGERPRINT` §4.7.2a. WPF `HeadAttendancePage` + Web `AttendancePage`.
+Binding `SPEC_FINGERPRINT` §4.7.2a. WPF `HeadAttendancePage`.
 
 | Mục | Quy tắc |
 |-----|---------|
-| API | Summary `incompleteExplainAllowed`. Ghi: PUT / manual-range / `nghi-truc-assign` |
-| Roster | `editable=false` + P17: mở quick-action NV `IsUnchecked`; khóa NV `IsComplete` |
-| Lưu | `ManualRangeDialog` / Web modal: **Lý do giải trình** bắt buộc. Wizard N.trực: `reason` đủ. VE_SOM: lý do về sớm đủ |
-| Banner | Copy VN: được chấm NV thiếu dữ liệu; NV đã đủ cần Admin mở khóa. **Không** CTA chờ duyệt P15 cho luồng này |
+| API | Summary `incompleteExplainAllowed` + `unlockRequest*`. Ghi: PUT / manual-range / `nghi-truc-assign` |
+| Roster | `editable=false` + P17: mở quick-action NV `IsUnchecked` (chưa bản ghi / chưa status / chưa đủ); khóa NV `IsComplete` |
+| Lưu | `ManualRangeDialog`: **Lý do chấm bổ sung** bắt buộc khi P17. Wizard N.trực: `reason` đủ. VE_SOM: lý do về sớm đủ. Admin Chi tiết ĐV cột **LÝ DO CHẤM BỔ SUNG** |
+| Banner | **Cấm** banner chữ «Ngày quá khứ…» / «Đang xem dữ liệu ngày…». Nút **Gửi yêu cầu mở khóa** trên filter toolbar: **hiện** khi ngày khóa (`!editable`, ≤ hôm nay, không `reportBlocked`); **enable** khi roster có ≥1 NV `IsComplete` và chưa `PENDING`; **disable** khi toàn NV thiếu dữ liệu hoặc đang `PENDING` |
 | `reportBlocked` | Vẫn khóa full roster |
 
 #### 2.18.5 Checklist D-ATT.3
@@ -1755,8 +1887,8 @@ Binding `SPEC_FINGERPRINT` §4.7.2a. WPF `HeadAttendancePage` + Web `AttendanceP
 | ID | Nội dung | Trạng thái |
 |----|----------|------------|
 | D-ATT.3a | SPEC P17 + summary flag + lock service | [x] |
-| D-ATT.3b | WPF HEAD Chấm công — banner + note bắt buộc | [x] |
-| D-ATT.3c | Web HEAD Chấm công — cùng rule | [x] |
+| D-ATT.3b | WPF HEAD — lý do chấm bổ sung bắt buộc; bỏ banner chữ P17/history | [x] |
+| D-ATT.3c | WPF HEAD — nút Gửi yêu cầu mở khóa (enable khi có NV đã đủ) | [x] |
 
 #### 2.18.6 Lịch thủ công — dialog lớn + lọc trạng thái (D-ATT.4)
 
@@ -1803,7 +1935,7 @@ Binding nghiệp vụ: `SPEC_ADMIN.md` §8–§9 · Token kiosk: `SPEC_FINGERPRI
 |-----|------|
 | Nav | `password` — ADMIN + HEAD |
 | Layout | **Hàng ngang** 2 cột khi ADMIN: phải **Đặt lại mật khẩu người dùng** (`Grid` `*` + gap 16px) · HEAD chỉ cột trái (**`Width` 560** cố định, căn trái) · `CardBorderFlatStyle` · `VerticalAlignment=Top` |
-| PageHeader | Chỉ `PageTitle` — **cấm** subtitle dưới tiêu đề |
+| PageHeader | Chỉ `PageTitle` — **cấm** subtitle dưới tiêu đề · HEAD: `ĐỔI MẬT KHẨU > {TÊN ĐƠN VỊ}` (D-HEAD.1) |
 | Password input (D5.1a) | `Controls/PasswordField` — chiều cao **44** cố định · icon mắt toggle hiện/ẩn · **cấm** giãn ngang khi MK dài · dùng trên **Login** + **Đổi mật khẩu** |
 | UI (self) ADMIN | Card trái: **chỉ** mật khẩu mới · xác nhận · **Cập nhật mật khẩu** — **cấm** hiện «Mật khẩu hiện tại» (parity HEAD) |
 | UI (self) HEAD | Card trái: **chỉ** mật khẩu mới · xác nhận · **Cập nhật mật khẩu** — **cấm** hiện «Mật khẩu hiện tại» (HEAD thường quên MK cũ) |
@@ -1833,9 +1965,11 @@ Parity `UserPermissionsPage` · `SPEC_ADMIN` §8.
 | Filter | Vai trò · trạng thái · ô tìm · **Tìm kiếm** · **Xóa lọc** · **Làm mới** (D-UI.42) — **cấm** Làm mới trên `PageHeader` |
 | Pagination | **Server-side** `GET /api/admin/accounts?page&pageSize&search&role&status` |
 | Cột | TÊN ĐĂNG NHẬP **180** (D-UI.42) · MÃ NV · HỌ VÀ TÊN **160** · VAI TRÒ / ĐƠN VỊ / TRẠNG THÁI / THAO TÁC mỗi `*` MinWidth **120** (D-UI.46) — header `x:Static` §2.14.3 |
-| Thao tác | Đặt lại MK · Sửa · Xóa — UI menu §2.19.2.1 |
-| Dialogs | Form create/edit · Reset password · Confirm delete |
+| Thao tác | Đặt lại MK · **Cấp màn hình** · Sửa · Xóa (= **ngưng hoạt động**, soft `active=false` — H3) — UI menu §2.19.2.1 |
+| Dialogs | Form create/edit · Reset password · Confirm **ngưng** · **AccountScreensDialog** (§2.19.2b) |
 | HEAD rules | Bắt buộc `empCode`; max 1 HEAD active/dept; sync dept head — **cấm** invent ngoài §8 |
+| DUTY (D-DUTY.2) | Bắt buộc chọn NV → `empCode` + `deptCode` + họ tên từ NV; **không** max-1-HEAD; form panel NV giống HEAD (`SPEC_DUTY` §5) |
+| Form theo role | HEAD/DUTY: panel NV + đơn vị read-only · ADMIN: họ tên tự nhập — **cấm** form DUTY chỉ họ tên |
 
 #### 2.19.2.1 Phân quyền — menu THAO TÁC (D-UI.21)
 
@@ -1844,14 +1978,63 @@ Parity cột THAO TÁC `StaffCatalogPage` (§2.15.1) / token kiosk. **Cấm** 3 
 | Mục | Rule |
 |-----|------|
 | Nút | **«Thao tác»** (`Accounts.ActionsMenuLabel`) · `SecondaryButtonStyle` · Padding `8,4` · `HorizontalAlignment=Left` |
-| Menu | `ContextMenu` code-behind — **Đặt lại MK** · **Sửa** · **Xóa** (Xóa `DangerFgBrush`) |
+| Menu | `ContextMenu` code-behind — **Đặt lại MK** · **Cấp màn hình** · **Sửa** · **Xóa** (Xóa `DangerFgBrush` — nghĩa = ngưng hoạt động) |
 | Width | **120** |
-| Hành vi | Giữ dialog reset / form sửa / `MessageBox` confirm xóa · cấm xóa tài khoản đang login |
+| Hành vi | Giữ dialog reset / form sửa / `MessageBox` confirm ngưng · cấm ngưng tài khoản đang login · tài khoản đã ngưng: disable Xóa |
 
 | ID | Nội dung | Trạng thái |
 |----|----------|------------|
 | D-UI.21a | SPEC §2.19.2.1 | [x] |
 | D-UI.21b | `PermissionsPage` + `ActionsMenuLabel` | [x] |
+
+#### 2.19.2b Screen ACL — cấp màn hình (D-ACL.1)
+
+Binding `SPEC_DUTY` §7 · `SPEC_ADMIN` §8.1.
+
+| Mục | Rule |
+|-----|------|
+| Ai | **Chỉ ADMIN** mở catalog / dialog cấp màn |
+| Catalog | `GET /api/admin/screens` — **đủ** màn Admin+HEAD+DUTY |
+| Hậu tố trùng tên | ` (Admin)` · ` (Trưởng ĐV)` · ` (Trực ban)` |
+| Dialog | Chọn account → header badge + **`{Họ tên} — {Đơn vị}`** · checklist (disable màn ngoài allowed-for-role / whitelist DUTY) → Lưu `PUT …/screens` · **cấm** 2 dòng hint dài dưới badge |
+| Grant = full | Có màn → thao tác toàn bộ chức năng màn đó |
+| Default | Chưa lưu override → nav role hiện tại |
+| Shell | `UserProfile.ScreenCodes` filter `ShellNavigation` theo `mode.navId` |
+| Login | `screenCodes` trên user payload |
+
+| ID | Nội dung | Trạng thái |
+|----|----------|------------|
+| D-ACL.1a | SPEC + Flyway `account_screens` | [x] |
+| D-ACL.1b | BE catalog + GET/PUT + login | [x] |
+| D-ACL.1c | WPF dialog + menu + shell filter | [x] |
+| D-ACL.1d | `AccountScreensDialog` header = badge + tên NV — ĐV (§2.6.2 GrantScreens) | [x] |
+
+#### 2.19.2c Nhóm quyền (D-ACL.2)
+
+Binding `SPEC_DUTY` §7.1 · `SPEC_ADMIN` §8.2 — **ADMIN only**.
+
+| Mục | Rule |
+|-----|------|
+| Nav | **Một** mục `settings-permissions` — **Phân quyền** · **cấm** nav riêng `settings-permission-groups` |
+| Hub | `PermissionsHubPage` — **2 tab**: (1) **Tài khoản** — gắn NV/TK ↔ nhóm · (2) **Nhóm quyền** — nhóm ↔ màn hình |
+| Tab 1 | List TK + form: username · MK · **nhóm quyền** · **Đơn vị** · **Nhân viên** (lọc theo ĐV) · **cấm** combo ADMIN/HEAD/DUTY · **cấm** họ tên gõ tay (trừ seed `admin`) |
+| Tab 2 | List nhóm · Thêm/Sửa: **tên** + tick màn (**mọi** màn enable) · **cấm** combo Phạm vi vai trò · ngưng nhóm |
+| Tab 2 filter (D-UI.62) | **Vai trò** + Combo + **Tìm kiếm** / **Xóa lọc** / **Làm mới** **liền kề** — **cấm** cột `*` đẩy nút phải |
+| Tab 2 bảng (D-UI.62) | **STT** · **TÊN NHÓM** 160 · **VAI TRÒ** / **SỐ MÀN** / **TÀI KHOẢN** / **TRẠNG THÁI** / **THAO TÁC** mỗi `*` MinWidth 120 |
+| Account form | Nhóm bắt buộc (trừ seed `admin`) · chọn ĐV trước → NV của ĐV · `AccountRole` suy từ nhóm · cột lưới hiện **tên nhóm** |
+| Grant dialog | Lưu tùy chỉnh → clear nhóm · gắn nhóm → clear custom |
+| Screen ACL | `admin.settings-permissions` mở hub · shell **chỉ** nav `settings-permissions` |
+| Seed | Trực ban cơ bản / đầy đủ · Trưởng ĐV chuẩn · Admin đầy đủ |
+
+| ID | Nội dung | Trạng thái |
+|----|----------|------------|
+| D-ACL.2a | SPEC §7.1 / §8.2 / §2.19.2c | [x] |
+| D-ACL.2b | Flyway V28 + BE CRUD + effective | [x] |
+| D-ACL.2c | WPF Nhóm quyền + form account | [x] |
+| D-ACL.2d | Hub 2 tab Tài khoản / Nhóm quyền — bỏ nav riêng | [x] |
+| D-ACL.2e | Role suy từ nhóm · form bỏ roleScope/role · full tick màn | [x] |
+| D-ACL.2f | Form TK: Đơn vị → Nhân viên theo ĐV (mọi nhóm trừ seed admin) | [x] |
+| D-UI.62 | Tab Nhóm quyền — filter liền kề + cột chia đều (§2.7.20) | [x] |
 
 #### 2.19.3 Token kiosk (A-06.2)
 
@@ -1883,13 +2066,13 @@ Parity `SystemSettingsPage` · `SPEC_ADMIN` §9.
 
 | Section | Nội dung |
 |---------|----------|
-| 1 | Tên hệ thống |
+| 1 | Tên hệ thống — Grid **2 cột** `portalTitle` \| `portalSubtitle` (gutter 12; bắt buộc; phụ đề mặc định **Chương trình chấm công**) — **cấm** hint dưới ô · **cấm** xếp dọc hai ô |
 | 2 | Logo + ảnh nền login (data URL PUT) |
 | Chọn ảnh | `OpenFileDialog` **có Owner** = cửa sổ shell (maximized — **cấm** `ShowDialog()` không owner) · JPG/PNG/GIF/WEBP ≤ 5MB → chuỗi `data:{mime};base64,...` |
 | Preview | `DataUrlToImageSourceConverter` ủy quyền `BrandingImageHelper.TryCreateImageSource` (StreamSource) — **cấm** `BitmapImage.UriSource` với data URL |
 | Lưu ảnh | PUT `logoUrl` / `loginAvatarUrl` = **chuỗi data URL** vào DB `MEDIUMTEXT` — **cấm** chỉ lưu path file local |
 | 3 | Giờ hành chính: 4 mốc · 5 midpoint · khung quét read-only · grace · **Đặt lại** draft |
-| 4 | Khóa mềm + giờ nhắc |
+| 4 | Khóa mềm (`lockTime`) — **cấm** ô `reminderTime` trên UI (D-UAT.4: không auto nhắc) |
 | Layout | `ScrollViewer` — **cấm** clip section 3/4 |
 | Nút **Lưu cài đặt** | Thanh cố định cuối form (card footer) · **`PrimaryButtonStyle`** mặc định · căn phải — **cấm** `NavyButtonStyle` · **cấm** `Padding 20,10` / `MinWidth 180` |
 | Lưu (hành vi) | Sau thành công → `App.Branding.ReloadAsync()` (§2.19.6) |
@@ -1907,6 +2090,7 @@ Chỉ `SystemSettingsPage`. **Cấm** đổi field/API.
 | Hint / mô tả ô | `FormHintStyle` — **`FontSizeBase`** · `ContentMutedBrush` · wrap — **cấm** `FontSizeSm` / hardcode 12 |
 | Nút phụ | `FilterToolbarSecondaryButtonStyle` · compact `Padding 10,6` · `MinHeight 32` |
 | Branding | Grid **2 cột** Logo \| Ảnh nền — cùng gutter 12 |
+| Tên hệ thống | Grid **2 cột** Tên hiển thị \| Phụ đề — gutter 12 · TextBox stretch — **cấm** hint phụ đề · **cấm** MaxWidth cứng lệch |
 | Ô giờ | Cột `*` đều · gutter 12 · TextBox stretch (không Width cứng lệch) |
 | Lỗi ảnh | `NullToVisibility` — không chiếm chỗ khi rỗng |
 
@@ -1924,13 +2108,14 @@ Parity Web bootstrap + refresh sau Admin **Lưu cài đặt** (`SystemSettingsPa
 
 | Thành phần | Rule |
 |------------|------|
-| API public | `GET /api/public/branding` — không auth |
-| API admin save | `PUT /api/admin/settings/branding` — giữ nguyên payload §2.19.4 |
+| API public | `GET /api/public/branding` — không auth — gồm `portalSubtitle` |
+| API admin save | `PUT /api/admin/settings/branding` — payload §2.19.4 gồm `portalSubtitle` |
 | `AppBrandingService` | Load startup · cache `%LocalAppData%/BV87/branding-cache.json` · `ReloadAsync` sau Lưu |
-| `BrandingUiApplicator` | Login (header + nền avatar) · sidebar shell · mode select |
+| `BrandingUiApplicator` | Login (header + nền avatar) · sidebar shell — dòng 2 = `portalSubtitle` |
 | `BrandingImageHelper` | Data URL → `BitmapImage`; fallback bundled PNG |
-| `HospitalBranding` | Hằng fallback: `DefaultPortalTitle`, `LoginProgramSubtitle`, `LogoResourcePath` |
-| Normalize title | Legacy `"Bệnh viện Quân y 87"` → `DefaultPortalTitle` (parity Web) |
+| `HospitalBranding` | Hằng fallback: `DefaultPortalTitle`, `DefaultPortalSubtitle`, `LogoResourcePath` |
+| Normalize title | Legacy `"Bệnh viện Quân y 87"` → `DefaultPortalTitle` |
+| Normalize subtitle | Trống / null → `DefaultPortalSubtitle` **Chương trình chấm công** |
 | Không avatar | Nền login = `SurfacePage`; không placeholder text |
 | Cửa sổ đang mở | `ApplyToOpenWindows()` cập nhật ngay sau `ReloadAsync` — không cần đăng xuất |
 
@@ -1971,20 +2156,20 @@ Parity Web `AttendancePage` · UI reference `AdminDeptAttendanceDetailPage` (kh�
 
 | Khối | Rule |
 |------|------|
-| Layout | Title `CHẤM CÔNG HẰNG NGÀY` (D-UI.40) → **một hàng**: `{Progress} · Ngày {dd/MM/yyyy}` **cùng hàng** date pills + DatePicker → lock banner → history banner (ngày ≠ hôm nay) → KPI chips **dưới** hàng ngày → filter card → table + pagination → quick-action |
-| PageHeader / tiến độ (D-UI.37 / D-UI.40) | Title `HeadUiStrings.Attendance.PageTitle` = `CHẤM CÔNG HẰNG NGÀY` · dòng phụ `{Progress} · Ngày {dd/MM/yyyy}` **không** độc lập dưới title — **cùng hàng ngang** với pill Hôm nay / dd/MM · **cấm** pill bar hàng riêng dưới subtitle |
+| Layout | Title `CHẤM CÔNG HẰNG NGÀY > {TÊN ĐƠN VỊ}` (D-HEAD.1) → **một hàng**: `{Progress} · Ngày {dd/MM/yyyy}` **cùng hàng** date pills + DatePicker → KPI chips → filter card (kèm nút mở khóa khi ngày khóa) → table + pagination → quick-action |
+| PageHeader / tiến độ (D-UI.37 / D-HEAD.1) | Title bind `PageTitle` = `HeadPageTitleFormatter` trên `HeadUiStrings.Attendance.PageTitle` · dòng phụ `{Progress} · Ngày {dd/MM/yyyy}` **không** độc lập dưới title — **cùng hàng ngang** với pill Hôm nay / dd/MM · **cấm** pill bar hàng riêng dưới subtitle · **cấm** `x:Static` PageTitle không kèm khoa |
 | Date pills | 4 ngày gần nhất · pill active = `PrimaryLightButtonStyle` · còn lại `FilterToolbarSecondaryButtonStyle` · **ngay sau** text tiến độ (trái → phải: tiến độ · pill · DatePicker) — **cấm** căn phải mép trang |
 | Chọn ngày khác (D6.1a) | `DatePicker` (`FilterDatePickerStyle`) cạnh pill bar · **`DisplayDateEnd` = hôm nay** · parity Web `DatePillBar` + `DatePickerPopover` |
-| History banner (D6.1a) | Khi `SelectedDate` ≠ hôm nay — banner `PrimaryLightBrush` · text parity Web `HistoryViewBanner` · badge «CHẾ ĐỘ XEM» khi read-only |
+| History / lock banner | **Cấm** banner «Đang xem dữ liệu ngày…» và banner chữ «Ngày quá khứ…» / P17 copy — D-ATT.3 |
 | KPI | `statusBreakdown` — chip `PrimaryLightBrush` / `PrimaryLightBorderBrush` · **cấm** hex inline · tooltip `DailyKpiChipTooltip` (chỉ NV đủ dữ liệu; **không** theo lọc bảng) |
-| Filter | Hàng 1: label Tìm kiếm + `FilterTextBoxStyle` · label Trạng thái + ComboBox · **Tìm kiếm** + **Làm mới** (`FilterToolbarPrimaryButtonStyle` §2.7.1) — nút **liền kề** combo trạng thái (§2.20.0) |
+| Filter | Hàng 1: label Tìm kiếm + `FilterTextBoxStyle` · label Trạng thái + ComboBox · **Tìm kiếm** + **Làm mới** + **Gửi yêu cầu mở khóa** (khi ngày khóa — §2.18.4) (`FilterToolbarPrimaryButtonStyle` / navy) — nút **liền kề** |
 | «Chưa chấm» (D-UI.39) | Filter = `!isComplete` · tooltip `UncheckedFilterTooltip` — **cấm** hiểu là «chưa có trạng thái» · badge cột vẫn hiện `statusLabel` |
 | Tiến độ (D-UI.39) | `Đã chấm {marked}/{total} ({pct}%) · toàn đơn vị` — **cấm** đổi công thức `isComplete` · **cấm** gắn số theo bộ lọc bảng |
-| Bảng | `AdminDataGridStyle` · cột MÃ NV · HỌ TÊN · CẤP BẬC · CHỨC VỤ · GIỜ (`FormatClockDisplay`, MinWidth **280**, D-UI.54) · MÁY · TRẠNG THÁI · GHI CHÚ |
+| Bảng | `AdminDataGridStyle` · cột MÃ NV · HỌ TÊN · CẤP BẬC · CHỨC VỤ · GIỜ (`FormatClockDisplay`, MinWidth **280**, D-UI.54) · MÁY · TRẠNG THÁI · **LÝ DO CHẤM BỔ SUNG** |
 | Phân trang | **`TablePaginationBar`** · `UnitLabel` = `nhân viên` · default page size **20** |
-| Quick action | Panel dưới bảng khi chọn NV · `SecondaryButtonStyle` + `ShortLabel` · reuse dialogs §2.18 |
-| Lock banner | `LockBannerStyle` + token danger — parity H-04 |
-| Khoảng cách (D-UI.38) | **16px** giữa mọi khối (header → KPI → filter → bảng) · lock / lỗi / history **Collapsed** khi trống — **cấm** margin còn lại · chip KPI `Margin 0,0,8,8` + host `0,0,0,8` (đáy chip + host = 16; wrap vẫn có 8 dọc) |
+| Quick action | Panel dưới bảng khi chọn NV · `SecondaryButtonStyle` + `ShortLabel` · reuse dialogs §2.18 · P17: NV thiếu vẫn enable; NV đủ disable đến khi unlock |
+| Lock banner | **Cấm** `LockBannerStyle` chữ danger trên HEAD Chấm công (D-ATT.3) — chỉ nút mở khóa trên filter |
+| Khoảng cách (D-UI.38) | **16px** giữa mọi khối (header → KPI → filter → bảng) · lỗi Collapsed khi trống — **cấm** margin còn lại · chip KPI `Margin 0,0,8,8` + host `0,0,0,8` |
 
 #### 2.20.2 Thống kê HEAD (H-05 / D6.2)
 
@@ -1994,9 +2179,9 @@ Binding nghiệp vụ: `SPEC_HEAD.md` §7 · API `/api/attendance/statistics*`.
 |------|------|
 | Layout | `PageHeader` (không Excel, không subtitle) → KPI card → filter card (**Xuất Excel** phải) → bảng lịch sử + `TablePaginationBar` |
 | Biểu đồ | **Cấm** trên Desktop WPF — **không** port `AttendanceTrendChart` / donut dashboard; KPI + bảng đủ parity nghiệp vụ |
-| PageHeader | Chỉ `HeadUiStrings.Statistics.PageTitle` = `THỐNG KÊ LỊCH SỬ CHẤM CÔNG` (D-UI.40) — **cấm** `PageSubtitle` (D-UI.41) |
+| PageHeader | `THỐNG KÊ LỊCH SỬ CHẤM CÔNG > {TÊN ĐƠN VỊ}` (D-HEAD.1) — **cấm** `PageSubtitle` (D-UI.41) |
 | KPI | `statusBreakdown` API (§7.1a) — số lớn **LƯỢT CHẤM CÔNG** = tổng chip = `history.totalItems` · gồm chip **CHƯA CHẤM** (`UNCHECKED` khi > 0) · empty filter: **cấm** ẩn card · chip catalog giữ chỗ count 0 · **cấm** lọc `isComplete` phía WPF · **cấm** hex inline |
-| Đơn vị đếm (D-UI.39) | Hint dưới **LƯỢT CHẤM CÔNG**: `KpiHint` **Theo bản ghi đã có — không phải quân số ngày** · tooltip chip UNCHECKED ≠ filter «Chưa chấm» màn Chấm công · **cấm** đổi công thức §7.1a |
+| Đơn vị đếm (D-UI.39) | **Không** hint dưới **LƯỢT CHẤM CÔNG** (đã gỡ `KpiHint`, D-HEAD.1) · tooltip chip UNCHECKED ≠ filter «Chưa chấm» màn Chấm công · **cấm** đổi công thức §7.1a |
 | Filter | Preset `TIME_RANGE_PRESETS` (**chỉ** điền Từ/Đến draft — D-UI.48) · Từ/Đến `FilterDatePickerStyle` · label **Họ tên** + ô tìm NV · **Tìm kiếm** + **Xóa lọc** + **Làm mới** **liền kề** ô tìm (§2.20.0) · **Xuất Excel** **phải** cùng hàng (D-UI.41) |
 | Phạm vi | Max **366 ngày** · preset mặc định **Tháng này** |
 | Bảng lịch sử | `AdminDataGridStyle` · **STT** (§2.21.1) · NGÀY · NHÂN VIÊN (**chỉ họ tên**, không MSNV dưới tên) · TRẠNG THÁI · GHI CHÚ — cell `AdminDataGridTextCellStyle` |
@@ -2010,7 +2195,7 @@ Polish `HeadStaffFingerprintPage` — parity D6 layout §2.20.0 · binding §2.1
 | Khối | Rule |
 |------|------|
 | Layout | `PageHeader` → KPI stats → filter card → table card + `TablePaginationBar` |
-| PageHeader | Chỉ `HeadUiStrings.Staff.PageTitle` = `NHÂN VIÊN` (D-UI.40) — **cấm** `PageSubtitle` (D-UI.36) |
+| PageHeader | `NHÂN VIÊN > {TÊN ĐƠN VỊ}` (D-HEAD.1) — **cấm** `PageSubtitle` (D-UI.36) |
 | KPI | Tổng NV · Đã đăng ký vân tay · Chưa đăng ký — tính từ danh sách fingerprint · **cấm** chart |
 | Filter | Label **Họ tên / Mã NV** + ô tìm · Combo trạng thái VT (Tất cả / Đã ĐK / Chưa ĐK) · **Tìm kiếm** + **Xóa lọc** + **Làm mới** (`FilterToolbarPrimaryButtonStyle`) — nút **liền kề** combo (§2.20.0) |
 | Bảng | `AdminDataGridStyle` · STT · **ẢNH ĐẠI DIỆN** 140 (§2.15.4) · MÃ NV · HỌ TÊN Width **220** (không `*`) · VÂN TAY `*` MinWidth **280** (badge + tooltip) · THAO TÁC **120** — nút **«Thao tác»** → `ContextMenu` (**Ảnh đại diện** · **Xóa vân tay** disabled nếu chưa ĐK) · **cấm** Họ tên `*` chiếm chỗ Vân tay · **cấm** 2 nút ngang |
@@ -2031,7 +2216,7 @@ Binding `SPEC_HEAD.md` §9 · API `/api/notifications*`.
 | Poll | 60s khi shell mở · refresh khi mở popup |
 | Badge | Số unread (`99+` cap) · ẩn khi 0 |
 | Item | Title + body · nền `PrimaryLightBrush` khi chưa đọc |
-| Click | `ATTENDANCE_REMINDER` / `UNLOCK_REQUEST_RESULT` → nav **Chấm công** + chọn `attendanceDate` · `UNLOCK_REQUEST` (Admin) → **Yêu cầu mở khóa** |
+| Click | `ATTENDANCE_REMINDER` / `UNLOCK_REQUEST_RESULT` → nav **Chấm công** + chọn `attendanceDate` · `UNLOCK_REQUEST` (Admin) → **Yêu cầu mở khóa** · `UNLOCK_REQUEST` (DUTY) → **Chi tiết đơn vị** (`deptCode` + ngày) |
 | Empty | `Không có thông báo.` |
 | Biểu đồ | **Cấm** — không màn full-page |
 
@@ -2057,7 +2242,7 @@ Component: `Controls/AppContentFooter` · Shell: `MainShellWindow`.
 | Mục | Rule |
 |-----|------|
 | Vị trí | `MainShellWindow` — hàng **Auto** dưới `ContentHost` (cột main phải sidebar); **cấm** footer trong sidebar |
-| Phạm vi | Mọi màn sau login (ADMIN + HEAD); **cấm** trên `LoginWindow` |
+| Phạm vi | Mọi màn sau login (ADMIN + DUTY + HEAD); **cấm** trên `LoginWindow` |
 | Text | `© 2026 Bệnh viện Quân y 87 v1.0 — Chương trình chấm công Phát triển bởi Ban Tham mưu - Hành chính` |
 | Strings | `ShellUiStrings.FooterCopyright` |
 | Style | `BorderThickness 0,1,0,0` · `LineBrush` · nền `SurfaceWhiteBrush` · chữ `ContentMutedBrush` · `FontSizeSm` · căn giữa · `Padding 16,10` · `TextWrapping=Wrap` · `TextAlignment=Center` |
@@ -2095,7 +2280,7 @@ Component: `Controls/AppContentFooter` · Shell: `MainShellWindow`.
 | Mục | Quy tắc |
 |-----|---------|
 | Login | **Cấm** — đã gỡ nút «Chế độ kiosk» |
-| `AppMode` | Chỉ `Head` \| `Admin` — **không** có `Kiosk`; CLI `--mode=kiosk` **bỏ qua** |
+| `AppMode` | `Head` \| `Admin` \| `Duty` — **không** có `Kiosk`; CLI `--mode=kiosk` **bỏ qua** |
 | `ModeSelectWindow` | **Đã xóa** (D5) |
 | Quét IN/OUT | Phase **D1.2** — WPF Agent (`BV87.exe --agent`) |
 
@@ -2115,6 +2300,7 @@ Màn quét vân tay IN/OUT toàn viện trên máy kiosk — **không** đăng n
 | Debounce | 2s / `empCode`; gate `scanInFlight` — SPEC §9.3.3 |
 | Banner VN | Map `direction`/`status` — không hiện raw `MORNING_IN` / `AFTERNOON_IN` (§9.3.1) |
 | Âm thanh | `DesktopSoundService` — Success / Warning / Danger theo tone banner; `soundEnabled` trong config |
+| Sound volume (D-UAT.1) | Cùng rule enroll §2.17.7: peak-normalize + `MediaPlayer.Volume = 1.0` mỗi lần quét có banner Success / Warning / Danger — **không** kêu debounce |
 | Auto USB | `deviceAutoOpen` + retry (mặc định 5× / 800ms); hot-plug poll **2.5s** khi chưa kết nối (parity D1.1c) |
 | Heartbeat | Mặc định 30s — Admin token Online/Offline |
 | UI | Fullscreen / maximized; **header** card: logo BV lớn (~100px) + metadata (Đơn vị · Kiosk · Mẫu · Thiết bị) — **cấm** footer status; banner semantic lớn; **giữa**: icon vân tay enroll (Segoe `E962`) + «Chờ đặt ngón tay…» / preview; `Window.Icon` = logo bệnh viện |
@@ -2144,6 +2330,7 @@ Màn quét vân tay IN/OUT toàn viện trên máy kiosk — **không** đăng n
 - [x] D1.2e Agent nhường USB cho enroll cùng PC — lease + event + banner 2 phía (§2.17.7 / §2.22)
 - [x] D-UI.59 Agent header — tên BV 18 SemiBold · Thiết bị cùng kiểu Mẫu đã nạp (§2.22)
 - [x] D1.2f Một `--agent` / máy · ModeSelect không nút kiosk · copy token → `agent.config.json` (§2.19.3 / §2.22)
+- [x] D-UAT.1 Âm quét to hơn — peak-normalize WAV + `MediaPlayer.Volume = 1.0` (§2.22 / §2.17.7)
 
 ---
 
@@ -2188,11 +2375,13 @@ Tham chiếu `SPEC_ADMIN.md`. Loại trừ §10 AI + `ClinicalFlowPanel`. IDs `A
 
 - [x] A-01 Login JWT ADMIN (D0)
 - [x] A-02 Dashboard Tổng quan chung (`AdminDashboardOverviewPage`) — MVP
+- [x] D-UAT.3 DatePicker **Chọn ngày** sau lọc đơn vị trên Tổng quan (§2.8.3)
 - [x] A-02.1 Scroll + pagination bar tiêu chuẩn (§2.8)
 - [x] A-02.2 STT + đồng bộ pagination/filter toolbar (§2.8.1)
 - [x] A-02.3 Pagination bar v2 — `TablePaginationBar` (§2.10)
 - [x] A-02.4 Mockup polish KPI + filter + shell header (§2.11)
 - [x] A-03 Dashboard Chi tiết đơn vị (`AdminDeptAttendanceDetailPage`)
+- [x] D-UAT.2 Combo **Tất cả đơn vị** trên Chi tiết đơn vị (§2.11.7)
 - [ ] A-03.1 Migrate pagination chuẩn §2.10 lên `AdminDeptAttendanceDetailPage` (D-UI.4)
 - [x] A-04.0 Foundation catalog (§2.12)
 - [x] A-04.1 Danh mục Cấp bậc (§2.12)
@@ -2235,6 +2424,14 @@ Tham chiếu `SPEC_ADMIN.md`. Loại trừ §10 AI + `ClinicalFlowPanel`. IDs `A
 | **D0.1** | Shell sidebar, ThemeResources, token persist, auto-refresh, logout clear | [x] |
 | **D0.2** | Logo bệnh viện + MainShell maximized | [x] |
 | **D0.3** | Auto-route ADMIN/HEAD sau login (bỏ chọn mode) | [x] |
+| **D-DUTY.1** | Role DUTY — Tổng quan + Chi tiết + đổi MK (`SPEC_DUTY`) | [x] |
+| **D-DUTY.2** | DUTY form — bắt buộc chọn NV / đơn vị (`SPEC_DUTY` §5) | [x] |
+| **D-ACL.1** | Screen ACL — cấp màn hình Phân quyền (§2.19.2b) | [x] |
+| **D-ACL.1d** | AccountScreensDialog — badge + tên NV — ĐV (§2.6.2 / §2.19.2b) | [x] |
+| **D-ACL.2** | Nhóm quyền (permission groups) — SPEC + BE + WPF (§2.19.2c) | [x] |
+| **D-ACL.2d** | Phân quyền hub 2 tab Tài khoản / Nhóm quyền (§2.19.2c) | [x] |
+| **D-ACL.2e** | Role suy từ nhóm — bỏ combo role/scope UI (§2.19.2c) | [x] |
+| **D-ACL.2f** | Form TK Đơn vị → Nhân viên theo ĐV (§2.19.2c) | [x] |
 | **D-UI** | Design system + Shell v2 (mockup admin) | [x] |
 | **D-UI.2** | Polish màn Đăng nhập (§2.9) | [x] |
 | **D-UI.3** | A-02.3: `TablePaginationBar` v2 (reference Tổng quan) | [x] |
@@ -2275,6 +2472,7 @@ Tham chiếu `SPEC_ADMIN.md`. Loại trừ §10 AI + `ClinicalFlowPanel`. IDs `A
 | **D-UI.38** | Chấm công HEAD — khoảng cách khối đều 16px (§2.20.1) | [x] |
 | **D-UI.39** | Hint đơn vị đếm — Chấm công vs Thống kê; tooltip «Chưa chấm» (§2.20.1 / §2.20.2) | [x] |
 | **D-UI.40** | Page title IN HOA mọi màn WPF (§2.7.7) | [x] |
+| **D-HEAD.1** | Gỡ KpiHint Thống kê + H1 HEAD kèm tên đơn vị (§2.7.18) | [x] |
 | **D-UI.41** | Toolbar compact — Thống kê / Tổng quan / Chi tiết / catalog (§2.7.8) | [x] |
 | **D-UI.42** | Stat card label 20px + Phân quyền username 180 + Làm mới sau Xóa lọc (§2.7.9) | [x] |
 | **D-UI.43** | ADMIN bỏ PageSubtitle · placeholder ô tìm · chuông 24 / body `FontSizeMd` (§2.7.10) | [x] |
@@ -2294,23 +2492,45 @@ Tham chiếu `SPEC_ADMIN.md`. Loại trừ §10 AI + `ClinicalFlowPanel`. IDs `A
 | **D-UI.57** | Audit/nhắc/token — nới cột thời gian, ngày chấm, thời gian gửi, nhãn (§2.17.2–3 / §2.19.3) | [x] |
 | **D-UI.58** | Audit ĐƠN VỊ 150 · Unlock LÝ DO max 220 / GỬI LÚC 210 · Lịch sử VT THỜI GIAN 200 | [x] |
 | **D-UI.59** | Agent — tên BV 18 SemiBold · Thiết bị cùng font/màu Mẫu đã nạp (§2.22) | [x] |
+| **D-UI.60** | Chi tiết ĐV — cột GIỜ hẹp 160 · LÝ DO CHẤM BỔ SUNG MinWidth 240 (§2.11.2) | [x] |
+| **D-UI.60** | Dialog — `Window.Title` kế glyph chrome (§2.6) | [x] |
+| **D-UI.61** | Dialog in-card `DialogContextHeader` — pilot 4 màn (§2.6.2) | [x] |
+| **D-UI.61b** | Rollout `DialogContextHeader` — mọi `*Dialog` (§2.6.2) | [x] |
+| **D-UI.62** | Nhóm quyền — filter liền kề + cột chia đều (§2.7.20 / §2.19.2c) | [x] |
 | **D1.2f** | Một `--agent` / máy · gỡ nút ModeSelect kiosk · copy token WPF → `agent.config.json` | [x] |
+| **D-UAT.1** | Tăng volume âm quét enroll + chấm công (§2.17.7 / §2.22) | [x] |
+| **D-UAT.2** | Chi tiết đơn vị ADMIN — combo Tất cả đơn vị (§2.11.7) | [x] |
+| **D-UAT.3** | Tổng quan ADMIN — DatePicker sau lọc đơn vị (§2.8.3) | [x] |
+| **D-UAT.4** | Nhắc nhở chỉ thủ công theo đơn vị — tắt cron AUTO (§2.8.4) | [x] |
+| **D-UAT.5** | Phụ đề sidebar dưới tên viện — chỉnh Cài đặt mục 1 (§2.6 / §2.19.4) | [x] |
+| **D-UAT.6** | Tổng quan filter label = `FilterToolbarLabelStyle` (parity Chi tiết) | [x] |
 | **D-STAT.1** | KPI thống kê HEAD đếm như bảng lịch sử (§2.20.2) | [x] |
 | **D-STAT.1b** | Empty filter — giữ bố cục KPI thống kê, số = 0 (§2.20.2) | [x] |
 | **D-DATA.1** | Đồng bộ Chưa chấm + nav Tổng quan → Chi tiết (§2.11.6) | [x] |
 | **D-ATT.1** | Wizard nghỉ trực + lịch thủ công shared (§2.18) | [x] |
 | **D-ATT.2** | Wizard nghỉ trực layout lớn + toast shell (§2.18.2) | [x] |
-| **D-ATT.3** | HEAD chấm NV thiếu + giải trình P17 (§2.18.4) | [x] |
+| **D-ATT.3** | HEAD chấm NV thiếu + lý do chấm bổ sung P17 + nút mở khóa P15 (§2.18.4) | [x] |
 | **D-ATT.4** | Lịch thủ công — dialog lớn, STT, phân trang, lọc trạng thái (§2.18.6) | [x] |
 | **D-STAFF.1** | Avatar NV — Admin form + HEAD danh mục (§2.15 / §2.17.6) | [x] |
 | **D-STAFF.1a** | Dialog avatar — header Contact + overlay chọn/xóa (§2.15.3) | [x] |
 | **D-STAFF.1b** | HEAD Nhân viên — menu THAO TÁC dropdown (§2.17.6 / §2.20.4) | [x] |
 | **D-STAFF.1c** | Cột Ảnh đại diện trước MÃ NV — Admin + HEAD (§2.15.4) | [x] |
+| **D-STAFF.2** | Xóa NV = soft deactivate + tắt account + confirm cảnh báo + lọc `active` (§2.15) | [x] |
+| **H2-DUTY** | Chi tiết ĐV — nút Từ chối yêu cầu mở khóa (§2.11.5 / `SPEC_DUTY` §3) | [x] |
+| **H1-ACL** | DUTY whitelist utilities — API `hasScreen` (`SPEC_DUTY` §7) | [x] |
+| **H3-ACC** | Xóa tài khoản = soft deactivate (§2.19.2) | [x] |
+| **H4-DEPT** | Soft-delete ĐV chỉ đếm NV active (`SPEC_ADMIN` §7.2) | [x] |
 | **D1.1** | WPF enroll USB (§2.17.7); bỏ kiosk login | [x] |
 | **D1.2** | WPF Agent chấm công (`--agent`, §2.22) | [x] |
 | **D1.2d** | Enroll: hết hiểu nhầm cáp khi agent giữ USB (§2.17.7 / §2.22) | [x] |
 | **D1.2e** | Agent nhường USB cho enroll cùng PC (§2.17.7 / §2.22) | [x] |
 | **D1.2f** | Single-instance `--agent` + copy `agent.config.json` (§2.22 / §2.19.3) | [x] |
+| **D-UAT.1** | Tăng volume âm quét enroll + chấm công (§2.17.7 / §2.22) | [x] |
+| **D-UAT.2** | Chi tiết đơn vị ADMIN — combo Tất cả đơn vị (§2.11.7) | [x] |
+| **D-UAT.3** | Tổng quan ADMIN — DatePicker sau lọc đơn vị (§2.8.3) | [x] |
+| **D-UAT.4** | Nhắc nhở chỉ thủ công theo đơn vị — tắt cron AUTO (§2.8.4) | [x] |
+| **D-UAT.5** | Phụ đề sidebar dưới tên viện — chỉnh Cài đặt mục 1 (§2.6 / §2.19.4) | [x] |
+| **D-UAT.6** | Tổng quan filter label = `FilterToolbarLabelStyle` (parity Chi tiết) | [x] |
 | **D5** | Xóa `frontend/` + `fingerprint-agent/` · API prod `:8081` = Spring · bỏ AI + session web · D5.6 gỡ PIN kiosk | [x] |
 | **B-BACKUP** | Dump MySQL hàng ngày 22:00 trên PC server Windows · giữ 7 ngày (`deploy/scripts`) | [x] |
 | **D-DISK.1** | Banner dung lượng ổ máy chủ trên Admin Tổng quan — chỉ khi gần đầy (§2.8.2) | [x] |
@@ -2354,13 +2574,14 @@ Tham chiếu `SPEC_ADMIN.md`. Loại trừ §10 AI + `ClinicalFlowPanel`. IDs `A
 ### D0.2 deliverables (Branding + maximized shell — done)
 
 - [x] `Resources/Images/hospital-logo.png` (fallback bundled)
+- [x] `Resources/Images/app.ico` + `ApplicationIcon` — shortcut / Explorer (D-PACK.1)
 - [x] `Controls/HospitalLogo` + `WindowBrandingHelper` + `AppBrandingService` (§2.19.6)
 - [x] Logo/title động trên Login và sidebar shell; icon title bar
 - [x] `MainShellWindow` — `WindowState=Maximized` khi mở
 
 ### D0.3 deliverables (Auto-route sau login — done)
 
-- [x] Login ADMIN/HEAD → thẳng `MainShellWindow` (bỏ `ModeSelectWindow` sau login)
+- [x] Login ADMIN/HEAD/DUTY → thẳng `MainShellWindow` (bỏ `ModeSelectWindow` sau login)
 - [x] `ResolveDefaultMode` từ `user.role`; kiosk **không** trên login (`BV87.exe --agent`)
 - [x] Fix binding `SelectedStaffName` — `Mode=OneWay` (Admin Chi tiết đơn vị + HEAD Chấm công)
 
@@ -2389,7 +2610,8 @@ Tham chiếu `SPEC_ADMIN.md`. Loại trừ §10 AI + `ClinicalFlowPanel`. IDs `A
 
 - [x] Sidebar Admin 4 nhóm (Bảng điều khiển · Danh mục · Tiện ích · Cài đặt)
 - [x] `AdminApiClient` — dashboard, departments, reminders, toggle-lock, report-blocks
-- [x] `AdminDashboardOverviewPage` — KPI, bảng tiến độ, lọc đơn vị, Làm mới, Gửi nhắc nhở, menu Quản lý
+- [x] `AdminDashboardOverviewPage` — KPI, bảng tiến độ, lọc đơn vị, **Chọn ngày**, Làm mới, Gửi nhắc nhở, menu Quản lý
+- [x] D-UAT.3 — `GET /api/admin/dashboard?date=` + DatePicker sau combo đơn vị (§2.8.3)
 
 ### D3.1 deliverables (A-02 scroll + pagination — done)
 
@@ -2436,6 +2658,7 @@ Tham chiếu `SPEC_ADMIN.md`. Loại trừ §10 AI + `ClinicalFlowPanel`. IDs `A
 - [x] A-03.1 / D-UI.7 — layout §2.11.2: bỏ KPI card, gộp filter, scroll bảng
 - [x] A-03.3 / D-UI.8 — Xuất Excel, quét, điền giờ, duyệt giờ, xóa chấm (§2.11.3)
 - [x] D-ATT.1 — Wizard nghỉ trực + lịch thủ công (§2.18)
+- [x] D-UAT.2 — Combo **Tất cả đơn vị** + gộp roster (§2.11.7)
 
 ---
 

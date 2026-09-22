@@ -27,14 +27,20 @@ public static class AdminUiStrings
     public const string UncheckedFilterTooltip =
         "Gồm nhân viên chưa có trạng thái và nhân viên đã có trạng thái nhưng còn thiếu giờ hoặc ghi chú. Cột trạng thái vẫn hiện tên trạng thái hiện có.";
     public const string ProgressScope = "toàn đơn vị";
+    public const string ProgressScopeHospital = "toàn viện";
+    public const string DeptDetailColDept = "ĐƠN VỊ";
     public const string DailyProgressTooltip =
         "Số toàn đơn vị — chỉ nhân viên đủ dữ liệu chấm công. Bộ lọc bảng không đổi các số này.";
     public const string FilterDeptLabel = "Lọc đơn vị";
+    public const string FilterDateLabel = "Chọn ngày";
     public const string ClearFilter = "Xóa lọc";
     public const string ShellBrandTitle = "BV87 — Quản trị";
     public const string Loading = "Đang tải bảng điều khiển...";
     public const string ApplyFilter = "Tìm kiếm";
     public const string ReminderModalTitle = "Gửi nhắc nhở Chấm công";
+    public const string ReminderModalBadge = "GỬI NHẮC NHỞ";
+    public const string ReminderPickHint = "Chọn đơn vị chưa hoàn thành chấm công:";
+    public const string ReminderDateHint = "Ngày chấm công: {0}. Chỉ gửi khi bấm Gửi — không tự gửi theo giờ.";
     public const string ReminderSend = "Gửi";
     public const string BlockReportReason = "Khóa chỉnh sửa HEAD từ bảng điều khiển";
 
@@ -45,6 +51,7 @@ public static class AdminUiStrings
     public const string DeptDetailUnlock = "Mở khóa ngày";
     public const string DeptDetailRelock = "Thu hồi mở khóa";
     public const string DeptDetailApproveUnlock = "Xác nhận yêu cầu";
+    public const string DeptDetailRejectUnlock = "Từ chối yêu cầu";
     public const string DeptDetailLoading = "Đang tải chi tiết Chấm công...";
     public const string DeptDetailEmpty = "Không có dữ liệu!";
     public const string DeptDetailScanLogs = "Chi tiết quét";

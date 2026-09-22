@@ -42,6 +42,17 @@ public partial class AttendanceStatusCatalogFormDialog : AppDialogWindow
         Loaded += OnLoaded;
     }
 
+    private void UpdateContextHeader()
+    {
+        if (!_isEdit || _initial == null)
+        {
+            DialogContextHeaderHelper.SetBadge(ContextHeader, CatalogUiStrings.StatusCatalog.FormHeaderBadgeCreate);
+            return;
+        }
+
+        DialogContextHeaderHelper.SetPerson(ContextHeader, _initial.Label, _initial.Code);
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ApplyScreenHeightLimits();
@@ -63,7 +74,7 @@ public partial class AttendanceStatusCatalogFormDialog : AppDialogWindow
         Title = _isEdit
             ? CatalogUiStrings.StatusCatalog.FormTitleEdit
             : CatalogUiStrings.StatusCatalog.FormTitleCreate;
-        TitleText.Text = Title;
+        UpdateContextHeader();
         CodeLabel.Text = CatalogUiStrings.StatusCatalog.FormCode;
         LabelFieldLabel.Text = CatalogUiStrings.StatusCatalog.FormLabel;
         BadgeLabelFieldLabel.Text = CatalogUiStrings.StatusCatalog.FormBadgeLabel;

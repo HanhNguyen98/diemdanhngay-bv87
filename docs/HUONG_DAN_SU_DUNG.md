@@ -41,7 +41,7 @@ Tài liệu kỹ thuật: [`SPEC_DESKTOP.md`](SPEC_DESKTOP.md) · cài kiosk: [`
 | Việc | Cách |
 |------|------|
 | Xem viện đã chấm xong chưa | Tổng quan → cột tiến độ / **HOÀN THÀNH** |
-| Nhắc trưởng khoa | Tổng quan → **Gửi nhắc nhở** |
+| Nhắc trưởng khoa | Tổng quan → **Gửi nhắc nhở** → chọn từng đơn vị trên ngày đang xem. **Không** tự gửi theo giờ cố định |
 | Tạo tài khoản HEAD | Cài đặt → Phân quyền (mỗi đơn vị tối đa **1** HEAD đang hoạt động, bắt buộc gắn mã NV) |
 | Cấp máy quét | Cài đặt → Token Kiosk → phát hành token → **gửi token cho IT** (không đưa lên Git) |
 | Đăng ký vân tay NV | Tiện ích → Đăng ký vân tay → USB ZK9500 → quét 3 lần → đặt nhãn ngón tay |

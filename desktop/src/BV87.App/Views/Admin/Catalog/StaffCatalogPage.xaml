@@ -54,7 +54,9 @@
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
@@ -67,7 +69,16 @@
                           DisplayMemberPath="Label"
                           SelectedValuePath="DeptCode"
                           SelectedValue="{Binding SelectedDeptFilterDraft, Mode=TwoWay}"/>
-                <TextBox Grid.Column="2" Width="240" Style="{StaticResource FilterTextBoxStyle}" VerticalAlignment="Center"
+                <TextBlock Grid.Column="2" Text="{Binding ActiveFilterLabel}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
+                <ComboBox Grid.Column="3" Style="{StaticResource FilterComboBoxStyle}" VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding ActiveFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="Active"
+                          SelectedValue="{Binding SelectedActiveFilterDraft, Mode=TwoWay}"/>
+                <TextBox Grid.Column="4" Width="220" Style="{StaticResource FilterTextBoxStyle}" VerticalAlignment="Center"
                          Margin="0,0,12,0"
                          Tag="{x:Static catalog:CatalogUiStrings+Staff.SearchPlaceholder}"
                          ToolTip="{x:Static catalog:CatalogUiStrings+Staff.SearchPlaceholder}"
@@ -76,7 +87,7 @@
                         <KeyBinding Key="Enter" Command="{Binding ApplyFiltersCommand}"/>
                     </TextBox.InputBindings>
                 </TextBox>
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
                             Command="{Binding ApplyFiltersCommand}" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">

@@ -17,6 +17,7 @@ public sealed class HeadStatisticsViewModel : ViewModelBase
     private readonly AttendanceApiClient _attendanceApi;
     private readonly ExcelFileService _excelFileService = new();
     private readonly int _deptCode;
+    private readonly string _pageTitle;
 
     private DateOnly _appliedFrom;
     private DateOnly _appliedTo;
@@ -38,10 +39,11 @@ public sealed class HeadStatisticsViewModel : ViewModelBase
     private string? _deptName;
     private long _kpiTotal;
 
-    public HeadStatisticsViewModel(AttendanceApiClient attendanceApi, int deptCode)
+    public HeadStatisticsViewModel(AttendanceApiClient attendanceApi, int deptCode, string? deptName)
     {
         _attendanceApi = attendanceApi;
         _deptCode = deptCode;
+        _pageTitle = HeadPageTitleFormatter.Format(HeadUiStrings.Statistics.PageTitle, deptName);
 
         var range = StatisticsDateRangeHelper.GetDefaultRange();
         _appliedFrom = range.From;
@@ -80,7 +82,7 @@ public sealed class HeadStatisticsViewModel : ViewModelBase
     public ICommand ExportExcelCommand { get; }
     public ICommand GoToPageCommand { get; }
 
-    public string PageTitle => HeadUiStrings.Statistics.PageTitle;
+    public string PageTitle => _pageTitle;
 
     public string PageSubtitle => string.IsNullOrWhiteSpace(_deptName)
         ? $"{FormatDate(_appliedFrom)} — {FormatDate(_appliedTo)}"

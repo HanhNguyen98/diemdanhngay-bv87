@@ -80,6 +80,8 @@ public class AttendanceService {
         }
         if (role == AccountRole.ADMIN) {
             message = "Quản trị viên - Toàn quyền truy cập";
+        } else if (role == AccountRole.DUTY) {
+            message = "Trực ban bệnh viện - Toàn quyền truy cập";
         }
 
         return SessionStatusDto.builder()
@@ -119,7 +121,7 @@ public class AttendanceService {
     }
 
     public List<AttendanceSummaryDto> getAllSummaries(AuthUser authUser, LocalDate date) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới xem tổng hợp toàn viện");
         }
         return buildAllSummaries(date, authUser.getAccount().getRole());
@@ -276,7 +278,7 @@ public class AttendanceService {
         RangeSkipCounts counts = countManualRangeSkips(
                 authUser, employee.getEmpCode(), deptCode, from, to, request.getStatus());
         int totalDays = (int) (ChronoUnit.DAYS.between(from, to) + 1);
-        boolean requiresConfirm = !authUser.isAdmin() && counts.skippedFingerprint > 0;
+        boolean requiresConfirm = !authUser.isHospitalWide() && counts.skippedFingerprint > 0;
 
         String message = null;
         if (requiresConfirm) {
@@ -336,14 +338,14 @@ public class AttendanceService {
 
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
             AttendanceRecord record = existingByDate.get(day);
-            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
+            if (!authUser.isHospitalWide() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
                 skippedSoftLock++;
                 continue;
             }
 
             if (record != null && AttendanceValidity.isPresenceStatus(record.getStatus())
                     && !isPostScanOverride(request.getStatus())) {
-                if (!authUser.isAdmin()) {
+                if (!authUser.isHospitalWide()) {
                     skippedFingerprint++;
                     continue;
                 }
@@ -422,13 +424,13 @@ public class AttendanceService {
 
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
             AttendanceRecord record = existingByDate.get(day);
-            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
+            if (!authUser.isHospitalWide() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
                 skippedSoftLock++;
                 continue;
             }
             if (record != null && AttendanceValidity.isPresenceStatus(record.getStatus())
                     && !isPostScanOverride(targetStatus)
-                    && !authUser.isAdmin()) {
+                    && !authUser.isHospitalWide()) {
                 skippedFingerprint++;
                 continue;
             }
@@ -583,7 +585,7 @@ public class AttendanceService {
      */
     @Transactional
     public StaffAttendanceDto clearAttendanceDay(AuthUser authUser, ClearAttendanceRequest request) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được đưa Chấm công về chưa chấm");
         }
         String reason = request.getReason() != null ? request.getReason().trim() : "";
@@ -636,7 +638,7 @@ public class AttendanceService {
      */
     @Transactional
     public ManualAttendanceRangeResultDto assignNghiTrucWizard(AuthUser authUser, NghiTrucAssignRequest request) {
-        if (!authUser.isHead() && !authUser.isAdmin()) {
+        if (!authUser.isHead() && !authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Trưởng đơn vị hoặc Admin mới được chấm nghỉ trực kèm giải trình");
         }
 
@@ -674,9 +676,13 @@ public class AttendanceService {
 
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
             AttendanceRecord record = existingByDate.get(day);
-            if (!authUser.isAdmin() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
+            if (!authUser.isHospitalWide() && lockService.shouldSkipManualRangeDayForHead(deptCode, day, record)) {
                 skippedSoftLock++;
                 continue;
+            }
+
+            if (!authUser.isHospitalWide()) {
+                lockService.assertCanWriteStaff(authUser, deptCode, day, record, reason);
             }
 
             if (record == null) {
@@ -757,7 +763,7 @@ public class AttendanceService {
      */
     @Transactional
     public StaffAttendanceDto approvePayrollFill(AuthUser authUser, PayrollFillApproveRequest request) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được duyệt bổ sung giờ");
         }
 
@@ -884,7 +890,7 @@ public class AttendanceService {
      */
     @Transactional
     public StaffAttendanceDto fillAttendanceTimes(AuthUser authUser, FillAttendanceTimesRequest request) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được điền giờ vào/ra bị thiếu");
         }
 
@@ -1026,7 +1032,7 @@ public class AttendanceService {
 
     @Transactional
     public void unlockDepartment(AuthUser authUser, UnlockDepartmentRequest request) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được cấp quyền mở khóa");
         }
 
@@ -1056,7 +1062,7 @@ public class AttendanceService {
      */
     @Transactional
     public void relockDepartment(AuthUser authUser, Integer deptCode, LocalDate requestedDate) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được khóa sổ lại");
         }
 
@@ -1093,7 +1099,7 @@ public class AttendanceService {
      */
     @Transactional
     public ToggleDeptLockResultDto toggleDepartmentLock(AuthUser authUser, Integer deptCode) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được thao tác khóa sổ");
         }
 
@@ -1154,7 +1160,7 @@ public class AttendanceService {
     }
 
     private Integer resolveDeptCode(AuthUser authUser, Integer requestedCode) {
-        if (authUser.isAdmin()) {
+        if (authUser.isHospitalWide()) {
             if (requestedCode == null) {
                 throw new BusinessException("Admin cần chọn mã Đơn vị");
             }
@@ -1397,7 +1403,7 @@ public class AttendanceService {
     @Transactional(readOnly = true)
     public MissingPunchesResponseDto listMissingPunches(
             AuthUser authUser, Integer departmentCode, LocalDate date) {
-        if (authUser.isAdmin() && departmentCode == null) {
+        if (authUser.isHospitalWide() && departmentCode == null) {
             return buildMissingPunchesAllDepts(date);
         }
         Integer deptCode = resolveDeptCode(authUser, departmentCode);

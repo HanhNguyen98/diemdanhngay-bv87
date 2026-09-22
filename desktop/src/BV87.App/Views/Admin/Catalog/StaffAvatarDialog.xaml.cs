@@ -1,5 +1,6 @@
 using System.Windows;
 using BV87.App.Branding;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.Core.Helpers;
 using Microsoft.Win32;
@@ -8,10 +9,13 @@ namespace BV87.App.Views.Admin.Catalog;
 
 public partial class StaffAvatarDialog : AppDialogWindow
 {
-    public StaffAvatarDialog(string fullname, string empCodeFormatted, string? avatarUrl)
+    public StaffAvatarDialog(string fullname, string empCodeFormatted, string? avatarUrl, string? deptDisplay = null)
     {
         InitializeComponent();
-        StaffText.Text = $"{fullname} · {empCodeFormatted}";
+        DialogContextHeaderHelper.SetPerson(
+            ContextHeader,
+            fullname,
+            string.IsNullOrWhiteSpace(deptDisplay) ? empCodeFormatted : deptDisplay);
         AvatarUrl = string.IsNullOrWhiteSpace(avatarUrl) ? null : avatarUrl;
         InitialsText.Text = Initials(fullname);
         RenderPreview();

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:BV87.App.Shell"
         xmlns:strings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+        xmlns:controls="clr-namespace:BV87.App.Controls"
         Title="{x:Static strings:AttendanceUiStrings.NghiTrucWizardTitle}"
         Width="960"
         MinWidth="880"
@@ -20,28 +21,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Border Margin="24" Padding="24" Style="{StaticResource CardBorderFlatStyle}">
             <StackPanel>
-                <Grid Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock FontFamily="{StaticResource IconFont}"
-                               Text="&#xE708;"
-                               FontSize="{StaticResource FontSizeXl}"
-                               Foreground="{StaticResource PrimaryBrush}"
-                               VerticalAlignment="Center"
-                               Margin="0,0,14,0"/>
-                    <StackPanel Grid.Column="1">
-                        <TextBlock x:Name="TitleText"
-                                   FontSize="{StaticResource FontSizeXl}"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource NavyBrush}"/>
-                        <TextBlock x:Name="StaffText"
-                                   Margin="0,4,0,0"
-                                   FontSize="{StaticResource FontSizeLg}"
-                                   Foreground="{StaticResource ContentMutedBrush}"/>
-                    </StackPanel>
-                </Grid>
+                <controls:DialogContextHeader x:Name="ContextHeader"/>
 
                 <Border Padding="14,12" CornerRadius="8" Margin="0,0,0,16"
                         BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="1"

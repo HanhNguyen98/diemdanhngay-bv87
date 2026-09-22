@@ -191,7 +191,7 @@ public partial class App : Application
         if (mode == null)
         {
             AppMessageBox.Show(
-                "Tài khoản không có quyền Trưởng đơn vị hoặc Quản trị viên.",
+                "Tài khoản không có quyền Trưởng đơn vị, Trực ban hoặc Quản trị viên.",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             ShowLogin();
@@ -206,6 +206,11 @@ public partial class App : Application
         if (user.IsAdmin)
         {
             return AppMode.Admin;
+        }
+
+        if (user.IsDuty)
+        {
+            return AppMode.Duty;
         }
 
         if (user.IsHead)
@@ -230,6 +235,7 @@ public partial class App : Application
             {
                 "head" => AppMode.Head,
                 "admin" => AppMode.Admin,
+                "duty" => AppMode.Duty,
                 _ => null
             };
         }

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.App.ViewModels;
 using BV87.Core.Constants;
@@ -54,14 +55,42 @@ public partial class StaffCatalogFormDialog : AppDialogWindow
             }
         }
 
-        TitleText.Text = Title;
+        UpdateContextHeader();
         UpdateAvatarStatus();
         Loaded += (_, _) => FullnameBox.Focus();
     }
 
+    private void UpdateContextHeader()
+    {
+        if (!_isEdit || _initial == null)
+        {
+            DialogContextHeaderHelper.SetBadge(ContextHeader, CatalogUiStrings.Staff.FormHeaderBadgeCreate);
+            return;
+        }
+
+        DialogContextHeaderHelper.SetPerson(ContextHeader, _initial.Fullname, GetSelectedDeptDisplay());
+    }
+
+    private string GetSelectedDeptDisplay()
+    {
+        if (DeptCombo.SelectedItem is DeptComboItem item)
+        {
+            return item.DisplayLabel;
+        }
+
+        return _initial?.DeptDisplay ?? string.Empty;
+    }
+
     private static string FormatDeptLabel(AdminDepartmentDto dept) => dept.DisplayLabel;
 
-    private void DeptCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateTransferPanel();
+    private void DeptCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateTransferPanel();
+        if (_isEdit)
+        {
+            UpdateContextHeader();
+        }
+    }
 
     private void UpdateTransferPanel()
     {
@@ -77,7 +106,6 @@ public partial class StaffCatalogFormDialog : AppDialogWindow
         Title = deptChanged
             ? CatalogUiStrings.Staff.FormTitleEditTransfer
             : CatalogUiStrings.Staff.FormTitleEdit;
-        TitleText.Text = Title;
 
         if (!deptChanged)
         {
@@ -165,7 +193,7 @@ public partial class StaffCatalogFormDialog : AppDialogWindow
             ? CatalogUiStrings.Staff.FormTitleCreate
             : FullnameBox.Text.Trim();
         var code = _initial?.EmpCodeFormatted ?? "—";
-        var dialog = new StaffAvatarDialog(name, code, _avatarUrl)
+        var dialog = new StaffAvatarDialog(name, code, _avatarUrl, GetSelectedDeptDisplay())
         {
             Owner = this
         };

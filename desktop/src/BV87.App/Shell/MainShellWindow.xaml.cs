@@ -31,8 +31,8 @@ public partial class MainShellWindow : Window
     public MainShellWindow(AppMode mode)
     {
         _mode = mode;
-        _navGroups = ShellNavigation.GetNavGroups(mode);
-        _navItems = ShellNavigation.GetNavItems(mode);
+        _navGroups = ShellNavigation.GetNavGroups(mode, App.Sessions.Session.User?.ScreenCodes);
+        _navItems = _navGroups.SelectMany(g => g.Items).ToList();
         InitializeComponent();
         WindowBrandingHelper.ApplyHospitalIcon(this);
         WindowState = WindowState.Maximized;
@@ -43,13 +43,16 @@ public partial class MainShellWindow : Window
     {
         Title = ShellUiStrings.WindowTitle;
 
-        if (_mode == AppMode.Admin || _mode == AppMode.Head)
+        if (_mode == AppMode.Admin || _mode == AppMode.Duty || _mode == AppMode.Head)
         {
             var user = App.Sessions.Session.User;
             if (user != null)
             {
-                UserInfoText.Text = string.IsNullOrWhiteSpace(user.RoleLabel) ? user.Fullname : user.RoleLabel;
-                UserAvatarText.Text = GetInitials(user.Fullname);
+                UserInfoText.Text = string.IsNullOrWhiteSpace(user.Username)
+                    ? (user.Fullname ?? string.Empty)
+                    : user.Username;
+                UserAvatarText.Text = GetInitials(
+                    string.IsNullOrWhiteSpace(user.Fullname) ? user.Username : user.Fullname);
             }
 
             SetupNotificationBell();
@@ -63,13 +66,13 @@ public partial class MainShellWindow : Window
 
         App.Sessions.SetLastMode(_mode);
 
-        BrandingUiApplicator.ApplyShellSidebar(SidebarLogo, App.Branding.Current, _mode, App.Sessions.Session.User);
+        BrandingUiApplicator.ApplyShellSidebar(SidebarLogo, App.Branding.Current);
         WindowBrandingHelper.ApplyWindowIcon(this, App.Branding.Current);
     }
 
     public void ApplyBranding(AppBrandingState state)
     {
-        BrandingUiApplicator.ApplyShellSidebar(SidebarLogo, state, _mode, App.Sessions.Session.User);
+        BrandingUiApplicator.ApplyShellSidebar(SidebarLogo, state);
         WindowBrandingHelper.ApplyWindowIcon(this, state);
     }
 
@@ -84,6 +87,13 @@ public partial class MainShellWindow : Window
 
     private void OnNotificationNavigationRequested(object? sender, NotificationNavigationRequest request)
     {
+        if (request.TargetNavId == "dashboard-dept" && request.DeptCode != null)
+        {
+            var date = request.AttendanceDate ?? DateOnly.FromDateTime(DateTime.Today);
+            NavigateToDeptDetail(request.DeptCode.Value, date);
+            return;
+        }
+
         if (request.AttendanceDate != null)
         {
             _pendingAttendanceDate = request.AttendanceDate;
@@ -212,7 +222,8 @@ public partial class MainShellWindow : Window
             "fingerprint-history" => new FingerprintHistoryPage(),
             "fingerprint-enroll" => new FingerprintEnrollPage(mode),
             "password" => new ChangePasswordPage(),
-            "settings-permissions" => new PermissionsPage(),
+            "settings-permissions" => new PermissionsHubPage(0),
+            "settings-permission-groups" => new PermissionsHubPage(1),
             "settings-kiosk" => new KioskTokensPage(),
             "settings-system" => new SystemSettingsPage(),
             _ => new PlaceholderPage(item.PlaceholderTitle, item.PlaceholderDescription)

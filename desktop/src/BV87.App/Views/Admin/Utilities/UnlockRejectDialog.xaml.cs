@@ -1,4 +1,5 @@
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.Core.Constants;
 
@@ -10,7 +11,7 @@ public partial class UnlockRejectDialog : AppDialogWindow
     {
         InitializeComponent();
         Title = UtilitiesUiStrings.UnlockRequests.RejectTitle;
-        TitleText.Text = UtilitiesUiStrings.UnlockRequests.RejectTitle;
+        DialogContextHeaderHelper.SetBadge(ContextHeader, UtilitiesUiStrings.UnlockRequests.RejectBadge);
         HintText.Text = UtilitiesUiStrings.UnlockRequests.RejectHint;
         NoteBox.SetValue(System.Windows.Controls.ToolTipService.ToolTipProperty, UtilitiesUiStrings.UnlockRequests.RejectPlaceholder);
     }

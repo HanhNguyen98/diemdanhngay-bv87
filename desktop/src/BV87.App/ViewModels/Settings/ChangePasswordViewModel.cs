@@ -16,6 +16,7 @@ public sealed class ChangePasswordViewModel : ViewModelBase
 {
     private readonly Bv87ApiClient _api;
     private readonly AdminApiClient? _adminApi;
+    private readonly string _pageTitle;
     private List<AccountRowViewModel> _allAccounts = [];
     private bool _isSaving;
     private bool _isSearchingAccounts;
@@ -28,11 +29,14 @@ public sealed class ChangePasswordViewModel : ViewModelBase
     private int? _deptFilter;
     private AccountRowViewModel? _selectedAccount;
 
-    public ChangePasswordViewModel(Bv87ApiClient api, AdminApiClient? adminApi, bool isAdmin)
+    public ChangePasswordViewModel(Bv87ApiClient api, AdminApiClient? adminApi, bool isAdmin, string? headDeptName = null)
     {
         _api = api;
         _adminApi = adminApi;
         IsAdmin = isAdmin;
+        _pageTitle = isAdmin
+            ? SettingsUiStrings.ChangePassword.PageTitle
+            : HeadPageTitleFormatter.Format(SettingsUiStrings.ChangePassword.PageTitle, headDeptName);
         AccountOptions = new ObservableCollection<AccountRowViewModel>();
         DeptFilterOptions = new ObservableCollection<DeptFilterOption>();
 
@@ -70,7 +74,7 @@ public sealed class ChangePasswordViewModel : ViewModelBase
 
     public ICommand AdminResetCommand { get; }
 
-    public string PageTitle => SettingsUiStrings.ChangePassword.PageTitle;
+    public string PageTitle => _pageTitle;
     public string PageSubtitle => IsAdmin
         ? SettingsUiStrings.ChangePassword.PageSubtitle
         : SettingsUiStrings.ChangePassword.HeadPageSubtitle;

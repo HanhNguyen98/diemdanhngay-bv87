@@ -35,6 +35,7 @@ public static class CatalogUiStrings
         public const string ColUsage = "NHÂN VIÊN";
         public const string ColStatus = "TRẠNG THÁI";
         public const string FormTitleCreate = "Thêm cấp bậc mới";
+        public const string FormHeaderBadgeCreate = "THÊM CẤP BẬC";
         public const string FormTitleEdit = "Cập nhật cấp bậc";
         public const string DeleteTitle = "Xóa cấp bậc";
         public const string FormCode = "Mã cấp bậc";
@@ -67,6 +68,7 @@ public static class CatalogUiStrings
         public const string ColUsage = "NHÂN VIÊN";
         public const string ColStatus = "TRẠNG THÁI";
         public const string FormTitleCreate = "Thêm chức vụ mới";
+        public const string FormHeaderBadgeCreate = "THÊM CHỨC VỤ";
         public const string FormTitleEdit = "Cập nhật chức vụ";
         public const string DeleteTitle = "Xóa chức vụ";
         public const string FormCode = "Mã chức vụ";
@@ -100,6 +102,7 @@ public static class CatalogUiStrings
         public const string ColUsage = "SỬ DỤNG";
         public const string ColStatus = "TRẠNG THÁI";
         public const string FormTitleCreate = "Thêm trạng thái mới";
+        public const string FormHeaderBadgeCreate = "THÊM TRẠNG THÁI";
         public const string FormTitleEdit = "Cập nhật trạng thái";
         public const string DeleteTitle = "Xóa trạng thái";
         public const string FormCode = "Mã trạng thái";
@@ -155,6 +158,7 @@ public static class CatalogUiStrings
         public const string ColActions = "THAO TÁC";
         public const string ColStt = "STT";
         public const string FormTitleCreate = "Thêm đơn vị mới";
+        public const string FormHeaderBadgeCreate = "THÊM ĐƠN VỊ";
         public const string FormTitleEdit = "Cập nhật đơn vị";
         public const string DeleteTitle = "Xóa đơn vị";
         public const string FormDeptCode = "Mã đơn vị";
@@ -177,14 +181,16 @@ public static class CatalogUiStrings
         public static string FlashDelete(string name) => $"Đã xóa \"{name}\" thành công.";
 
         public static string DeleteBlocked(long staffCount) =>
-            $"Đang có {staffCount:N0} nhân viên — không thể xóa đơn vị";
+            $"Đang có {staffCount:N0} nhân viên đang hoạt động — không thể xóa đơn vị";
     }
 
     public static class DepartmentGroups
     {
         public const string ManageTitle = "Quản lý nhóm đơn vị";
+        public const string ManageBadge = "QUẢN LÝ NHÓM";
         public const string NewButton = "Thêm nhóm";
         public const string FormTitleCreate = "Thêm nhóm mới";
+        public const string FormHeaderBadgeCreate = "THÊM NHÓM";
         public const string FormTitleEdit = "Cập nhật nhóm";
         public const string DeleteTitle = "Xóa nhóm";
         public const string ColCode = "MÃ NHÓM";
@@ -215,6 +221,8 @@ public static class CatalogUiStrings
         public const string UnitLabel = "nhân viên";
         public const string DeptFilterLabel = "Lọc theo đơn vị";
         public const string DeptFilterAll = "Tất cả đơn vị";
+        public const string ActiveFilterLabel = "Trạng thái";
+        public const string ActiveFilterAll = "Tất cả trạng thái";
         public const string StatsTotal = "Tổng nhân viên";
         public const string StatsActive = "Đang hoạt động";
         public const string StatsInactive = "Ngưng hoạt động";
@@ -246,9 +254,11 @@ public static class CatalogUiStrings
         public const string Active = "Đang hoạt động";
         public const string Inactive = "Ngưng hoạt động";
         public const string FormTitleCreate = "Thêm mới nhân viên";
+        public const string FormHeaderBadgeCreate = "THÊM NHÂN VIÊN";
         public const string FormTitleEdit = "Cập nhật nhân viên";
         public const string FormTitleEditTransfer = "Cập nhật & luân chuyển";
-        public const string DeleteTitle = "Xóa nhân viên";
+        public const string DeleteTitle = "Ngưng hoạt động nhân viên";
+        public const string DeleteAlreadyInactive = "Nhân viên đã ngưng hoạt động.";
         public const string FormFullname = "Họ và tên";
         public const string FormDept = "Đơn vị";
         public const string FormDeptPlaceholder = "— Chọn đơn vị —";
@@ -265,7 +275,7 @@ public static class CatalogUiStrings
         public const string HistoryAction = "Lịch sử";
         public const string TransferModalTitle = "Chuyển đơn vị làm việc";
         public const string TransferFromLabel = "Đơn vị hiện tại";
-        public const string TransferToLabel = "Đơn vị đích";
+        public const string TransferToLabel = "Đơn vị đến";
         public const string TransferSubmit = "Xác nhận chuyển";
         public const string TransferFingerprintHint = "Vân tay đã đăng ký vẫn dùng được tại mọi máy quét sau khi chuyển đơn vị.";
         public const string FingerprintDeleteLabel = "Xóa vân tay";
@@ -284,12 +294,54 @@ public static class CatalogUiStrings
         public const string FlashUpdate = "Đã cập nhật nhân viên thành công.";
         public const string FlashTransfer = "Đã chuyển đơn vị thành công.";
         public const string FlashTransferHeadRevoke = "Đã luân chuyển và thu hồi quyền trưởng đơn vị.";
-        public const string FlashDeleteFail = "Không thể xóa nhân viên. Vui lòng thử lại.";
+        public const string FlashDeleteFail = "Không thể ngưng hoạt động nhân viên. Vui lòng thử lại.";
 
         public static string DeleteMessage(string name) =>
-            $"Bạn có chắc muốn xóa nhân viên \"{name}\"? Thao tác không thể hoàn tác.";
+            $"Chuyển nhân viên \"{name}\" sang ngưng hoạt động?";
 
-        public static string FlashDelete(string name) => $"Đã xóa \"{name}\" thành công.";
+        public static string FlashDelete(string name) =>
+            $"Đã chuyển \"{name}\" sang ngưng hoạt động.";
+
+        public static string BuildDeactivateConfirmMessage(
+            string fullname,
+            bool isDepartmentCatalogHead,
+            string? headDepartmentLabel,
+            bool hasAttendanceRecords,
+            IReadOnlyList<string> linkedActiveAccountUsernames)
+        {
+            var lines = new List<string>
+            {
+                DeleteMessage(fullname),
+                string.Empty,
+                "Khi xác nhận:"
+            };
+
+            lines.Add("• Nhân viên chuyển sang trạng thái Ngưng hoạt động.");
+
+            if (isDepartmentCatalogHead)
+            {
+                var dept = string.IsNullOrWhiteSpace(headDepartmentLabel)
+                    ? "đơn vị đang phụ trách"
+                    : headDepartmentLabel.Trim();
+                lines.Add($"• Đang là Trưởng đơn vị của {dept} — hệ thống sẽ thu hồi gán trưởng. Admin cần cấp trưởng cho tài khoản khác.");
+            }
+
+            if (hasAttendanceRecords)
+            {
+                lines.Add("• Đã có dữ liệu chấm công — lịch sử được giữ, không xóa khỏi hệ thống.");
+            }
+
+            if (linkedActiveAccountUsernames.Count > 0)
+            {
+                lines.Add(
+                    "• Tài khoản đăng nhập gắn nhân viên sẽ bị tắt và không dùng được nữa: "
+                    + string.Join(", ", linkedActiveAccountUsernames) + ".");
+            }
+
+            lines.Add(string.Empty);
+            lines.Add("Bạn có muốn tiếp tục?");
+            return string.Join(Environment.NewLine, lines);
+        }
 
         public static string TransferModalSubtitle(string name, string code) => $"{name} ({code})";
 

@@ -170,7 +170,7 @@ public class AttendanceStatisticsService {
     }
 
     private Integer resolveDeptCode(AuthUser authUser, Integer requestedCode) {
-        if (authUser.isAdmin()) {
+        if (authUser.isHospitalWide()) {
             if (requestedCode == null) {
                 throw new BusinessException("Admin cần chọn mã Đơn vị");
             }

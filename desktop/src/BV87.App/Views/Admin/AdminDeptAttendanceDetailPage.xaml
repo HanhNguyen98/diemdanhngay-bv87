@@ -120,6 +120,12 @@
                             Command="{Binding ApproveUnlockRequestCommand}"
                             Margin="0,0,8,0"
                             Visibility="{Binding ShowApproveUnlockButton, Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Content="{x:Static strings:AdminUiStrings.DeptDetailRejectUnlock}"
+                            Style="{StaticResource FilterToolbarSecondaryButtonStyle}"
+                            Foreground="{StaticResource DangerFgBrush}"
+                            Command="{Binding RejectUnlockRequestCommand}"
+                            Margin="0,0,8,0"
+                            Visibility="{Binding ShowApproveUnlockButton, Converter={StaticResource BoolToVisibility}}"/>
                     <Button Content="{x:Static strings:AdminUiStrings.DeptDetailUnlock}"
                             Style="{StaticResource FilterToolbarSecondaryButtonStyle}"
                             Command="{Binding UnlockCommand}"
@@ -188,12 +194,21 @@
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
+                        <DataGridTextColumn x:Name="DeptColumn"
+                                            Header="{x:Static strings:AdminUiStrings.DeptDetailColDept}"
+                                            Binding="{Binding DeptDisplay}"
+                                            Width="*" MinWidth="160"
+                                            Visibility="Collapsed">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="CHỨC VỤ" Binding="{Binding PositionName}" Width="*" MinWidth="120">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="GIỜ" Binding="{Binding DisplayTimes}" Width="*" MinWidth="280">
+                        <DataGridTextColumn Header="GIỜ" Binding="{Binding DisplayTimes}" Width="160" MinWidth="140">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
                             </DataGridTextColumn.ElementStyle>
@@ -233,7 +248,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="GHI CHÚ" Binding="{Binding Note}" Width="*" MinWidth="120">
+                        <DataGridTextColumn Header="LÝ DO CHẤM BỔ SUNG" Binding="{Binding Note}" Width="*" MinWidth="240">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
                             </DataGridTextColumn.ElementStyle>

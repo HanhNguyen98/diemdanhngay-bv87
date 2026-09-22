@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using BV87.App.ViewModels;
@@ -37,7 +38,46 @@ public partial class AdminDeptAttendanceDetailPage : UserControl
             App.AttendanceApi,
             _initialDeptCode,
             _initialDate);
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.RejectUnlockDialogRequested += OnRejectUnlockDialogRequested;
         DataContext = _viewModel;
+        UpdateDeptColumnVisibility();
+    }
+
+    private async void OnRejectUnlockDialogRequested(object? sender, EventArgs e)
+    {
+        var vm = ResolveViewModel();
+        if (vm == null)
+        {
+            return;
+        }
+
+        var dialog = new Utilities.UnlockRejectDialog { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        await vm.RejectUnlockRequestAsync(dialog.Note);
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(AdminDeptAttendanceViewModel.ShowDeptColumn))
+        {
+            UpdateDeptColumnVisibility();
+        }
+    }
+
+    private void UpdateDeptColumnVisibility()
+    {
+        var vm = ResolveViewModel();
+        if (vm == null)
+        {
+            return;
+        }
+
+        DeptColumn.Visibility = vm.ShowDeptColumn ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private AdminDeptAttendanceViewModel? ResolveViewModel()

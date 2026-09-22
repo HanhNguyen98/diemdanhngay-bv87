@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.Core;
 using BV87.Core.Api;
@@ -24,8 +25,11 @@ public partial class ScanLogDialog : AppDialogWindow
         _staff = staff;
         _date = date;
 
-        TitleText.Text = AdminUiStrings.ScanLogTitle;
-        SubtitleText.Text = $"{staff.Fullname} · {staff.EmpCodeFormatted ?? staff.EmpCode.ToString()}";
+        Title = AdminUiStrings.ScanLogTitle;
+        DialogContextHeaderHelper.SetPerson(
+            ContextHeader,
+            staff.Fullname,
+            $"{staff.DeptDisplay} · {AdminUtilitiesFormatHelper.FormatDateOnly(date)}");
         ItemsGrid.ItemsSource = new ObservableCollection<ScanLogRowViewModel>();
 
         Loaded += async (_, _) => await LoadPageAsync();

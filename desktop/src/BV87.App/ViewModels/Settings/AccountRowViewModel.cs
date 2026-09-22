@@ -17,7 +17,14 @@ public sealed class AccountRowViewModel : IPageRowNumber
     public string Username => Dto.Username ?? "—";
     public string EmpCodeDisplay => Dto.EmpCodeFormatted ?? "—";
     public string Fullname => Dto.Fullname ?? "—";
-    public string RoleLabel => Dto.RoleLabel ?? Dto.Role ?? "—";
+    public string RoleLabel =>
+        !string.IsNullOrWhiteSpace(Dto.PermissionGroupName)
+            ? Dto.PermissionGroupName!
+            : (Dto.RoleLabel ?? Dto.Role ?? "—");
+    public string PermissionGroupDisplay =>
+        string.IsNullOrWhiteSpace(Dto.PermissionGroupName)
+            ? (string.Equals(Dto.Username, "admin", StringComparison.OrdinalIgnoreCase) ? "Full quyền" : "—")
+            : Dto.PermissionGroupName!;
     public string DeptDisplay => DeptDisplayFormatter.Format(Dto.UnitCode, Dto.DeptName);
     public bool Active => Dto.Active;
     public string StatusLabel => Active

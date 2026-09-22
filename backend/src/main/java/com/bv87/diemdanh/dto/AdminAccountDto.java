@@ -19,4 +19,6 @@ public class AdminAccountDto {
     private final Integer empCode;
     private final String empCodeFormatted;
     private final boolean active;
+    private final Long permissionGroupId;
+    private final String permissionGroupName;
 }

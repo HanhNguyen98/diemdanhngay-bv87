@@ -20,6 +20,7 @@ public static class ShellNavIcons
         "fingerprint-enroll" => "\uE962",
         "reminder-history" => "\uE715",
         "settings-permissions" => "\uE72C",
+        "settings-permission-groups" => "\uE8D7",
         "settings-kiosk" => "\uE7F8",
         "settings-system" => "\uE713",
         "settings" => "\uE713",

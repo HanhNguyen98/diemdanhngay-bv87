@@ -15,8 +15,6 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*" MinHeight="200"/>
         </Grid.RowDefinitions>
 
@@ -25,7 +23,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <TextBlock Text="{x:Static head:HeadUiStrings+Attendance.PageTitle}"
+            <TextBlock Text="{Binding PageTitle}"
                        Style="{StaticResource PageTitleStyle}"/>
             <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,6,0,0">
                 <TextBlock Text="{Binding PageSubtitle}"
@@ -70,38 +68,12 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="1" Style="{StaticResource LockBannerStyle}" Margin="0,0,0,16"
-                Visibility="{Binding ShowLockBanner, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="{Binding LockBannerText}" Foreground="{StaticResource DangerFgBrush}" TextWrapping="Wrap"/>
-        </Border>
-
-        <StackPanel Grid.Row="2" Margin="0,0,0,16"
+        <StackPanel Grid.Row="1" Margin="0,0,0,16"
                     Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}">
             <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerFgBrush}" TextWrapping="Wrap"/>
         </StackPanel>
 
-        <Border Grid.Row="3" Margin="0,0,0,16" Padding="12,10" CornerRadius="8"
-                Background="{StaticResource PrimaryLightBrush}"
-                BorderBrush="{StaticResource PrimaryLightBorderBrush}"
-                BorderThickness="1"
-                Visibility="{Binding ShowHistoryBanner, Converter={StaticResource BoolToVisibility}}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding HistoryBannerText}" TextWrapping="Wrap"
-                           FontSize="{StaticResource FontSizeSm}" Foreground="{StaticResource NavyBrush}"/>
-                <Border Grid.Column="1" Background="{StaticResource SurfaceWhiteBrush}" Padding="8,4" CornerRadius="4"
-                        Margin="12,0,0,0" VerticalAlignment="Center"
-                        Visibility="{Binding ShowHistoryReadOnlyBadge, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="{x:Static head:HeadUiStrings+Attendance.ReadOnlyBadge}"
-                               FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}"/>
-                </Border>
-            </Grid>
-        </Border>
-
-        <ItemsControl Grid.Row="4" ItemsSource="{Binding KpiItems}" Margin="0,0,0,8">
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding KpiItems}" Margin="0,0,0,8">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <WrapPanel/>
@@ -123,7 +95,7 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <Border Grid.Row="5" Style="{StaticResource CardBorderStyle}" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" Padding="16" Margin="0,0,0,16">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -164,17 +136,23 @@
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"
-                            Command="{Binding RefreshCommand}">
+                            Command="{Binding RefreshCommand}"
+                            Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
                             <controls:RefreshSpinIcon IsSpinning="{Binding IsRefreshing}" FontSize="13" Margin="0,0,6,0"/>
                             <TextBlock Text="{x:Static head:HeadUiStrings+Attendance.Refresh}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <Button Content="{x:Static head:HeadUiStrings+Attendance.UnlockRequestAction}"
+                            Command="{Binding SendUnlockRequestCommand}"
+                            Style="{StaticResource FilterToolbarNavyButtonStyle}"
+                            ToolTip="{Binding UnlockRequestButtonTooltip}"
+                            Visibility="{Binding ShowUnlockRequestButton, Converter={StaticResource BoolToVisibility}}"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <Border Grid.Row="6" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Stretch">
+        <Border Grid.Row="4" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Stretch">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

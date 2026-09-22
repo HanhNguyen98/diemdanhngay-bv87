@@ -25,6 +25,8 @@ public sealed class StaffCatalogViewModel : ViewModelBase
     private string _searchQuery = string.Empty;
     private int? _deptFilterDraft;
     private int? _deptFilter;
+    private bool? _activeFilterDraft;
+    private bool? _activeFilter;
     private int _currentPage = 1;
     private int _pageSize = 20;
     private int _totalPages = 1;
@@ -41,6 +43,12 @@ public sealed class StaffCatalogViewModel : ViewModelBase
         _adminApi = adminApi;
         PagedItems = new ObservableCollection<StaffCatalogRowViewModel>();
         DeptFilterOptions = new ObservableCollection<StaffDeptFilterOption>();
+        ActiveFilterOptions = new ObservableCollection<StaffActiveFilterOption>
+        {
+            new(null, CatalogUiStrings.Staff.ActiveFilterAll),
+            new(true, CatalogUiStrings.Staff.Active),
+            new(false, CatalogUiStrings.Staff.Inactive)
+        };
 
         RefreshCommand = new RelayCommand(async () => await LoadAsync(force: true));
         ApplyFiltersCommand = new RelayCommand(async () => await ApplyFiltersAsync());
@@ -78,7 +86,7 @@ public sealed class StaffCatalogViewModel : ViewModelBase
                     DeleteRequested?.Invoke(this, row);
                 }
             },
-            row => row != null);
+            row => row is { Active: true });
         DeleteFingerprintCommand = new RelayCommand<StaffCatalogRowViewModel>(
             row =>
             {
@@ -94,6 +102,7 @@ public sealed class StaffCatalogViewModel : ViewModelBase
 
     public ObservableCollection<StaffCatalogRowViewModel> PagedItems { get; }
     public ObservableCollection<StaffDeptFilterOption> DeptFilterOptions { get; }
+    public ObservableCollection<StaffActiveFilterOption> ActiveFilterOptions { get; }
 
     public ICommand RefreshCommand { get; }
     public ICommand ApplyFiltersCommand { get; }
@@ -116,6 +125,7 @@ public sealed class StaffCatalogViewModel : ViewModelBase
     public string NewButtonLabel => CatalogUiStrings.Staff.NewButton;
     public string UnitLabel => CatalogUiStrings.Staff.UnitLabel;
     public string DeptFilterLabel => CatalogUiStrings.Staff.DeptFilterLabel;
+    public string ActiveFilterLabel => CatalogUiStrings.Staff.ActiveFilterLabel;
     public string StatsTotalLabel => CatalogUiStrings.Staff.StatsTotal;
     public string StatsActiveLabel => CatalogUiStrings.Staff.StatsActive;
     public string StatsInactiveLabel => CatalogUiStrings.Staff.StatsInactive;
@@ -141,6 +151,12 @@ public sealed class StaffCatalogViewModel : ViewModelBase
     {
         get => _deptFilterDraft;
         set => SetProperty(ref _deptFilterDraft, value);
+    }
+
+    public bool? SelectedActiveFilterDraft
+    {
+        get => _activeFilterDraft;
+        set => SetProperty(ref _activeFilterDraft, value);
     }
 
     public string SearchDraft
@@ -281,10 +297,11 @@ public sealed class StaffCatalogViewModel : ViewModelBase
         try
         {
             var result = await _adminApi.ListStaffPageAsync(
-                _searchQuery,
-                _deptFilter,
-                _currentPage,
-                _pageSize);
+                search: _searchQuery,
+                deptCode: _deptFilter,
+                active: _activeFilter,
+                page: _currentPage,
+                pageSize: _pageSize);
 
             _totalItems = result.TotalItems;
             _totalPages = Math.Max(1, result.TotalPages);
@@ -382,14 +399,17 @@ public sealed class StaffCatalogViewModel : ViewModelBase
 
         try
         {
-            await _adminApi.DeleteStaffAsync(row.EmpCode);
-            ShellToast.Success(ToastCopy.OkItem("xóa", ToastCopy.Staff(row.Fullname)));
+            var result = await _adminApi.DeleteStaffAsync(row.EmpCode);
+            var message = string.IsNullOrWhiteSpace(result.Message)
+                ? CatalogUiStrings.Staff.FlashDelete(row.Fullname)
+                : result.Message.Trim();
+            ShellToast.Success(message);
             await LoadReferenceDataAsync();
             await LoadPageAsync(resetPage: false, showFullLoading: false);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            ShellToast.Danger(ToastCopy.FailItem("xóa", ToastCopy.Staff(row.Fullname)));
+            ShellToast.Danger(ExtractMessage(ex));
         }
     }
 
@@ -488,10 +508,11 @@ public sealed class StaffCatalogViewModel : ViewModelBase
         do
         {
             var result = await _adminApi.ListStaffPageAsync(
-                _searchQuery,
-                _deptFilter,
-                page,
-                ExportPageSize);
+                search: _searchQuery,
+                deptCode: _deptFilter,
+                active: _activeFilter,
+                page: page,
+                pageSize: ExportPageSize);
 
             all.AddRange(result.Items);
             totalPages = Math.Max(1, result.TotalPages);
@@ -520,6 +541,7 @@ public sealed class StaffCatalogViewModel : ViewModelBase
     {
         _searchQuery = SearchDraft;
         _deptFilter = _deptFilterDraft;
+        _activeFilter = _activeFilterDraft;
         await LoadPageAsync(resetPage: true, showFullLoading: false);
     }
 
@@ -529,8 +551,11 @@ public sealed class StaffCatalogViewModel : ViewModelBase
         _searchQuery = string.Empty;
         _deptFilterDraft = null;
         _deptFilter = null;
+        _activeFilterDraft = null;
+        _activeFilter = null;
         OnPropertyChanged(nameof(SearchDraft));
         OnPropertyChanged(nameof(SelectedDeptFilterDraft));
+        OnPropertyChanged(nameof(SelectedActiveFilterDraft));
         await LoadPageAsync(resetPage: true, showFullLoading: false);
     }
 

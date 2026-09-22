@@ -30,7 +30,7 @@ internal static class AppBrandingCache
 
             var json = File.ReadAllText(CachePath);
             var dto = JsonSerializer.Deserialize<BrandingDto>(json, JsonOptions);
-            return dto == null ? null : AppBrandingState.FromDto(dto.PortalTitle, dto.LogoUrl, dto.LoginAvatarUrl);
+            return dto == null ? null : AppBrandingState.FromDto(dto);
         }
         catch
         {
@@ -47,6 +47,7 @@ internal static class AppBrandingCache
             var dto = new BrandingDto
             {
                 PortalTitle = state.PortalTitle,
+                PortalSubtitle = state.PortalSubtitle,
                 LogoUrl = state.LogoUrl,
                 LoginAvatarUrl = state.LoginAvatarUrl
             };

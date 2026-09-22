@@ -1,4 +1,5 @@
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.App.ViewModels.Settings;
 using BV87.Core.Constants;
@@ -15,7 +16,7 @@ public partial class ResetPasswordDialog : AppDialogWindow
         _ownerVm = ownerVm;
         _account = account;
         InitializeComponent();
-        DescText.Text = SettingsUiStrings.Accounts.ResetPasswordDesc(_account.Fullname, _account.Username);
+        DialogContextHeaderHelper.SetPerson(ContextHeader, _account.Fullname, _account.DeptDisplay);
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e)

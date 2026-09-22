@@ -23,13 +23,19 @@ public class AdminDashboardService {
     private final AttendanceStatusCatalogService statusCatalogService;
     private final VietnamTimeService timeService;
 
+    /**
+     * Hospital-wide KPI + per-dept summaries for one calendar day (SPEC D-UAT.3).
+     *
+     * @param authUser must be ADMIN
+     * @param date     null = today Vietnam
+     */
     @Transactional(readOnly = true)
-    public AdminDashboardDto getDashboard(AuthUser authUser) {
-        if (!authUser.isAdmin()) {
+    public AdminDashboardDto getDashboard(AuthUser authUser, LocalDate date) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới xem bảng điều khiển");
         }
-        LocalDate today = timeService.today();
-        List<AttendanceSummaryDto> departments = attendanceService.getAllSummaries(authUser, today);
+        LocalDate target = date != null ? date : timeService.today();
+        List<AttendanceSummaryDto> departments = attendanceService.getAllSummaries(authUser, target);
 
         long total = 0;
         long unchecked = 0;
@@ -49,7 +55,7 @@ public class AdminDashboardService {
                 .build();
 
         return AdminDashboardDto.builder()
-                .attendanceDate(today)
+                .attendanceDate(target)
                 .kpi(kpi)
                 .departments(departments)
                 .build();

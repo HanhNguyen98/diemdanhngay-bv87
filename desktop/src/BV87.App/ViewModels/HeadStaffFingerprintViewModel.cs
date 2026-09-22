@@ -47,6 +47,7 @@ public sealed class HeadStaffFingerprintViewModel : ViewModelBase
     private static readonly int[] DefaultPageSizeOptions = [10, 20, 50, 100];
 
     private readonly HeadApiClient _headApi;
+    private readonly string _pageTitle;
 
     private List<HeadStaffFingerprintRowViewModel> _allItems = [];
     private string _searchDraft = string.Empty;
@@ -65,9 +66,10 @@ public sealed class HeadStaffFingerprintViewModel : ViewModelBase
     private int _statsRegistered;
     private int _statsMissing;
 
-    public HeadStaffFingerprintViewModel(HeadApiClient headApi)
+    public HeadStaffFingerprintViewModel(HeadApiClient headApi, string? deptName)
     {
         _headApi = headApi;
+        _pageTitle = HeadPageTitleFormatter.Format(HeadUiStrings.Staff.PageTitle, deptName);
         PagedItems = new ObservableCollection<HeadStaffFingerprintRowViewModel>();
         FingerprintFilterOptions =
         [
@@ -117,7 +119,7 @@ public sealed class HeadStaffFingerprintViewModel : ViewModelBase
     public event EventHandler<HeadStaffFingerprintRowViewModel>? DeleteFingerprintRequested;
     public event EventHandler<HeadStaffFingerprintRowViewModel>? EditAvatarRequested;
 
-    public string PageTitle => HeadUiStrings.Staff.PageTitle;
+    public string PageTitle => _pageTitle;
     public string ListTitle => HeadUiStrings.Staff.ListTitle;
     public string LoadingMessage => HeadUiStrings.Staff.Loading;
     public string StatsTotalText => _statsTotal.ToString("N0");

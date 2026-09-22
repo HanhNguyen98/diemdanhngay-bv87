@@ -22,6 +22,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
     @Query("SELECT COUNT(e) FROM Employee e WHERE e.department.deptCode = :deptCode")
     long countByDeptCode(@Param("deptCode") Integer deptCode);
 
+    @Query("SELECT COUNT(e) FROM Employee e WHERE e.department.deptCode = :deptCode AND e.active = true")
+    long countByDeptCodeAndActiveTrue(@Param("deptCode") Integer deptCode);
+
     @Query("SELECT COUNT(e) FROM Employee e WHERE e.rankName = :rankName")
     long countByRankName(@Param("rankName") String rankName);
 
@@ -46,17 +49,20 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
             value = """
                     SELECT e FROM Employee e JOIN FETCH e.department d
                     WHERE (:deptCode IS NULL OR d.deptCode = :deptCode)
+                    AND (:active IS NULL OR e.active = :active)
                     AND (:search IS NULL OR LOWER(e.fullname) LIKE LOWER(CONCAT('%', :search, '%'))
                          OR CONCAT('', e.empCode) LIKE CONCAT('%', :search, '%'))
                     """,
             countQuery = """
                     SELECT COUNT(e) FROM Employee e JOIN e.department d
                     WHERE (:deptCode IS NULL OR d.deptCode = :deptCode)
+                    AND (:active IS NULL OR e.active = :active)
                     AND (:search IS NULL OR LOWER(e.fullname) LIKE LOWER(CONCAT('%', :search, '%'))
                          OR CONCAT('', e.empCode) LIKE CONCAT('%', :search, '%'))
                     """)
     Page<Employee> searchPage(
             @Param("deptCode") Integer deptCode,
+            @Param("active") Boolean active,
             @Param("search") String search,
             Pageable pageable);
 }

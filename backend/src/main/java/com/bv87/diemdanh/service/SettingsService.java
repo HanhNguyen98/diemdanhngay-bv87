@@ -34,6 +34,7 @@ public class SettingsService {
             "image/jpeg", "image/png", "image/gif", "image/webp");
     private static final String DEFAULT_PORTAL_TITLE = "BỆNH VIỆN QUÂN Y 87";
     private static final String LEGACY_PORTAL_TITLE = "Bệnh viện Quân y 87";
+    private static final String DEFAULT_PORTAL_SUBTITLE = "Chương trình chấm công";
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
     private final SystemSettingsRepository settingsRepository;
@@ -68,6 +69,9 @@ public class SettingsService {
         }
         SystemSettings settings = loadSettings();
         settings.setPortalTitle(request.getPortalTitle().trim());
+        if (request.getPortalSubtitle() != null) {
+            settings.setPortalSubtitle(normalizePortalSubtitle(request.getPortalSubtitle()));
+        }
         if (request.getLogoUrl() != null) {
             applyImageUrl(settings::setLogoUrl, request.getLogoUrl(), "Logo");
         }
@@ -96,6 +100,7 @@ public class SettingsService {
             SystemSettings created = new SystemSettings();
             created.setId(1L);
             created.setPortalTitle(DEFAULT_PORTAL_TITLE);
+            created.setPortalSubtitle(DEFAULT_PORTAL_SUBTITLE);
             return settingsRepository.save(created);
         });
         if (LEGACY_PORTAL_TITLE.equals(settings.getPortalTitle())) {
@@ -110,6 +115,21 @@ public class SettingsService {
             return DEFAULT_PORTAL_TITLE;
         }
         return title;
+    }
+
+    private String resolvePortalSubtitle(String subtitle) {
+        if (subtitle == null || subtitle.isBlank()) {
+            return DEFAULT_PORTAL_SUBTITLE;
+        }
+        return subtitle.trim();
+    }
+
+    private String normalizePortalSubtitle(String subtitle) {
+        String trimmed = resolvePortalSubtitle(subtitle);
+        if (trimmed.length() > 200) {
+            throw new BusinessException("Phụ đề không được vượt quá 200 ký tự.");
+        }
+        return trimmed;
     }
 
     private void applyImageUrl(java.util.function.Consumer<String> setter, String imageUrl, String label) {
@@ -264,6 +284,7 @@ public class SettingsService {
                 settings.getEarlyGraceMinutes());
         return BrandingDto.builder()
                 .portalTitle(normalizePortalTitle(settings.getPortalTitle()))
+                .portalSubtitle(resolvePortalSubtitle(settings.getPortalSubtitle()))
                 .logoUrl(settings.getLogoUrl())
                 .loginAvatarUrl(settings.getLoginAvatarUrl())
                 .attendanceLockTime(resolveLockTime(settings))

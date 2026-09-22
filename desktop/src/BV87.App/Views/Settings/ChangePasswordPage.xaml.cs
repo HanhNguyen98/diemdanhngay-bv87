@@ -23,7 +23,11 @@ public partial class ChangePasswordPage : UserControl
         }
 
         var user = App.Sessions.Session.User;
-        _viewModel = new ChangePasswordViewModel(App.Api, App.AdminApi, user?.IsAdmin == true);
+        _viewModel = new ChangePasswordViewModel(
+            App.Api,
+            App.AdminApi,
+            user?.IsAdmin == true,
+            user?.IsHead == true ? user.DeptName : null);
         DataContext = _viewModel;
     }
 

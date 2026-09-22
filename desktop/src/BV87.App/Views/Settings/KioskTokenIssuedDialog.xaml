@@ -3,14 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:BV87.App.Shell"
         xmlns:settings="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+        xmlns:controls="clr-namespace:BV87.App.Controls"
         Title="{x:Static settings:SettingsUiStrings+KioskTokens.IssuedTitle}"
         SizeToContent="WidthAndHeight" MinWidth="480" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize" Background="{StaticResource SurfacePageBrush}">
     <Border Margin="16" Padding="20" Background="{StaticResource SurfaceWhiteBrush}"
             BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" MinWidth="460">
         <StackPanel>
-            <TextBlock Text="{x:Static settings:SettingsUiStrings+KioskTokens.IssuedTitle}" FontSize="16" FontWeight="SemiBold"
-                       Foreground="{StaticResource NavyBrush}" Margin="0,0,0,8"/>
+            <controls:DialogContextHeader PrimaryText="{x:Static settings:SettingsUiStrings+KioskTokens.IssuedBadge}"/>
             <TextBlock Text="{x:Static settings:SettingsUiStrings+KioskTokens.IssuedHint}"
                        TextWrapping="Wrap" Foreground="{StaticResource ContentMutedBrush}" Margin="0,0,0,12"/>
             <TextBox x:Name="TokenBox" IsReadOnly="True" FontFamily="Consolas" FontSize="13"

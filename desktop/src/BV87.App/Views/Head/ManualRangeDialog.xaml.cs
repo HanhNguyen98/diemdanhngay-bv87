@@ -15,8 +15,8 @@ public partial class ManualRangeDialog : AppDialogWindow
         bool requireExplainNote = false)
     {
         InitializeComponent();
-        TitleText.Text = action.Label;
-        StaffText.Text = $"{staff.Fullname} · {staff.EmpCodeFormatted ?? staff.EmpCode.ToString()}";
+        Title = action.Label;
+        DialogContextHeaderHelper.SetPerson(ContextHeader, staff.Fullname, staff.DeptDisplay);
         FromDatePicker.SelectedDate = defaultDate.ToDateTime(TimeOnly.MinValue);
         ToDatePicker.SelectedDate = defaultDate.ToDateTime(TimeOnly.MinValue);
         Staff = staff;

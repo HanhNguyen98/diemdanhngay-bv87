@@ -31,9 +31,9 @@ public static class AttendanceUiStrings
     public const string NghiTrucToastDanger = "Không chấm được nghỉ trực.";
     public const string NghiTrucIntentFullCaption = "Kiosk từ chối mọi lần quét trong ngày.";
     public const string NghiTrucIntentHalfAfternoonCaption = "Vẫn quét vào sáng / ra trưa; chiều không quét.";
-    public const string ManualRangeNoteOptional = "Ghi chú (tùy chọn)";
-    public const string ManualRangeNoteRequired = "Lý do giải trình (bắt buộc)";
-    public const string IncompleteExplainNeedReason = "Vui lòng nhập lý do giải trình thiếu dữ liệu chấm công.";
+    public const string ManualRangeNoteOptional = "Lý do chấm bổ sung (không bắt buộc)";
+    public const string ManualRangeNoteRequired = "Lý do chấm bổ sung (bắt buộc)";
+    public const string IncompleteExplainNeedReason = "Vui lòng nhập lý do chấm bổ sung.";
     public const string ManualRangeFrom = "Từ ngày";
     public const string ManualRangeTo = "Đến ngày";
     public const string ManualRangeInvalidOrder = "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.";

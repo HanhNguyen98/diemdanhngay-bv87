@@ -3,6 +3,7 @@ namespace BV87.Core.Models.Admin;
 public sealed class BrandingDto
 {
     public string? PortalTitle { get; set; }
+    public string? PortalSubtitle { get; set; }
     public string? LogoUrl { get; set; }
     public string? LoginAvatarUrl { get; set; }
     public string? AttendanceLockTime { get; set; }
@@ -24,6 +25,7 @@ public sealed class BrandingDto
 public sealed class BrandingUpdateRequest
 {
     public string PortalTitle { get; set; } = string.Empty;
+    public string? PortalSubtitle { get; set; }
     public string? LogoUrl { get; set; }
     public string? LoginAvatarUrl { get; set; }
     public string? AttendanceLockTime { get; set; }
@@ -62,6 +64,8 @@ public sealed class AdminAccountDto
     public int? EmpCode { get; set; }
     public string? EmpCodeFormatted { get; set; }
     public bool Active { get; set; }
+    public long? PermissionGroupId { get; set; }
+    public string? PermissionGroupName { get; set; }
 }
 
 public sealed class AccountUpsertRequest
@@ -73,6 +77,7 @@ public sealed class AccountUpsertRequest
     public int? DeptCode { get; set; }
     public int? EmpCode { get; set; }
     public bool? Active { get; set; }
+    public long? PermissionGroupId { get; set; }
 }
 
 public sealed class ResetPasswordRequest

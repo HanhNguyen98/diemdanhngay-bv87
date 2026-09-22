@@ -98,6 +98,25 @@ CREATE TABLE IF NOT EXISTS attendance_unlock_requests (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Bảng phụ: tài khoản đăng nhập (Admin / Trưởng ban) — cần cho phân quyền
+CREATE TABLE IF NOT EXISTS permission_groups (
+    id           BIGINT       NOT NULL AUTO_INCREMENT,
+    name         VARCHAR(100) NOT NULL,
+    role_scope   VARCHAR(20)  NOT NULL,
+    is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+    created_at   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_permission_groups_name_role (name, role_scope)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS permission_group_screens (
+    id           BIGINT       NOT NULL AUTO_INCREMENT,
+    group_id     BIGINT       NOT NULL,
+    screen_code  VARCHAR(80)  NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_pgs_group_code (group_id, screen_code),
+    CONSTRAINT fk_pgs_group FOREIGN KEY (group_id) REFERENCES permission_groups (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS accounts (
     id            BIGINT       NOT NULL AUTO_INCREMENT,
     username      VARCHAR(50)  NOT NULL,
@@ -105,18 +124,33 @@ CREATE TABLE IF NOT EXISTS accounts (
     role          VARCHAR(20)  NOT NULL,
     dept_code     INT          NULL,
     emp_code      INT          NULL,
+    permission_group_id BIGINT NULL,
     fullname      VARCHAR(100) NOT NULL,
     is_active     TINYINT(1)   NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     UNIQUE KEY uk_username (username),
     KEY idx_acc_dept (dept_code),
     CONSTRAINT fk_acc_dept FOREIGN KEY (dept_code) REFERENCES departments (dept_code),
-    CONSTRAINT fk_acc_emp FOREIGN KEY (emp_code) REFERENCES employees (emp_code)
+    CONSTRAINT fk_acc_emp FOREIGN KEY (emp_code) REFERENCES employees (emp_code),
+    CONSTRAINT fk_accounts_permission_group FOREIGN KEY (permission_group_id)
+        REFERENCES permission_groups (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS account_screens (
+    id           BIGINT       NOT NULL AUTO_INCREMENT,
+    account_id   BIGINT       NOT NULL,
+    screen_code  VARCHAR(80)  NOT NULL,
+    created_at   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_account_screens_account_code (account_id, screen_code),
+    KEY idx_account_screens_account (account_id),
+    CONSTRAINT fk_account_screens_account FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS system_settings (
     id                        BIGINT       NOT NULL,
     portal_title              VARCHAR(200) NOT NULL DEFAULT 'BỆNH VIỆN QUÂN Y 87',
+    portal_subtitle           VARCHAR(200) NOT NULL DEFAULT 'Chương trình chấm công',
     logo_url                  MEDIUMTEXT   NULL,
     login_avatar_url          MEDIUMTEXT   NULL,
     attendance_lock_time      VARCHAR(5)   NULL,

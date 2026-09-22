@@ -72,10 +72,4 @@ public class VietnamTimeService {
     public LocalTime getReminderTimeFromConfig() {
         return timeConfig.getReminderTime();
     }
-
-    public boolean isReminderMinute() {
-        LocalTime now = currentTime();
-        LocalTime reminder = timeConfig.getReminderTime();
-        return now.getHour() == reminder.getHour() && now.getMinute() == reminder.getMinute();
-    }
 }

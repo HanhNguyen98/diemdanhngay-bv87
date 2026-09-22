@@ -40,3 +40,15 @@ public sealed class ApiMessageResult
 {
     public string? Message { get; set; }
 }
+
+public sealed class StaffDeactivatePreviewDto
+{
+    public int EmpCode { get; set; }
+    public string? EmpCodeFormatted { get; set; }
+    public string? Fullname { get; set; }
+    public bool AlreadyInactive { get; set; }
+    public bool IsDepartmentCatalogHead { get; set; }
+    public string? HeadDepartmentLabel { get; set; }
+    public bool HasAttendanceRecords { get; set; }
+    public List<string> LinkedActiveAccountUsernames { get; set; } = [];
+}

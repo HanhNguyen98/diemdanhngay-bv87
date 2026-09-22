@@ -40,6 +40,23 @@ public sealed class AttendanceApiClient
         return _api.PostAsync<object, ApiMessageResult>("/api/attendance/unlock", body, null, ct);
     }
 
+    public Task<UnlockRequestItemDto> CreateUnlockRequestAsync(
+        DateOnly date,
+        string reason,
+        CancellationToken ct = default)
+    {
+        var body = new UnlockRequestCreateRequest
+        {
+            Date = date,
+            Reason = reason
+        };
+        return _api.PostAsync<UnlockRequestCreateRequest, UnlockRequestItemDto>(
+            "/api/attendance/unlock-requests",
+            body,
+            null,
+            ct);
+    }
+
     public Task<ApiMessageResult> RelockDepartmentAsync(int deptCode, DateOnly date, CancellationToken ct = default) =>
         _api.DeleteAsync<ApiMessageResult>(
             $"/api/attendance/unlock/{deptCode}?date={AttendanceFormatHelper.ToApiDate(date)}",

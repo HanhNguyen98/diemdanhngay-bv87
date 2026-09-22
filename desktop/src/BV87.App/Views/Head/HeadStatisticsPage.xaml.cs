@@ -32,7 +32,7 @@ public partial class HeadStatisticsPage : UserControl
             return;
         }
 
-        _viewModel = new HeadStatisticsViewModel(App.AttendanceApi, user.DeptCode.Value);
+        _viewModel = new HeadStatisticsViewModel(App.AttendanceApi, user.DeptCode.Value, user.DeptName);
         _viewModel.ExportRequested += OnExportRequested;
         DataContext = _viewModel;
     }

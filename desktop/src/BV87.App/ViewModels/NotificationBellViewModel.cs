@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Threading;
+using BV87.App;
 using BV87.App.Helpers;
 using BV87.Core.Api;
 using BV87.Core.Constants;
@@ -12,6 +13,7 @@ public sealed class NotificationNavigationRequest
 {
     public required string TargetNavId { get; init; }
     public DateOnly? AttendanceDate { get; init; }
+    public int? DeptCode { get; init; }
 }
 
 public sealed class NotificationItemViewModel
@@ -24,6 +26,7 @@ public sealed class NotificationItemViewModel
         Body = item.Body ?? string.Empty;
         IsRead = item.Read;
         AttendanceDate = item.AttendanceDate;
+        DeptCode = item.DeptCode;
         CreatedAtText = AdminUtilitiesFormatHelper.FormatLogDateTime(item.CreatedAt);
     }
 
@@ -33,6 +36,7 @@ public sealed class NotificationItemViewModel
     public string Body { get; }
     public bool IsRead { get; }
     public DateOnly? AttendanceDate { get; }
+    public int? DeptCode { get; }
     public string CreatedAtText { get; }
 }
 
@@ -170,9 +174,15 @@ public sealed class NotificationBellViewModel : ViewModelBase
                     }
                     break;
                 case NotificationTypes.UnlockRequest:
+                    var hasUnlockQueue = App.Sessions.Session.User?.ScreenCodes?
+                        .Contains("admin.unlock-requests", StringComparer.OrdinalIgnoreCase) == true;
                     NavigationRequested?.Invoke(this, new NotificationNavigationRequest
                     {
-                        TargetNavId = "unlock-requests"
+                        TargetNavId = App.Sessions.Session.User?.IsDuty == true && !hasUnlockQueue
+                            ? "dashboard-dept"
+                            : "unlock-requests",
+                        AttendanceDate = item.AttendanceDate,
+                        DeptCode = item.DeptCode
                     });
                     break;
             }

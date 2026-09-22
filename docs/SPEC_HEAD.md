@@ -26,7 +26,7 @@
 | Sau login | WPF `MainShellWindow` mode **head** (`SPEC_DESKTOP` §2.3.1) |
 | Phạm vi dữ liệu | **Chỉ** `deptCode` gắn trên tài khoản — không xem/sửa đơn vị khác |
 | Tài khoản | Mỗi đơn vị tối đa **1** HEAD active (do Admin tạo ở Phân quyền); gắn bắt buộc `empCode` |
-| Không được gọi | `/api/admin/**` — **không** còn `/api/head/ai/**` (D5) |
+| Không được gọi | `/api/admin/**` — **không** còn `/api/head/ai/**` (D5). Role `DUTY` (trực ban) **không** thay quyền HEAD — `docs/SPEC_DUTY.md` |
 | Date picker (UI) | Hiển thị **`dd/mm/yyyy`** (`DatePickerField` / `formatDateDMY`) — `SPEC_ADMIN` §4 / `SPEC_DESKTOP` §2.7.6. **Cấm** `<input type="date">` |
 
 ---
@@ -147,7 +147,7 @@ Scan vân tay: **không** qua API này — qua Agent + token kiosk (`SPEC_FINGER
 ### 6.2 UI bắt buộc
 
 - Header: ngày, KPI, chuông, **hàng đợi thiếu dữ liệu chấm công** — **không** nút **Gửi báo cáo**; **không** UI khóa sổ theo nghĩa nộp báo cáo
-- **P17:** ngày ≤ hôm nay khóa mềm / chưa unlock — HEAD **chấm NV thiếu dữ liệu** kèm **lý do giải trình bắt buộc** (không chờ Admin). Banner P17. P15 **Gửi yêu cầu mở khóa** chỉ khi cần sửa NV **đã đủ** — §4.7.2a / §4.7.2
+- **P17:** ngày ≤ hôm nay khóa mềm / chưa unlock — HEAD **chấm NV thiếu dữ liệu** (chưa bản ghi / chưa status / có status chưa đủ) kèm **lý do chấm bổ sung bắt buộc** (không chờ Admin). NV **đã đủ** → cấm sửa; nút **Gửi yêu cầu mở khóa** (enable khi roster có NV đã đủ) — §4.7.2a / §4.7.2. **Cấm** banner chữ «Ngày quá khứ…» / «Đang xem dữ liệu…» trên WPF
 - Cột: nhân viên, cấp bậc, chức vụ, **4 mốc giờ** (2×2), **Máy** (luôn hiện hostname+IP), badge status (+ text đỏ `+ Đi trễ` nếu `lateFlag`), thao tác thủ công theo `manualAllowed` + chọn khoảng ngày + **Chi tiết quét** + ô lý do `VE_SOM` bắt buộc
 - **P9-RowHintDeclutter:** **không** hiện hint `Thiếu dữ liệu chấm công` dưới ô giờ trên từng dòng (`EmployeeRow` / `AttendanceStaffCard`) — trùng banner + 4 mốc trống. Thiếu dữ liệu chỉ ở `MissingPunchBanner` (§4.5.2).
 - Roster: full NV active + null
@@ -235,7 +235,8 @@ Cùng filter `deptCode + from + to + search`:
 - Mobile: `StatisticsMobileKpiCards` + history cards; scroll pattern hiện có
 - Empty bảng: `Không có dữ liệu!` — **không** ẩn khối KPI (§7.1a empty filter)
 - WPF (D-UI.41): **cấm** `PageSubtitle` · **Xuất Excel** trên hàng filter phải — `SPEC_DESKTOP` §2.7.8 / §2.20.2
-- WPF (D-UI.39): dưới **LƯỢT CHẤM CÔNG** — `HeadUiStrings.Statistics.KpiHint` (**Theo bản ghi đã có — không phải quân số ngày**) · tooltip chip UNCHECKED ≠ «Chưa chấm» màn Chấm công · **cấm** đổi công thức §7.1a
+- WPF (D-HEAD.1): **cấm** `KpiHint` dưới **LƯỢT CHẤM CÔNG** · tooltip chip UNCHECKED ≠ «Chưa chấm» màn Chấm công · **cấm** đổi công thức §7.1a
+- WPF H1: `{PageTitle} > {TÊN ĐƠN VỊ}` — `SPEC_DESKTOP` §2.7.18
 - KPI / chart / Excel: **mọi status catalog active** (gồm `VE_SOM`, `NGHI_TRUC_*`) — **cùng nguồn DB** với màn Chấm công (`SPEC_FINGERPRINT`) · đếm record theo §7.1a
 - **KPI status desktop (P6-StatusKpi5Col):** `StatisticsKpiCards` — `lg:grid-cols-5`, compact, bỏ `min-h-[9.5rem]`; đồng bộ §6.2 Chấm công + `SPEC_FINGERPRINT` §10.5. Mobile scroll **không đổi**.
 - Web merge catalog: **giữ** item `UNCHECKED` sau `mergeBreakdownWithCatalog` — **cấm** làm mất chip CHƯA CHẤM
@@ -398,8 +399,9 @@ Chi tiết: `docs/SPEC_FINGERPRINT.md`.
 - [x] **D-STAFF.1c:** Bảng Nhân viên — cột ẢNH ĐẠI DIỆN trước MÃ NV — §8
 - [x] **D-STAT.1:** KPI thống kê đếm như bảng lịch sử — §7.1a
 - [x] **D-STAT.1b:** Empty filter — giữ bố cục KPI, số = 0 — §7.1a / §7.2
-- [x] **D-UI.39:** Hint WPF đơn vị đếm Chấm công vs Thống kê — §7.2
+- [x] **D-UI.39:** Tooltip «Chưa chấm» Chấm công vs chip UNCHECKED Thống kê — §7.2 / `SPEC_DESKTOP` §2.20.1
 - [x] **D-UI.40:** H1 WPF IN HOA (`CHẤM CÔNG HẰNG NGÀY` · `THỐNG KÊ LỊCH SỬ CHẤM CÔNG` · `NHÂN VIÊN`) — `SPEC_DESKTOP` §2.7.7
+- [x] **D-HEAD.1:** Gỡ KpiHint + H1 HEAD `{title} > {đơn vị}` — `SPEC_DESKTOP` §2.7.18
 - [x] **D-UI.41:** Thống kê HEAD — bỏ subtitle, Excel trên hàng filter — `SPEC_DESKTOP` §2.7.8
 - [x] **P15-HeadUnlockRequest:** nút gửi yêu cầu mở khóa ngày cũ; chờ Admin xác nhận — §4.7.2
 - [x] **P15-UnlockRequestNotifyType:** gửi yêu cầu không 500 vì ENUM chuông; luôn `message` VN — §4.7.2

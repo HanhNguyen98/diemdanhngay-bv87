@@ -9,13 +9,15 @@ import lombok.Setter;
 public class BrandingUpdateRequest {
     @NotBlank
     private String portalTitle;
+    /** Sidebar/login line under portalTitle; blank → default. */
+    private String portalSubtitle;
     /** Data URL logo sidebar; null giữ nguyên, chuỗi rỗng để xóa */
     private String logoUrl;
     /** Data URL ảnh đại diện màn đăng nhập; null giữ nguyên, chuỗi rỗng để xóa */
     private String loginAvatarUrl;
     /** HH:mm — giờ chốt sổ Chấm công */
     private String attendanceLockTime;
-    /** HH:mm — giờ tự động gửi nhắc nhở */
+    /** HH:mm — persisted; not used to schedule reminders (D-UAT.4). */
     private String attendanceReminderTime;
     private String morningInOfficial;
     private String noonOutOfficial;

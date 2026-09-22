@@ -72,7 +72,10 @@ Kiosk local: `.\run.cmd --agent` (cần `agent.config.json` cạnh exe).
 | Vai trò | Username | Mật khẩu |
 |---------|----------|----------|
 | Admin | admin | admin123 |
-| Trưởng phòng 02 | truongphong02 | head123 |
+
+HEAD / DUTY: tạo qua **Cài đặt → Phân quyền** (không seed sẵn).
+
+Xóa sạch TK local (giữ `admin`): `scripts/sql/cleanup_non_admin_accounts.sql`.
 
 ## Deploy production (LAN)
 

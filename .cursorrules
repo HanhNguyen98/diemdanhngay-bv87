@@ -59,7 +59,7 @@ Use enums instead of magic strings for domain states. Every enum must:
 
 Current enums:
 - `AttendanceStatus` — DI_LAM, DI_TRE, NGHI_PHEP, DI_HOC, DI_CONG_TAC, THAI_SAN, VE_SOM, NGHI_TRUC, NGHI_TRUC_FULL, NGHI_TRUC_HALF
-- `AccountRole` — ADMIN, HEAD
+- `AccountRole` — ADMIN, DUTY, HEAD
 
 ---
 
@@ -87,7 +87,8 @@ Current enums:
 - Admin unlock (legacy): `POST /api/attendance/unlock` with mandatory `reason` → `attendance_unlocks`
 
 ### Roles
-- **ADMIN:** all departments, unlock, full dashboard
+- **ADMIN:** all departments, unlock, full dashboard + catalogs / settings
+- **DUTY:** hospital-wide dashboard + dept detail (same operational writes as ADMIN on those screens) — `docs/SPEC_DUTY.md`
 - **HEAD:** own department only
 
 ---
@@ -135,7 +136,7 @@ WPF uses `ThemeResources.xaml` (same hex tokens as the former web theme). **Neve
 | `neutral` | `#F3F4F6` | `#6B7280` | Chưa chấm |
 
 ### Admin portal (ADMIN role only)
-- WPF: `desktop/` Admin shell — JWT `/api/admin/*`
+- WPF: `desktop/` Admin shell — JWT `/api/admin/*` (DUTY: dashboard subset only)
 - Codes: INT in DB; display with `CodeFormatter` / pad — never strip leading zeros in UI
 
 ---

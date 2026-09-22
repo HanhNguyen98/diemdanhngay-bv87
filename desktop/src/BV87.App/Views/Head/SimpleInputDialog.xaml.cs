@@ -1,6 +1,6 @@
 using System.Windows;
-using BV87.App.Shell;
 using BV87.App.Helpers;
+using BV87.App.Shell;
 
 namespace BV87.App.Views.Head;
 
@@ -10,7 +10,7 @@ public partial class SimpleInputDialog : AppDialogWindow
     {
         InitializeComponent();
         Title = title;
-        TitleText.Text = title;
+        DialogContextHeaderHelper.SetBadge(ContextHeader, title);
         PromptText.Text = prompt;
     }
 

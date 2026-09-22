@@ -75,6 +75,7 @@ public sealed class FingerprintEnrollViewModel : ViewModelBase, IDisposable
     private readonly AppMode _mode;
     private readonly AdminApiClient? _adminApi;
     private readonly HeadApiClient? _headApi;
+    private readonly string _pageTitle;
     private readonly ZkFingerprintDevice _device = new();
     private readonly Dispatcher _dispatcher;
     private readonly List<FingerprintStatusDto> _allStaff = [];
@@ -107,11 +108,14 @@ public sealed class FingerprintEnrollViewModel : ViewModelBase, IDisposable
     private int _currentPage = 1;
     private int _pageSize = 20;
 
-    public FingerprintEnrollViewModel(AppMode mode, AdminApiClient? adminApi, HeadApiClient? headApi)
+    public FingerprintEnrollViewModel(AppMode mode, AdminApiClient? adminApi, HeadApiClient? headApi, string? deptName = null)
     {
         _mode = mode;
         _adminApi = adminApi;
         _headApi = headApi;
+        _pageTitle = mode == AppMode.Head
+            ? HeadPageTitleFormatter.Format(UtilitiesUiStrings.FingerprintEnroll.PageTitle, deptName)
+            : UtilitiesUiStrings.FingerprintEnroll.PageTitle;
         _dispatcher = Dispatcher.CurrentDispatcher;
 
         FilteredStaff = new ObservableCollection<FingerprintEnrollStaffRow>();
@@ -192,7 +196,7 @@ public sealed class FingerprintEnrollViewModel : ViewModelBase, IDisposable
 
     public bool IsAdminMode => _mode == AppMode.Admin;
 
-    public string PageTitle => UtilitiesUiStrings.FingerprintEnroll.PageTitle;
+    public string PageTitle => _pageTitle;
     public string PageSubtitle => IsAdminMode
         ? UtilitiesUiStrings.FingerprintEnroll.PageSubtitle
         : string.Empty;

@@ -109,4 +109,15 @@ class AttendanceLockServiceTest {
         complete.setStatus(AttendanceValidity.NGHI_TRUC_FULL);
         assertTrue(lockService.shouldSkipManualRangeDayForHead(DEPT, yesterday, complete));
     }
+
+    @Test
+    void dutyBypassesSoftLockLikeAdmin() {
+        Account account = new Account();
+        account.setRole(AccountRole.DUTY);
+        AuthUser duty = new AuthUser(account);
+
+        assertTrue(lockService.isEditable(DEPT, AccountRole.DUTY, TODAY));
+        lockService.assertCanWrite(duty, DEPT, TODAY);
+        lockService.assertCanView(duty, DEPT);
+    }
 }

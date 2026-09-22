@@ -52,14 +52,13 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="280"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="{x:Static strings:AdminUiStrings.FilterDeptLabel}"
-                           VerticalAlignment="Center"
-                           Margin="0,0,10,0"
-                           Foreground="{StaticResource ContentHeadingBrush}"
-                           FontSize="20"
-                           FontWeight="SemiBold"/>
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
                 <ComboBox Grid.Column="1"
                           Style="{StaticResource FilterComboBoxStyle}"
                           VerticalAlignment="Center"
@@ -68,7 +67,16 @@
                           DisplayMemberPath="Label"
                           SelectedValuePath="DeptCode"
                           SelectedValue="{Binding SelectedDeptFilterDraft, Mode=TwoWay}"/>
-                <StackPanel Grid.Column="2"
+                <TextBlock Grid.Column="2"
+                           Text="{x:Static strings:AdminUiStrings.FilterDateLabel}"
+                           Style="{StaticResource FilterToolbarLabelStyle}"
+                           Margin="0,0,10,0"/>
+                <DatePicker Grid.Column="3"
+                            Style="{StaticResource FilterDatePickerStyle}"
+                            SelectedDate="{Binding DraftDatePicker, Mode=TwoWay}"
+                            VerticalAlignment="Center"
+                            Margin="0,0,12,0"/>
+                <StackPanel Grid.Column="4"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
                     <Button Style="{StaticResource FilterToolbarPrimaryButtonStyle}"

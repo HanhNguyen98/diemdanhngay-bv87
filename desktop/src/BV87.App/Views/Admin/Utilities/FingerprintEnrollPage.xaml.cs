@@ -33,7 +33,7 @@ public partial class FingerprintEnrollPage : UserControl
 
         _viewModel = _mode == AppMode.Admin
             ? new FingerprintEnrollViewModel(AppMode.Admin, App.AdminApi, null)
-            : new FingerprintEnrollViewModel(AppMode.Head, null, App.HeadApi);
+            : new FingerprintEnrollViewModel(AppMode.Head, null, App.HeadApi, App.Sessions.Session.User?.DeptName);
 
         _viewModel.FingerLabelRequired += OnFingerLabelRequired;
         _viewModel.EnrollCompleted += OnEnrollCompleted;

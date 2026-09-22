@@ -14,6 +14,7 @@
     <AssemblyName>BV87</AssemblyName>
     <RootNamespace>BV87.App</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
+    <ApplicationIcon>Resources\Images\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

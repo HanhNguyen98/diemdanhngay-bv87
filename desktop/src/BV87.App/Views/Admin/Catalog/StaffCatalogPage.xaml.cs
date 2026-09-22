@@ -83,17 +83,41 @@ public partial class StaffCatalogPage : UserControl
             return;
         }
 
-        var result = AppMessageBox.Show(
-            CatalogUiStrings.Staff.DeleteMessage(row.Fullname),
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (result != MessageBoxResult.Yes)
+        try
         {
-            return;
-        }
+            var preview = await App.AdminApi.GetStaffDeactivatePreviewAsync(row.EmpCode);
+            if (preview.AlreadyInactive)
+            {
+                AppMessageBox.Show(
+                    CatalogUiStrings.Staff.DeleteAlreadyInactive,
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
 
-        await _viewModel.DeleteStaffAsync(row);
+            var confirmText = CatalogUiStrings.Staff.BuildDeactivateConfirmMessage(
+                preview.Fullname ?? row.Fullname,
+                preview.IsDepartmentCatalogHead,
+                preview.HeadDepartmentLabel,
+                preview.HasAttendanceRecords,
+                preview.LinkedActiveAccountUsernames);
+
+            var result = AppMessageBox.Show(
+                confirmText,
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            await _viewModel.DeleteStaffAsync(row);
+        }
+        catch (Exception ex)
+        {
+            ShellToast.Danger(ex.Message.Trim('"', ' '));
+        }
     }
 
     private async void OnDeleteFingerprintRequested(object? sender, StaffCatalogRowViewModel row)
@@ -135,7 +159,9 @@ public partial class StaffCatalogPage : UserControl
         fingerprintItem.IsEnabled = row.FingerprintRegistered;
         menu.Items.Add(fingerprintItem);
 
-        menu.Items.Add(CreateActionItem(CatalogUiStrings.Staff.DeleteAction, () => ExecuteDelete(row)));
+        var deleteItem = CreateActionItem(CatalogUiStrings.Staff.DeleteAction, () => ExecuteDelete(row));
+        deleteItem.IsEnabled = row.Active;
+        menu.Items.Add(deleteItem);
 
         menu.PlacementTarget = button;
         menu.IsOpen = true;
@@ -163,7 +189,11 @@ public partial class StaffCatalogPage : UserControl
             return;
         }
 
-        var dialog = new StaffAvatarDialog(row.Fullname, row.EmpCodeFormatted ?? row.EmpCode.ToString("D5"), row.AvatarUrl)
+        var dialog = new StaffAvatarDialog(
+            row.Fullname,
+            row.EmpCodeFormatted ?? row.EmpCode.ToString("D5"),
+            row.AvatarUrl,
+            row.DeptDisplay)
         {
             Owner = Window.GetWindow(this)
         };

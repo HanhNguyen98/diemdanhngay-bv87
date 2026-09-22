@@ -11,6 +11,7 @@ import com.bv87.diemdanh.entity.EmployeeFingerprint;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AccountRepository;
+import com.bv87.diemdanh.repository.AttendanceRecordRepository;
 import com.bv87.diemdanh.repository.DepartmentGroupRepository;
 import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.repository.EmployeeDepartmentAssignmentRepository;
@@ -54,6 +55,7 @@ public class AdminService {
     private final DepartmentGroupRepository departmentGroupRepository;
     private final EmployeeRepository employeeRepository;
     private final AccountRepository accountRepository;
+    private final AttendanceRecordRepository attendanceRecordRepository;
     private final EmployeeDepartmentAssignmentRepository assignmentRepository;
     private final EmployeeFingerprintRepository employeeFingerprintRepository;
     private final AuditService auditService;
@@ -64,6 +66,12 @@ public class AdminService {
     private void assertAdmin(AuthUser authUser) {
         if (!authUser.isAdmin()) {
             throw new AccessDeniedException("Chỉ Admin mới được truy cập quản trị nâng cao");
+        }
+    }
+
+    private void assertHospitalWide(AuthUser authUser) {
+        if (!authUser.isHospitalWide()) {
+            throw new AccessDeniedException("Chỉ Admin hoặc Trực ban mới được truy cập");
         }
     }
 
@@ -175,7 +183,7 @@ public class AdminService {
     }
 
     public List<AdminDepartmentDto> listDepartments(AuthUser authUser, Integer groupCode) {
-        assertAdmin(authUser);
+        assertHospitalWide(authUser);
         return departmentRepository.findAllWithGroup().stream()
                 .filter(d -> groupCode == null
                         || (d.getDepartmentGroup() != null
@@ -237,21 +245,21 @@ public class AdminService {
         if (!dept.isActive()) {
             throw new BusinessException("Đơn vị đã được xóa");
         }
-        long staffCount = employeeRepository.countByDeptCode(deptCode);
+        long staffCount = employeeRepository.countByDeptCodeAndActiveTrue(deptCode);
         if (staffCount > 0) {
-            throw new BusinessException("Không thể xóa Đơn vị còn " + staffCount + " Nhân viên");
+            throw new BusinessException("Không thể xóa Đơn vị còn " + staffCount + " Nhân viên đang hoạt động");
         }
         dept.setActive(false);
         departmentRepository.save(dept);
     }
 
     public RegistryPageDto<AdminStaffDto> listStaffPage(
-            AuthUser authUser, String search, Integer deptCode, int page, int pageSize) {
+            AuthUser authUser, String search, Integer deptCode, Boolean active, int page, int pageSize) {
         assertAdmin(authUser);
         validateRegistryPage(page, pageSize);
         String q = normalizeRegistrySearch(search);
         PageRequest pageable = PageRequest.of(page - 1, pageSize, Sort.by("empCode"));
-        Page<Employee> result = employeeRepository.searchPage(deptCode, q, pageable);
+        Page<Employee> result = employeeRepository.searchPage(deptCode, active, q, pageable);
         Map<Integer, String> fpLabels = fingerprintLabelsByEmpCode(result.getContent());
         List<AdminStaffDto> items = result.getContent().stream()
                 .map(emp -> toStaffDto(emp, fpLabels))
@@ -266,7 +274,7 @@ public class AdminService {
     }
 
     public List<AdminStaffDto> listStaff(AuthUser authUser, String search, Integer deptCode) {
-        return listStaffPage(authUser, search, deptCode, 1, MAX_REGISTRY_PAGE_SIZE).getItems();
+        return listStaffPage(authUser, search, deptCode, null, 1, MAX_REGISTRY_PAGE_SIZE).getItems();
     }
 
     public AdminStaffDto getStaff(AuthUser authUser, Integer empCode) {
@@ -308,7 +316,7 @@ public class AdminService {
         Integer oldDeptCode = emp.getDepartment().getDeptCode();
         Integer newDeptCode = request.getDeptCode();
         if (oldDeptCode.equals(newDeptCode)) {
-            throw new BusinessException("Đơn vị đích phải khác đơn vị hiện tại");
+            throw new BusinessException("Đơn vị đến phải khác đơn vị hiện tại");
         }
         Department targetDept = departmentRepository.findById(newDeptCode)
                 .orElseThrow(() -> new BusinessException("Đơn vị không tồn tại"));
@@ -384,23 +392,102 @@ public class AdminService {
         return toStaffDto(employeeRepository.save(emp));
     }
 
+    /**
+     * Soft-deactivate staff: set inactive, disable linked login accounts, clear department head.
+     * Does not hard-delete the employee row or attendance history (D-STAFF.2).
+     *
+     * @param authUser admin caller
+     * @param empCode employee code
+     * @return Vietnamese success message for API clients
+     */
     @Transactional
-    public void deleteStaff(AuthUser authUser, Integer empCode) {
+    public String deleteStaff(AuthUser authUser, Integer empCode) {
         assertAdmin(authUser);
-        if (!employeeRepository.existsById(empCode)) {
-            throw new BusinessException("Nhân viên không tồn tại");
+        Employee emp = employeeRepository.findByEmpCodeWithDept(empCode)
+                .orElseThrow(() -> new BusinessException("Nhân viên không tồn tại"));
+        if (!emp.isActive()) {
+            throw new BusinessException("Nhân viên đã ngưng hoạt động");
         }
-        if (accountRepository.existsByEmployee_EmpCode(empCode)) {
-            throw new BusinessException(
-                    "Không thể xóa nhân viên đang được gắn với tài khoản đăng nhập. "
-                            + "Hãy xóa hoặc đổi nhân viên trên tài khoản trước.");
+
+        emp.setActive(false);
+        employeeRepository.save(emp);
+
+        List<String> deactivatedUsernames = accountRepository.findAllByEmployee_EmpCode(empCode).stream()
+                .filter(Account::isActive)
+                .map(account -> {
+                    account.setActive(false);
+                    accountRepository.save(account);
+                    return account.getUsername();
+                })
+                .toList();
+
+        boolean wasHead = departmentRepository.existsByHeadEmpCode(empCode);
+        if (wasHead) {
+            departmentRepository.findByHeadEmpCode(empCode).ifPresent(dept -> {
+                dept.setHeadEmpCode(null);
+                departmentRepository.save(dept);
+            });
         }
-        if (departmentRepository.existsByHeadEmpCode(empCode)) {
-            throw new BusinessException(
-                    "Không thể xóa nhân viên đang được gán là Trưởng đơn vị trên danh mục Đơn vị.");
+
+        auditService.log(authUser, "STAFF_DEACTIVATED", Map.of(
+                "empCode", empCode,
+                "deactivatedAccounts", deactivatedUsernames,
+                "headRevoked", wasHead));
+
+        StringBuilder message = new StringBuilder("Đã chuyển nhân viên sang ngưng hoạt động");
+        if (!deactivatedUsernames.isEmpty()) {
+            message.append(". Đã tắt tài khoản: ").append(String.join(", ", deactivatedUsernames));
         }
-        assignmentRepository.deleteByEmpCode(empCode);
-        employeeRepository.deleteById(empCode);
+        if (wasHead) {
+            message.append(". Đã thu hồi gán Trưởng đơn vị — hãy cấp trưởng cho tài khoản khác");
+        }
+        message.append(".");
+        return message.toString();
+    }
+
+    /**
+     * Builds warning flags for the Admin soft-deactivate confirm dialog.
+     *
+     * @param authUser admin caller
+     * @param empCode employee code
+     * @return preview DTO
+     */
+    public StaffDeactivatePreviewDto getStaffDeactivatePreview(AuthUser authUser, Integer empCode) {
+        assertAdmin(authUser);
+        Employee emp = employeeRepository.findByEmpCodeWithDept(empCode)
+                .orElseThrow(() -> new BusinessException("Nhân viên không tồn tại"));
+
+        String headLabel = null;
+        boolean catalogHead = departmentRepository.existsByHeadEmpCode(empCode);
+        if (catalogHead) {
+            headLabel = departmentRepository.findByHeadEmpCode(empCode)
+                    .map(dept -> {
+                        String unit = dept.getUnitCode();
+                        String name = dept.getDeptName() != null ? dept.getDeptName() : "";
+                        if (unit == null || unit.isBlank()) {
+                            return name;
+                        }
+                        return unit.trim() + " - " + name;
+                    })
+                    .orElse(null);
+        }
+
+        List<String> linkedActive = accountRepository.findAllByEmployee_EmpCode(empCode).stream()
+                .filter(Account::isActive)
+                .map(Account::getUsername)
+                .sorted()
+                .toList();
+
+        return StaffDeactivatePreviewDto.builder()
+                .empCode(emp.getEmpCode())
+                .empCodeFormatted(CodeFormatter.formatEmpCode(emp.getEmpCode()))
+                .fullname(emp.getFullname())
+                .alreadyInactive(!emp.isActive())
+                .isDepartmentCatalogHead(catalogHead)
+                .headDepartmentLabel(headLabel)
+                .hasAttendanceRecords(attendanceRecordRepository.existsByEmployee_EmpCode(empCode))
+                .linkedActiveAccountUsernames(linkedActive)
+                .build();
     }
 
     public List<AdminStaffDto> listStaffForHead(AuthUser authUser, String search) {
@@ -473,7 +560,7 @@ public class AdminService {
                 .headEmpCodeFormatted(headEmpFormatted)
                 .headName(headName)
                 .headRank(headRank)
-                .staffCount(employeeRepository.countByDeptCode(dept.getDeptCode()))
+                .staffCount(employeeRepository.countByDeptCodeAndActiveTrue(dept.getDeptCode()))
                 .active(dept.isActive())
                 .build();
     }

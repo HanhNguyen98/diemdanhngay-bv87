@@ -65,7 +65,7 @@ public class AttendanceLockService {
     }
 
     public static final String MSG_EXPLAIN_REQUIRED =
-            "Vui lòng nhập lý do giải trình thiếu dữ liệu chấm công.";
+            "Vui lòng nhập lý do chấm bổ sung.";
     public static final String MSG_COMPLETE_LOCKED =
             "Nhân viên đã đủ dữ liệu chấm công. Liên hệ Admin nếu cần chỉnh sửa.";
     public static final String MSG_PAST_LOCKED =
@@ -82,7 +82,7 @@ public class AttendanceLockService {
      * Incomplete staff after lock: P17 {@link #isIncompleteExplainAllowed}.
      */
     public boolean isEditable(Integer deptCode, AccountRole role, LocalDate date) {
-        if (role == AccountRole.ADMIN) {
+        if (role.isHospitalWide()) {
             return true;
         }
         if (role != AccountRole.HEAD) {
@@ -116,7 +116,7 @@ public class AttendanceLockService {
      * Validates role/dept for manual range assign — dates may be past/future (SPEC §3.2.1).
      */
     public void assertCanAssignManual(AuthUser authUser, Integer targetDeptCode) {
-        if (authUser.isAdmin()) {
+        if (authUser.isHospitalWide()) {
             return;
         }
         if (!authUser.isHead()) {
@@ -137,7 +137,7 @@ public class AttendanceLockService {
      * @throws BusinessException when soft-locked or report-blocked for HEAD
      */
     public void assertCanWrite(AuthUser authUser, Integer targetDeptCode, LocalDate date) {
-        if (authUser.isAdmin()) {
+        if (authUser.isHospitalWide()) {
             return;
         }
         if (!authUser.isHead()) {
@@ -196,7 +196,7 @@ public class AttendanceLockService {
             LocalDate date,
             AttendanceRecord existingRecord,
             String note) {
-        if (authUser.isAdmin()) {
+        if (authUser.isHospitalWide()) {
             return;
         }
         if (!authUser.isHead()) {
@@ -249,7 +249,7 @@ public class AttendanceLockService {
      * @throws AccessDeniedException when HEAD tries to access another department
      */
     public void assertCanView(AuthUser authUser, Integer targetDeptCode) {
-        if (authUser.isAdmin()) {
+        if (authUser.isHospitalWide()) {
             return;
         }
         if (authUser.isHead() && targetDeptCode.equals(authUser.getDeptCode())) {
@@ -276,10 +276,10 @@ public class AttendanceLockService {
         if (date != null && date.equals(timeService.today())) {
             return "Đã qua giờ khóa mềm ngày công ("
                     + timeService.formatLockTime()
-                    + "). Có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do giải trình khi lưu. "
+                    + "). Có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do chấm bổ sung khi lưu. "
                     + "Nhân viên đã đủ dữ liệu chỉ sửa khi Admin mở khóa.";
         }
-        return "Ngày quá khứ: có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do giải trình khi lưu. "
+        return "Ngày quá khứ: có thể chấm nhân viên còn thiếu dữ liệu — bắt buộc nhập lý do chấm bổ sung khi lưu. "
                 + "Nhân viên đã đủ dữ liệu chỉ sửa khi Admin mở khóa.";
     }
 
@@ -287,7 +287,7 @@ public class AttendanceLockService {
      * Legacy UI message for Admin lock flags.
      */
     public String getLockMessage(Integer deptCode, AccountRole role, LocalDate date) {
-        if (role == AccountRole.ADMIN || role == AccountRole.HEAD) {
+        if (role.isHospitalWide() || role == AccountRole.HEAD) {
             return null;
         }
         if (isDepartmentLocked(deptCode, date)) {

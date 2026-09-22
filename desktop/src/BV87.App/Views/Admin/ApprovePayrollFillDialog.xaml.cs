@@ -1,6 +1,8 @@
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.Core.Constants;
+using BV87.Core.Helpers;
 using BV87.Core.Models.Attendance;
 
 namespace BV87.App.Views.Admin;
@@ -13,8 +15,11 @@ public partial class ApprovePayrollFillDialog : AppDialogWindow
     {
         InitializeComponent();
 
-        TitleText.Text = AdminUiStrings.PayrollFillApproveTitle;
-        SubtitleText.Text = $"{staff.Fullname} · {staff.EmpCodeFormatted ?? staff.EmpCode.ToString()}";
+        Title = AdminUiStrings.PayrollFillApproveTitle;
+        DialogContextHeaderHelper.SetPerson(
+            ContextHeader,
+            staff.Fullname,
+            $"{staff.DeptDisplay} · {AdminUtilitiesFormatHelper.FormatDateOnly(date)}");
         HintText.Text = AdminUiStrings.PayrollFillApproveHint;
         IntentValueText.Text = staff.PayrollIntentLabel ?? "—";
         ReasonValueText.Text = staff.MissingPunchReason ?? "—";

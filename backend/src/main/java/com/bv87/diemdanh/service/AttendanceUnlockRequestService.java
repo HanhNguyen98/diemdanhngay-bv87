@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +50,7 @@ public class AttendanceUnlockRequestService {
     private final AuditService auditService;
     private final VietnamTimeService timeService;
     private final AttendanceLockService lockService;
+    private final AccountScreenService accountScreenService;
 
     @Transactional
     public UnlockRequestItemDto create(AuthUser authUser, UnlockRequestCreateRequest request) {
@@ -94,24 +96,30 @@ public class AttendanceUnlockRequestService {
 
     @Transactional(readOnly = true)
     public List<UnlockRequestItemDto> list(AuthUser authUser, UnlockRequestStatus status) {
-        if (!authUser.isAdmin()) {
-            throw new AccessDeniedException("Chỉ Admin được xem hàng đợi yêu cầu mở khóa");
-        }
+        assertCanViewUnlockQueue(authUser);
         UnlockRequestStatus filter = status != null ? status : UnlockRequestStatus.PENDING;
         return requestRepository.search(filter).stream().limit(LIST_LIMIT).map(this::toItem).toList();
     }
 
     @Transactional(readOnly = true)
     public long countPending(AuthUser authUser) {
-        if (!authUser.isAdmin()) {
-            throw new AccessDeniedException("Chỉ Admin được xem hàng đợi yêu cầu mở khóa");
-        }
+        assertCanViewUnlockQueue(authUser);
         return requestRepository.countByStatus(UnlockRequestStatus.PENDING);
+    }
+
+    private void assertCanViewUnlockQueue(AuthUser authUser) {
+        if (authUser.isAdmin()) {
+            return;
+        }
+        if (authUser.isDuty() && accountScreenService.hasScreen(authUser, "admin.unlock-requests")) {
+            return;
+        }
+        throw new AccessDeniedException("Chỉ Admin được xem hàng đợi yêu cầu mở khóa");
     }
 
     @Transactional
     public UnlockRequestItemDto approve(AuthUser authUser, Long id) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin được xác nhận mở khóa");
         }
         AttendanceUnlockRequest row = load(id);
@@ -128,7 +136,7 @@ public class AttendanceUnlockRequestService {
 
     @Transactional
     public UnlockRequestItemDto reject(AuthUser authUser, Long id, String note) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin được từ chối yêu cầu mở khóa");
         }
         AttendanceUnlockRequest row = load(id);
@@ -199,7 +207,7 @@ public class AttendanceUnlockRequestService {
             body = body.substring(0, 497) + "...";
         }
         Long senderId = head.getAccount().getId();
-        for (Account admin : accountRepository.findAllActiveByRole(AccountRole.ADMIN)) {
+        for (Account admin : hospitalOperators()) {
             Notification n = new Notification();
             n.setRecipientId(admin.getId());
             n.setSenderId(senderId);
@@ -233,6 +241,13 @@ public class AttendanceUnlockRequestService {
         } catch (Exception ex) {
             log.warn("Không gửi được thông báo kết quả mở khóa requestId={}", row.getId(), ex);
         }
+    }
+
+    private List<Account> hospitalOperators() {
+        List<Account> operators = new ArrayList<>();
+        operators.addAll(accountRepository.findAllActiveByRole(AccountRole.ADMIN));
+        operators.addAll(accountRepository.findAllActiveByRole(AccountRole.DUTY));
+        return operators;
     }
 
     private UnlockRequestItemDto toItem(AttendanceUnlockRequest row) {

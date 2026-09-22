@@ -35,6 +35,7 @@ public class AuthService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AccountScreenService accountScreenService;
 
     /**
      * Desktop JWT login — no HTTP session (SPEC_DESKTOP §2 / D5).
@@ -116,7 +117,8 @@ public class AuthService {
         boolean editable = deptCode != null && lockService.isEditable(deptCode, role, today);
         String lockMessage = lockService.getLockMessage(deptCode, role, today);
 
-        return LoginResponse.from(account, editable, locked, lockMessage);
+        return LoginResponse.from(
+                account, editable, locked, lockMessage, accountScreenService.effectiveScreenCodes(account));
     }
 
     private DesktopLoginResponse buildDesktopResponse(AuthUser authUser) {

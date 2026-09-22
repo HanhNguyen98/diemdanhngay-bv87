@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:BV87.App.Shell"
         xmlns:catalog="clr-namespace:BV87.Core.Constants;assembly=BV87.Core"
+        xmlns:controls="clr-namespace:BV87.App.Controls"
         Title="{x:Static catalog:CatalogUiStrings+Staff.AvatarTitle}"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
@@ -16,29 +17,7 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Margin="24,24,24,8">
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-                    <Border Width="40" Height="40" CornerRadius="20"
-                            Background="{StaticResource PrimaryLightBrush}"
-                            BorderBrush="{StaticResource PrimaryLightBorderBrush}"
-                            BorderThickness="1"
-                            VerticalAlignment="Center">
-                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE77B;"
-                                   FontSize="18" Foreground="{StaticResource PrimaryBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{x:Static catalog:CatalogUiStrings+Staff.AvatarTitle}"
-                                   FontFamily="{StaticResource AppFontFamily}"
-                                   FontSize="{StaticResource FontSizeLg}"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource NavyBrush}"/>
-                        <TextBlock x:Name="StaffText"
-                                   FontFamily="{StaticResource AppFontFamily}"
-                                   FontSize="{StaticResource FontSizeBase}"
-                                   Foreground="{StaticResource PrimaryBrush}"
-                                   Margin="0,2,0,0"/>
-                    </StackPanel>
-                </StackPanel>
+                <controls:DialogContextHeader x:Name="ContextHeader"/>
 
                 <Grid Width="140" Height="140" HorizontalAlignment="Center" Margin="0,0,0,20">
                     <Grid Width="128" Height="128"

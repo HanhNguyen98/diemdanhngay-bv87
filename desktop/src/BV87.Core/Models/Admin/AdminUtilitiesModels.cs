@@ -23,6 +23,12 @@ public sealed class UnlockRejectRequest
     public string? Note { get; set; }
 }
 
+public sealed class UnlockRequestCreateRequest
+{
+    public DateOnly Date { get; set; }
+    public string Reason { get; set; } = string.Empty;
+}
+
 public sealed class ReminderHistoryDto
 {
     public List<ReminderHistoryItemDto> History { get; set; } = [];

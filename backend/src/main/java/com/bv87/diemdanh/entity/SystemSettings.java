@@ -21,6 +21,9 @@ public class SystemSettings {
     @Column(name = "portal_title", nullable = false, length = 200)
     private String portalTitle = "BỆNH VIỆN QUÂN Y 87";
 
+    @Column(name = "portal_subtitle", length = 200)
+    private String portalSubtitle = "Chương trình chấm công";
+
     @Column(name = "logo_url", columnDefinition = "MEDIUMTEXT")
     private String logoUrl;
 
@@ -31,7 +34,7 @@ public class SystemSettings {
     @Column(name = "attendance_lock_time", length = 5)
     private String attendanceLockTime;
 
-    /** HH:mm — giờ tự động gửi nhắc nhở; null = dùng application.yml */
+    /** HH:mm — persisted; unused for jobs (D-UAT.4); null = application.yml. */
     @Column(name = "attendance_reminder_time", length = 5)
     private String attendanceReminderTime;
 

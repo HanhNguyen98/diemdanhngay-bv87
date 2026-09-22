@@ -56,7 +56,7 @@ public partial class AdminDashboardOverviewPage : UserControl
         }
 
         var owner = Window.GetWindow(this);
-        var dialog = new ReminderDialog(items) { Owner = owner };
+        var dialog = new ReminderDialog(items, _viewModel.AppliedDate) { Owner = owner };
         if (dialog.ShowDialog() != true)
         {
             return;

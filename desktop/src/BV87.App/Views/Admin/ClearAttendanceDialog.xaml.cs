@@ -1,6 +1,8 @@
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.Core.Constants;
+using BV87.Core.Helpers;
 using BV87.Core.Models.Attendance;
 
 namespace BV87.App.Views.Admin;
@@ -13,8 +15,11 @@ public partial class ClearAttendanceDialog : AppDialogWindow
     {
         InitializeComponent();
 
-        TitleText.Text = AdminUiStrings.ClearAttendanceTitle;
-        SubtitleText.Text = $"{staff.EmpCodeFormatted ?? staff.EmpCode.ToString()} - {staff.Fullname}";
+        Title = AdminUiStrings.ClearAttendanceTitle;
+        DialogContextHeaderHelper.SetPerson(
+            ContextHeader,
+            staff.Fullname,
+            AdminUtilitiesFormatHelper.FormatDateOnly(date));
         HintText.Text = AdminUiStrings.ClearAttendanceHint;
         ReportWarningText.Text = AdminUiStrings.ClearAttendanceAfterSubmitWarn;
         ReportWarningPanel.Visibility = reportSubmitted ? Visibility.Visible : Visibility.Collapsed;

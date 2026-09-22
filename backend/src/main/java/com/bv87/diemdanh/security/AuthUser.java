@@ -57,6 +57,14 @@ public class AuthUser implements UserDetails {
         return account.getRole() == AccountRole.ADMIN;
     }
 
+    public boolean isDuty() {
+        return account.getRole() == AccountRole.DUTY;
+    }
+
+    public boolean isHospitalWide() {
+        return account.getRole().isHospitalWide();
+    }
+
     public boolean isHead() {
         return account.getRole() == AccountRole.HEAD;
     }

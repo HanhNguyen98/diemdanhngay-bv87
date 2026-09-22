@@ -43,19 +43,12 @@ INSERT IGNORE INTO employees (emp_code, fullname, dept_code, rank_name, position
     (7002, 'Chu Thị Bích',     7, 'Trung tá',    'Nhân viên'),
     (7003, 'Võ Văn Cảnh',      7, 'Thiếu tá',    'Nhân viên');
 
--- Tài khoản đăng nhập (BCrypt: admin123 / head123)
--- is_active phải = 1; Hibernate tạo cột trước schema.sql nên default có thể là 0
+-- Tài khoản đăng nhập — chỉ seed ADMIN (BCrypt: admin123)
+-- HEAD/DUTY tạo qua UI Phân quyền; không seed HEAD mẫu
 INSERT IGNORE INTO accounts (username, password_hash, role, dept_code, emp_code, fullname, is_active) VALUES
-    ('admin',         '$2b$10$BaHCNaTF4.dilc6sgHGlcuHV3ihn.NjO62AihUjutjkp9JEh8ui3y', 'ADMIN', NULL, NULL, 'Amin', 1),
-    ('truongban01',   '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  1, 1001, 'Nguyễn Văn An', 1),
-    ('truongphong02', '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  2, 2001, 'Trần Thị Bình', 1),
-    ('truongphong03', '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  3, 3001, 'Lê Văn Cường', 1),
-    ('truongphong04', '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  4, 4001, 'Phạm Thị Dung', 1),
-    ('truongphong05', '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  5, 5001, 'Hoàng Văn Em', 1),
-    ('truongphong06', '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  6, 6001, 'Vũ Thị Phương', 1),
-    ('truongban07',   '$2b$10$iwj39QbCAG6T37mzW3YDjeWgASdBhenyZIERjolAPhmjvCewvy0kq', 'HEAD',  7, 7001, 'Đặng Văn Giang', 1);
+    ('admin', '$2b$10$BaHCNaTF4.dilc6sgHGlcuHV3ihn.NjO62AihUjutjkp9JEh8ui3y', 'ADMIN', NULL, NULL, 'Admin', 1);
 
-UPDATE accounts SET is_active = 1 WHERE is_active = 0;
+UPDATE accounts SET is_active = 1 WHERE username = 'admin';
 
 UPDATE departments SET is_active = 1 WHERE is_active = 0;
 
@@ -64,22 +57,49 @@ INSERT IGNORE INTO department_groups (group_code, group_name, sort_order, is_act
     (1, 'CƠ QUAN', 1, 1);
 UPDATE departments SET group_code = 1 WHERE group_code IS NULL OR group_code = 0;
 
--- ADMIN không gắn nhân viên; sửa dữ liệu cũ nếu admin trùng emp_code với HEAD
-UPDATE accounts SET emp_code = NULL, dept_code = NULL WHERE username = 'admin';
+-- ADMIN không gắn nhân viên
+UPDATE accounts SET emp_code = NULL, dept_code = NULL, fullname = 'Admin' WHERE username = 'admin';
 
--- Mỗi đơn vị chỉ một tài khoản HEAD (giữ bản active trước, rồi id nhỏ nhất)
-DELETE a
-FROM accounts a
-INNER JOIN (
-    SELECT dept_code,
-           CAST(SUBSTRING_INDEX(GROUP_CONCAT(id ORDER BY is_active DESC, id ASC), ',', 1) AS UNSIGNED) AS keep_id
-    FROM accounts
-    WHERE role = 'HEAD' AND dept_code IS NOT NULL
-    GROUP BY dept_code
-    HAVING COUNT(*) > 1
-) keeper ON a.dept_code = keeper.dept_code
-WHERE a.role = 'HEAD'
-  AND a.id <> keeper.keep_id;
+-- Gỡ tài khoản HEAD mẫu cũ (đã bỏ seed; idempotent mỗi lần start local)
+DELETE FROM notifications
+WHERE recipient_id IN (
+    SELECT id FROM (
+        SELECT id FROM accounts
+        WHERE username IN (
+            'truongban01', 'truongphong02', 'truongphong03', 'truongphong04',
+            'truongphong05', 'truongphong06', 'truongban07'
+        )
+    ) legacy_acc
+)
+   OR sender_id IN (
+    SELECT id FROM (
+        SELECT id FROM accounts
+        WHERE username IN (
+            'truongban01', 'truongphong02', 'truongphong03', 'truongphong04',
+            'truongphong05', 'truongphong06', 'truongban07'
+        )
+    ) legacy_acc2
+);
+DELETE FROM account_screens
+WHERE account_id IN (
+    SELECT id FROM (
+        SELECT id FROM accounts
+        WHERE username IN (
+            'truongban01', 'truongphong02', 'truongphong03', 'truongphong04',
+            'truongphong05', 'truongphong06', 'truongban07'
+        )
+    ) legacy_acc
+);
+UPDATE accounts SET permission_group_id = NULL
+WHERE username IN (
+    'truongban01', 'truongphong02', 'truongphong03', 'truongphong04',
+    'truongphong05', 'truongphong06', 'truongban07'
+);
+DELETE FROM accounts
+WHERE username IN (
+    'truongban01', 'truongphong02', 'truongphong03', 'truongphong04',
+    'truongphong05', 'truongphong06', 'truongban07'
+);
 
 -- Không còn ép DI_TRE → DI_LAM (SPEC: giữ DI_TRE trong catalog + bản ghi ngày)
 -- P3b catalog seed: AttendanceStatusCatalogBootstrap (Java) — tránh data.sql + cột legacy metric_key
@@ -87,6 +107,9 @@ WHERE a.role = 'HEAD'
 -- Đồng bộ tên hệ thống in hoa
 UPDATE system_settings SET portal_title = 'BỆNH VIỆN QUÂN Y 87'
 WHERE portal_title = 'Bệnh viện Quân y 87' OR portal_title IS NULL OR portal_title = '';
+
+UPDATE system_settings SET portal_subtitle = 'Chương trình chấm công'
+WHERE portal_subtitle IS NULL OR portal_subtitle = '';
 
 -- Backfill lịch sử đơn vị cho nhân viên hiện có (một bản ghi đang hiệu lực)
 INSERT INTO employee_department_assignments (emp_code, dept_code, from_date, created_by, created_at)

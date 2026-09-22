@@ -13,7 +13,7 @@ import lombok.Setter;
 @Setter
 public class StaffTransferRequest {
 
-    @NotNull(message = "Đơn vị đích không được để trống")
+    @NotNull(message = "Đơn vị đến không được để trống")
     private Integer deptCode;
 
     @NotBlank(message = "Vui lòng nhập lý do luân chuyển Đơn vị")

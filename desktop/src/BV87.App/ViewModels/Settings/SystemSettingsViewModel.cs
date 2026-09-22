@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using BV87.App;
+using BV87.App.Branding;
 using BV87.App.Helpers;
 using BV87.Core;
 using BV87.Core.Api;
@@ -21,6 +22,7 @@ public sealed class SystemSettingsViewModel : ViewModelBase
     private string? _loginAvatarError;
 
     private string _portalTitle = string.Empty;
+    private string _portalSubtitle = string.Empty;
     private string? _logoUrl;
     private string? _loginAvatarUrl;
     private string _attendanceLockTime = WorkHoursDefaults.DefaultLockTime;
@@ -113,6 +115,12 @@ public sealed class SystemSettingsViewModel : ViewModelBase
     {
         get => _portalTitle;
         set => SetProperty(ref _portalTitle, value);
+    }
+
+    public string PortalSubtitle
+    {
+        get => _portalSubtitle;
+        set => SetProperty(ref _portalSubtitle, value);
     }
 
     public string? LogoUrl
@@ -239,6 +247,9 @@ public sealed class SystemSettingsViewModel : ViewModelBase
         {
             var data = await _adminApi.GetBrandingAsync();
             PortalTitle = data.PortalTitle ?? string.Empty;
+            PortalSubtitle = string.IsNullOrWhiteSpace(data.PortalSubtitle)
+                ? HospitalBranding.DefaultPortalSubtitle
+                : data.PortalSubtitle.Trim();
             LogoUrl = data.LogoUrl;
             LoginAvatarUrl = data.LoginAvatarUrl;
             AttendanceLockTime = data.AttendanceLockTime ?? WorkHoursDefaults.DefaultLockTime;
@@ -283,15 +294,15 @@ public sealed class SystemSettingsViewModel : ViewModelBase
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(AttendanceLockTime))
+        if (string.IsNullOrWhiteSpace(PortalSubtitle))
         {
-            ErrorMessage = SettingsUiStrings.System.LockTimeRequired;
+            ErrorMessage = SettingsUiStrings.System.SubtitleRequired;
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(AttendanceReminderTime))
+        if (string.IsNullOrWhiteSpace(AttendanceLockTime))
         {
-            ErrorMessage = SettingsUiStrings.System.ReminderTimeRequired;
+            ErrorMessage = SettingsUiStrings.System.LockTimeRequired;
             return;
         }
 
@@ -301,6 +312,7 @@ public sealed class SystemSettingsViewModel : ViewModelBase
             await _adminApi.UpdateBrandingAsync(new BrandingUpdateRequest
             {
                 PortalTitle = PortalTitle.Trim(),
+                PortalSubtitle = PortalSubtitle.Trim(),
                 LogoUrl = LogoUrl,
                 LoginAvatarUrl = LoginAvatarUrl,
                 AttendanceLockTime = AttendanceLockTime,

@@ -4,5 +4,6 @@ namespace BV87.Core;
 public enum AppMode
 {
     Head,
-    Admin
+    Admin,
+    Duty
 }

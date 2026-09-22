@@ -1,10 +1,7 @@
 using System.Windows;
-using System.Windows.Media;
 using BV87.App.Controls;
 using BV87.App.Windows;
-using BV87.Core;
 using BV87.Core.Constants;
-using BV87.Core.Models;
 
 namespace BV87.App.Branding;
 
@@ -17,28 +14,23 @@ public static class BrandingUiApplicator
         window.Title = ShellUiStrings.WindowTitle;
     }
 
-    public static void ApplyShellSidebar(HospitalLogo logo, AppBrandingState state, AppMode mode, UserProfile? user = null)
+    public static void ApplyShellSidebar(HospitalLogo logo, AppBrandingState state)
     {
-        logo.LogoSource = BrandingImageHelper.ResolveLogoImage(state.LogoUrl);
-        logo.AppSubtitle = state.PortalTitle;
-        if (mode == AppMode.Head && !string.IsNullOrWhiteSpace(user?.DeptName))
-        {
-            logo.HospitalName = user!.DeptName!.Trim();
-            logo.ShowHospitalName = true;
-        }
-        else
-        {
-            logo.ShowHospitalName = false;
-        }
+        ApplyHeaderLogo(logo, state);
     }
 
     private static void ApplyLoginHeader(HospitalLogo logo, AppBrandingState state)
     {
+        ApplyHeaderLogo(logo, state);
+    }
+
+    private static void ApplyHeaderLogo(HospitalLogo logo, AppBrandingState state)
+    {
         logo.LogoSource = BrandingImageHelper.ResolveLogoImage(state.LogoUrl);
         logo.AppSubtitle = state.PortalTitle;
-        logo.HospitalName = HospitalBranding.LoginProgramSubtitle;
-        logo.ShowHospitalName = true;
+        logo.HospitalName = state.PortalSubtitle;
         logo.ShowAppSubtitle = true;
+        logo.ShowHospitalName = true;
     }
 
     private static void ApplyLoginBackground(

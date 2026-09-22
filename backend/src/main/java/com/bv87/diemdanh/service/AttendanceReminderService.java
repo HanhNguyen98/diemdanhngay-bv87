@@ -38,73 +38,35 @@ public class AttendanceReminderService {
     private final NotificationService notificationService;
     private final AttendanceReminderLogRepository reminderLogRepository;
     private final DepartmentRepository departmentRepository;
-    private final SettingsService settingsService;
     private final VietnamTimeService timeService;
+    private final AccountScreenService accountScreenService;
 
     @Transactional
     public SendReminderResultDto sendManualReminders(AuthUser authUser, List<Integer> deptCodes) {
-        // Default target = yesterday (P5 missing-punch model)
-        return sendManualReminders(authUser, deptCodes, timeService.today().minusDays(1));
+        return sendManualReminders(authUser, deptCodes, null);
     }
 
     /**
      * Manual reminders for departments with missing punches on {@code attendanceDate}.
      *
-     * @param attendanceDate day the missing-punch queue refers to (usually D−1)
+     * @param attendanceDate day the missing-punch queue refers to; null = yesterday (D−1)
      */
     @Transactional
     public SendReminderResultDto sendManualReminders(
             AuthUser authUser, List<Integer> deptCodes, LocalDate attendanceDate) {
-        if (!authUser.isAdmin()) {
+        if (!authUser.isHospitalWide()) {
             throw new AccessDeniedException("Chỉ Admin mới được gửi nhắc nhở");
         }
         if (deptCodes == null || deptCodes.isEmpty()) {
             throw new BusinessException("Chọn ít nhất một Đơn vị");
         }
-        if (attendanceDate == null) {
-            throw new BusinessException("Thiếu ngày Chấm công để nhắc nhở");
-        }
-        return dispatchReminders(attendanceDate, deptCodes, ReminderTriggerType.MANUAL, authUser);
-    }
-
-    @Transactional
-    public void sendAutoRemindersIfDue() {
-        LocalDate today = timeService.today();
-        if (reminderLogRepository.existsByAttendanceDateAndTriggerType(today, ReminderTriggerType.AUTO)) {
-            return;
-        }
-        if (!timeService.isReminderMinute()) {
-            return;
-        }
-        // P5 — remind about yesterday's missing punches (not today's incomplete submit)
-        LocalDate targetDate = today.minusDays(1);
-        MissingPunchesResponseDto missing = attendanceService.listMissingPunchesForSystem(targetDate);
-        List<Integer> incompleteDeptCodes = missing.getItems().stream()
-                .map(MissingPunchItemDto::getDeptCode)
-                .distinct()
-                .toList();
-        if (incompleteDeptCodes.isEmpty()) {
-            reminderLogRepository.save(buildAutoMarkerLog(today,
-                    "Không có ĐƠN VỊ thiếu dữ liệu chấm công ngày " + targetDate.format(DATE_FMT) + "."));
-            return;
-        }
-        dispatchReminders(targetDate, incompleteDeptCodes, ReminderTriggerType.AUTO, null);
-    }
-
-    private AttendanceReminderLog buildAutoMarkerLog(LocalDate date, String message) {
-        AttendanceReminderLog log = new AttendanceReminderLog();
-        log.setAttendanceDate(date);
-        log.setDeptCode(0);
-        log.setTriggerType(ReminderTriggerType.AUTO);
-        log.setStatus(ReminderLogStatus.SENT);
-        log.setMessage(message);
-        return log;
+        LocalDate targetDate = attendanceDate != null ? attendanceDate : timeService.today().minusDays(1);
+        return dispatchReminders(targetDate, deptCodes, authUser);
     }
 
     private SendReminderResultDto dispatchReminders(
             LocalDate date,
             List<Integer> requestedDeptCodes,
-            ReminderTriggerType trigger,
             AuthUser admin) {
         List<AttendanceSummaryDto> summaries = attendanceService.getAllSummariesForSystem(date);
         Map<Integer, AttendanceSummaryDto> summaryMap = summaries.stream()
@@ -115,12 +77,11 @@ public class AttendanceReminderService {
         Map<Integer, Long> missingCountByDept = missing.getItems().stream()
                 .collect(Collectors.groupingBy(MissingPunchItemDto::getDeptCode, Collectors.counting()));
 
-        String reminderTime = settingsService.getResolvedReminderTime();
         int sent = 0;
         int skippedNoHead = 0;
         List<String> skippedNames = new ArrayList<>();
         List<String> sentNames = new ArrayList<>();
-        Long adminId = admin != null ? admin.getAccount().getId() : null;
+        Long adminId = admin.getAccount().getId();
 
         for (Integer deptCode : requestedDeptCodes) {
             AttendanceSummaryDto summary = summaryMap.get(deptCode);
@@ -136,13 +97,13 @@ public class AttendanceReminderService {
             if (heads.isEmpty()) {
                 skippedNoHead++;
                 skippedNames.add(summary.getDeptName());
-                saveLog(date, deptCode, trigger, null, adminId, ReminderLogStatus.SKIPPED_NO_HEAD,
+                saveLog(date, deptCode, ReminderTriggerType.MANUAL, null, adminId, ReminderLogStatus.SKIPPED_NO_HEAD,
                         "Thiếu tài khoản HEAD cho " + summary.getDeptName());
                 continue;
             }
 
             Account head = heads.get(0);
-            String body = buildReminderBody(summary, date, reminderTime, missingCount);
+            String body = buildReminderBody(summary, date, missingCount);
             Notification notification = new Notification();
             notification.setRecipientId(head.getId());
             notification.setSenderId(adminId);
@@ -155,10 +116,10 @@ public class AttendanceReminderService {
 
             sent++;
             sentNames.add(summary.getDeptName());
-            saveLog(date, deptCode, trigger, head.getId(), adminId, ReminderLogStatus.SENT, body);
+            saveLog(date, deptCode, ReminderTriggerType.MANUAL, head.getId(), adminId, ReminderLogStatus.SENT, body);
         }
 
-        notifyAdmins(date, trigger, adminId, sent, skippedNoHead, skippedNames, sentNames);
+        notifyAdmins(date, adminId, sent, skippedNoHead, skippedNames, sentNames);
 
         String message = buildAdminResultMessage(sent, skippedNoHead, skippedNames, sentNames);
         return SendReminderResultDto.builder()
@@ -171,19 +132,16 @@ public class AttendanceReminderService {
 
     private void notifyAdmins(
             LocalDate date,
-            ReminderTriggerType trigger,
             Long senderId,
             int sent,
             int skippedNoHead,
             List<String> skippedNames,
             List<String> sentNames) {
         String body = buildAdminResultMessage(sent, skippedNoHead, skippedNames, sentNames);
-        String title = trigger == ReminderTriggerType.AUTO
-                ? "Tự động gửi nhắc nhở"
-                : "Kết quả gửi nhắc nhở";
+        String title = "Kết quả gửi nhắc nhở";
 
-        List<Account> admins = accountRepository.findAllActiveByRole(AccountRole.ADMIN);
-        for (Account adminAccount : admins) {
+        List<Account> operators = hospitalOperators();
+        for (Account adminAccount : operators) {
             Notification n = new Notification();
             n.setRecipientId(adminAccount.getId());
             n.setSenderId(senderId);
@@ -196,20 +154,17 @@ public class AttendanceReminderService {
     }
 
     private String buildReminderBody(
-            AttendanceSummaryDto summary, LocalDate date, String reminderTime, long missingCount) {
+            AttendanceSummaryDto summary, LocalDate date, long missingCount) {
         return summary.getDeptName()
                 + " ngày " + date.format(DATE_FMT)
                 + " còn " + missingCount + " trường hợp thiếu giờ ra / chưa chấm"
                 + " (" + summary.getMarkedCount() + "/" + summary.getTotal()
-                + " đã có trạng thái). Vui lòng rà soát thiếu giờ ra hoặc gán ngoại lệ."
-                + " (Nhắc lúc " + reminderTime + ")";
+                + " đã có trạng thái). Vui lòng rà soát thiếu giờ ra hoặc gán ngoại lệ.";
     }
 
     @Transactional(readOnly = true)
     public ReminderHistoryDto getReminderHistory(AuthUser authUser, LocalDate from, LocalDate to) {
-        if (!authUser.isAdmin()) {
-            throw new AccessDeniedException("Chỉ Admin mới được xem lịch sử nhắc nhở");
-        }
+        assertCanViewReminderHistory(authUser);
 
         LocalDate today = timeService.today();
         LocalDate resolvedFrom = from != null ? from : today.withDayOfMonth(1);
@@ -297,6 +252,23 @@ public class AttendanceReminderService {
                     .append(". Vui lòng thêm tại Cài đặt → Phân quyền người dùng.");
         }
         return sb.toString();
+    }
+
+    private List<Account> hospitalOperators() {
+        List<Account> operators = new ArrayList<>();
+        operators.addAll(accountRepository.findAllActiveByRole(AccountRole.ADMIN));
+        operators.addAll(accountRepository.findAllActiveByRole(AccountRole.DUTY));
+        return operators;
+    }
+
+    private void assertCanViewReminderHistory(AuthUser authUser) {
+        if (authUser.isAdmin()) {
+            return;
+        }
+        if (authUser.isDuty() && accountScreenService.hasScreen(authUser, "admin.reminder-history")) {
+            return;
+        }
+        throw new AccessDeniedException("Không có quyền xem lịch sử nhắc nhở");
     }
 
     private void saveLog(

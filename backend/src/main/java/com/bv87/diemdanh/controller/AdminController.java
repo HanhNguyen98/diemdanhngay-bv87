@@ -2,7 +2,6 @@ package com.bv87.diemdanh.controller;
 
 import com.bv87.diemdanh.dto.*;
 import com.bv87.diemdanh.enums.UnlockRequestStatus;
-import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','DUTY')")
 public class AdminController {
 
     private final AdminService adminService;
@@ -38,15 +37,19 @@ public class AdminController {
     private final AuditService auditService;
     private final AttendanceUnlockRequestService unlockRequestService;
     private final ServerStorageService serverStorageService;
+    private final AccountScreenService accountScreenService;
+    private final PermissionGroupService permissionGroupService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
         return ResponseEntity.ok(adminService.getStats(authService.getAuthUser()));
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<AdminDashboardDto> getDashboard() {
-        return ResponseEntity.ok(adminDashboardService.getDashboard(authService.getAuthUser()));
+    public ResponseEntity<AdminDashboardDto> getDashboard(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(adminDashboardService.getDashboard(authService.getAuthUser(), date));
     }
 
     @GetMapping("/system/storage")
@@ -54,10 +57,11 @@ public class AdminController {
         return ResponseEntity.ok(serverStorageService.getStorage());
     }
 
+    /** Manual per-department reminders for the requested attendance date (D-UAT.4). */
     @PostMapping("/attendance/reminders")
     public ResponseEntity<SendReminderResultDto> sendReminders(@Valid @RequestBody SendReminderRequest request) {
         return ResponseEntity.ok(attendanceReminderService.sendManualReminders(
-                authService.getAuthUser(), request.getDeptCodes()));
+                authService.getAuthUser(), request.getDeptCodes(), request.getDate()));
     }
 
     @GetMapping("/attendance/reminder-history")
@@ -140,16 +144,19 @@ public class AdminController {
         return ResponseEntity.ok(unlockRequestService.reject(authService.getAuthUser(), id, note));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/department-groups/next-code")
     public ResponseEntity<NextCodeDto> getNextGroupCode() {
         return ResponseEntity.ok(adminService.getNextGroupCode(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/department-groups")
     public ResponseEntity<List<AdminDepartmentGroupDto>> listDepartmentGroups() {
         return ResponseEntity.ok(adminService.listDepartmentGroups(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/department-groups")
     public ResponseEntity<AdminDepartmentGroupDto> createDepartmentGroup(
             @Valid @RequestBody DepartmentGroupUpsertRequest request) {
@@ -157,6 +164,7 @@ public class AdminController {
                 .body(adminService.createDepartmentGroup(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/department-groups/{groupCode}")
     public ResponseEntity<AdminDepartmentGroupDto> updateDepartmentGroup(
             @PathVariable Integer groupCode,
@@ -165,12 +173,14 @@ public class AdminController {
                 adminService.updateDepartmentGroup(authService.getAuthUser(), groupCode, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/department-groups/{groupCode}")
     public ResponseEntity<Map<String, String>> deleteDepartmentGroup(@PathVariable Integer groupCode) {
         adminService.deleteDepartmentGroup(authService.getAuthUser(), groupCode);
         return ResponseEntity.ok(Map.of("message", "Đã xóa nhóm Đơn vị"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/departments/next-code")
     public ResponseEntity<NextCodeDto> getNextDeptCode() {
         return ResponseEntity.ok(adminService.getNextDeptCode(authService.getAuthUser()));
@@ -182,17 +192,20 @@ public class AdminController {
         return ResponseEntity.ok(adminService.listDepartments(authService.getAuthUser(), groupCode));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/departments/{deptCode}")
     public ResponseEntity<AdminDepartmentDto> getDepartment(@PathVariable Integer deptCode) {
         return ResponseEntity.ok(adminService.getDepartment(authService.getAuthUser(), deptCode));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/departments")
     public ResponseEntity<AdminDepartmentDto> createDepartment(@Valid @RequestBody DepartmentUpsertRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(adminService.createDepartment(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/departments/{deptCode}")
     public ResponseEntity<AdminDepartmentDto> updateDepartment(
             @PathVariable Integer deptCode,
@@ -200,38 +213,51 @@ public class AdminController {
         return ResponseEntity.ok(adminService.updateDepartment(authService.getAuthUser(), deptCode, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/departments/{deptCode}")
     public ResponseEntity<Map<String, String>> deleteDepartment(@PathVariable Integer deptCode) {
         adminService.deleteDepartment(authService.getAuthUser(), deptCode);
         return ResponseEntity.ok(Map.of("message", "Đã xóa Đơn vị"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff/next-code")
     public ResponseEntity<NextCodeDto> getNextEmpCode(@RequestParam Integer deptCode) {
         return ResponseEntity.ok(adminService.getNextEmpCode(authService.getAuthUser(), deptCode));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff")
     public ResponseEntity<RegistryPageDto<AdminStaffDto>> listStaff(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Integer deptCode,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
         return ResponseEntity.ok(
-                adminService.listStaffPage(authService.getAuthUser(), search, deptCode, page, pageSize));
+                adminService.listStaffPage(authService.getAuthUser(), search, deptCode, active, page, pageSize));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff/{empCode}")
     public ResponseEntity<AdminStaffDto> getStaff(@PathVariable Integer empCode) {
         return ResponseEntity.ok(adminService.getStaff(authService.getAuthUser(), empCode));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/staff/{empCode}/deactivate-preview")
+    public ResponseEntity<StaffDeactivatePreviewDto> getStaffDeactivatePreview(@PathVariable Integer empCode) {
+        return ResponseEntity.ok(adminService.getStaffDeactivatePreview(authService.getAuthUser(), empCode));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff/{empCode}/department-history")
     public ResponseEntity<List<StaffDepartmentAssignmentDto>> getStaffDepartmentHistory(
             @PathVariable Integer empCode) {
         return ResponseEntity.ok(adminService.listStaffDepartmentHistory(authService.getAuthUser(), empCode));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/staff/{empCode}/transfer")
     public ResponseEntity<AdminStaffDto> transferStaff(
             @PathVariable Integer empCode,
@@ -240,12 +266,14 @@ public class AdminController {
                 adminService.transferStaff(authService.getAuthUser(), empCode, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/staff")
     public ResponseEntity<AdminStaffDto> createStaff(@Valid @RequestBody StaffUpsertRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(adminService.createStaff(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/staff/{empCode}")
     public ResponseEntity<AdminStaffDto> updateStaff(
             @PathVariable Integer empCode,
@@ -253,22 +281,26 @@ public class AdminController {
         return ResponseEntity.ok(adminService.updateStaff(authService.getAuthUser(), empCode, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/staff/{empCode}")
     public ResponseEntity<Map<String, String>> deleteStaff(@PathVariable Integer empCode) {
-        adminService.deleteStaff(authService.getAuthUser(), empCode);
-        return ResponseEntity.ok(Map.of("message", "Đã xóa Nhân viên"));
+        String message = adminService.deleteStaff(authService.getAuthUser(), empCode);
+        return ResponseEntity.ok(Map.of("message", message));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/attendance-status-types")
     public ResponseEntity<List<AttendanceStatusTypeDto>> listAttendanceStatusTypes() {
         return ResponseEntity.ok(statusCatalogService.listAll(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/attendance-status-types/{id}")
     public ResponseEntity<AttendanceStatusTypeDto> getAttendanceStatusType(@PathVariable Long id) {
         return ResponseEntity.ok(statusCatalogService.getById(authService.getAuthUser(), id));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/attendance-status-types")
     public ResponseEntity<AttendanceStatusTypeDto> createAttendanceStatusType(
             @Valid @RequestBody AttendanceStatusTypeUpsertRequest request) {
@@ -276,6 +308,7 @@ public class AdminController {
                 .body(statusCatalogService.create(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/attendance-status-types/{id}")
     public ResponseEntity<AttendanceStatusTypeDto> updateAttendanceStatusType(
             @PathVariable Long id,
@@ -283,28 +316,33 @@ public class AdminController {
         return ResponseEntity.ok(statusCatalogService.update(authService.getAuthUser(), id, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/attendance-status-types/{id}")
     public ResponseEntity<Map<String, String>> deleteAttendanceStatusType(@PathVariable Long id) {
         statusCatalogService.delete(authService.getAuthUser(), id);
         return ResponseEntity.ok(Map.of("message", "Đã xóa trạng thái"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff-ranks/next-code")
     public ResponseEntity<NextCodeDto> getNextStaffRankCode() {
         return ResponseEntity.ok(staffRankCatalogService.getNextCode(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff-ranks")
     public ResponseEntity<List<StaffRankDto>> listStaffRanks() {
         return ResponseEntity.ok(staffRankCatalogService.listAll(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/staff-ranks")
     public ResponseEntity<StaffRankDto> createStaffRank(@Valid @RequestBody StaffRankUpsertRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(staffRankCatalogService.create(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/staff-ranks/{rankCode}")
     public ResponseEntity<StaffRankDto> updateStaffRank(
             @PathVariable Integer rankCode,
@@ -313,22 +351,26 @@ public class AdminController {
                 staffRankCatalogService.update(authService.getAuthUser(), rankCode, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/staff-ranks/{rankCode}")
     public ResponseEntity<Map<String, String>> deleteStaffRank(@PathVariable Integer rankCode) {
         staffRankCatalogService.delete(authService.getAuthUser(), rankCode);
         return ResponseEntity.ok(Map.of("message", "Đã xóa cấp bậc"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff-positions/next-code")
     public ResponseEntity<NextCodeDto> getNextStaffPositionCode() {
         return ResponseEntity.ok(staffPositionCatalogService.getNextCode(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/staff-positions")
     public ResponseEntity<List<StaffPositionDto>> listStaffPositions() {
         return ResponseEntity.ok(staffPositionCatalogService.listAll(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/staff-positions")
     public ResponseEntity<StaffPositionDto> createStaffPosition(
             @Valid @RequestBody StaffPositionUpsertRequest request) {
@@ -336,6 +378,7 @@ public class AdminController {
                 .body(staffPositionCatalogService.create(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/staff-positions/{positionCode}")
     public ResponseEntity<StaffPositionDto> updateStaffPosition(
             @PathVariable Integer positionCode,
@@ -344,27 +387,32 @@ public class AdminController {
                 staffPositionCatalogService.update(authService.getAuthUser(), positionCode, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/staff-positions/{positionCode}")
     public ResponseEntity<Map<String, String>> deleteStaffPosition(@PathVariable Integer positionCode) {
         staffPositionCatalogService.delete(authService.getAuthUser(), positionCode);
         return ResponseEntity.ok(Map.of("message", "Đã xóa chức vụ"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/settings/branding")
     public ResponseEntity<BrandingDto> getBranding() {
         return ResponseEntity.ok(settingsService.getBranding());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/settings/branding")
     public ResponseEntity<BrandingDto> updateBranding(@Valid @RequestBody BrandingUpdateRequest request) {
         return ResponseEntity.ok(settingsService.updateBranding(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/accounts/stats")
     public ResponseEntity<AccountStatsDto> getAccountStats() {
         return ResponseEntity.ok(adminAccountService.getAccountStats(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/accounts")
     public ResponseEntity<RegistryPageDto<AdminAccountDto>> listAccounts(
             @RequestParam(required = false) String search,
@@ -376,12 +424,14 @@ public class AdminController {
                 authService.getAuthUser(), search, role, status, page, pageSize));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/accounts")
     public ResponseEntity<AdminAccountDto> createAccount(@Valid @RequestBody AccountUpsertRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(adminAccountService.createAccount(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/accounts/{accountId}")
     public ResponseEntity<AdminAccountDto> updateAccount(
             @PathVariable Long accountId,
@@ -389,12 +439,14 @@ public class AdminController {
         return ResponseEntity.ok(adminAccountService.updateAccount(authService.getAuthUser(), accountId, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/accounts/{accountId}")
     public ResponseEntity<Map<String, String>> deleteAccount(@PathVariable Long accountId) {
         adminAccountService.deleteAccount(authService.getAuthUser(), accountId);
-        return ResponseEntity.ok(Map.of("message", "Đã xóa tài khoản"));
+        return ResponseEntity.ok(Map.of("message", "Đã chuyển tài khoản sang ngưng hoạt động"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/accounts/{accountId}/reset-password")
     public ResponseEntity<Map<String, String>> resetAccountPassword(
             @PathVariable Long accountId,
@@ -403,18 +455,81 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Đã đặt lại mật khẩu thành công"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/screens")
+    public ResponseEntity<List<ScreenCatalogItemDto>> listScreens() {
+        return ResponseEntity.ok(accountScreenService.listCatalog(authService.getAuthUser()));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/accounts/{accountId}/screens")
+    public ResponseEntity<AccountScreensDto> getAccountScreens(@PathVariable Long accountId) {
+        return ResponseEntity.ok(accountScreenService.getAccountScreens(authService.getAuthUser(), accountId));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/accounts/{accountId}/screens")
+    public ResponseEntity<AccountScreensDto> updateAccountScreens(
+            @PathVariable Long accountId,
+            @Valid @RequestBody AccountScreensUpdateRequest request) {
+        return ResponseEntity.ok(
+                accountScreenService.replaceAccountScreens(authService.getAuthUser(), accountId, request));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/permission-groups")
+    public ResponseEntity<List<PermissionGroupDto>> listPermissionGroups(
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false, defaultValue = "false") boolean activeOnly) {
+        return ResponseEntity.ok(
+                permissionGroupService.list(authService.getAuthUser(), role, activeOnly));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/permission-groups/{id}")
+    public ResponseEntity<PermissionGroupDto> getPermissionGroup(@PathVariable Long id) {
+        return ResponseEntity.ok(permissionGroupService.get(authService.getAuthUser(), id));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/permission-groups")
+    public ResponseEntity<PermissionGroupDto> createPermissionGroup(
+            @Valid @RequestBody PermissionGroupUpsertRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(permissionGroupService.create(authService.getAuthUser(), request));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/permission-groups/{id}")
+    public ResponseEntity<PermissionGroupDto> updatePermissionGroup(
+            @PathVariable Long id,
+            @Valid @RequestBody PermissionGroupUpsertRequest request) {
+        return ResponseEntity.ok(
+                permissionGroupService.update(authService.getAuthUser(), id, request));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/permission-groups/{id}")
+    public ResponseEntity<Map<String, String>> deactivatePermissionGroup(@PathVariable Long id) {
+        permissionGroupService.deactivate(authService.getAuthUser(), id);
+        return ResponseEntity.ok(Map.of("message", "Đã ngưng nhóm quyền"));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/fingerprints")
     public ResponseEntity<List<FingerprintStatusDto>> listFingerprints(
             @RequestParam(required = false) Integer deptCode) {
         return ResponseEntity.ok(fingerprintService.listStatusForAdmin(authService.getAuthUser(), deptCode));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/fingerprints/{empCode}")
     public ResponseEntity<Map<String, String>> deleteFingerprint(@PathVariable Integer empCode) {
         fingerprintService.deleteForAdmin(authService.getAuthUser(), empCode);
         return ResponseEntity.ok(Map.of("message", "Đã xóa đăng ký vân tay thành công"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/fingerprints/enroll")
     public ResponseEntity<FingerprintStatusDto> enrollFingerprint(
             @Valid @RequestBody FingerprintEnrollRequest request) {
@@ -433,11 +548,13 @@ public class AdminController {
                 authService.getAuthUser(), from, to, deptCode, page, pageSize));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/fingerprint/kiosk-tokens")
     public ResponseEntity<List<KioskTokenDto>> listKioskTokens() {
         return ResponseEntity.ok(fingerprintService.listKioskTokensForAdmin(authService.getAuthUser()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/fingerprint/kiosk-tokens")
     public ResponseEntity<KioskTokenIssuedDto> createKioskToken(
             @Valid @RequestBody KioskTokenCreateRequest request) {
@@ -445,6 +562,7 @@ public class AdminController {
                 fingerprintService.createKioskTokenForAdmin(authService.getAuthUser(), request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/fingerprint/kiosk-tokens/{id}/label")
     public ResponseEntity<KioskTokenDto> updateKioskTokenLabel(
             @PathVariable Long id,
@@ -453,12 +571,14 @@ public class AdminController {
                 fingerprintService.updateKioskLabelForAdmin(authService.getAuthUser(), id, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/fingerprint/kiosk-tokens/{id}/revoke")
     public ResponseEntity<Map<String, String>> revokeKioskToken(@PathVariable Long id) {
         fingerprintService.revokeKioskTokenForAdmin(authService.getAuthUser(), id);
         return ResponseEntity.ok(Map.of("message", "Đã thu hồi token kiosk"));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/fingerprint/kiosk-tokens/{id}/rotate")
     public ResponseEntity<KioskTokenIssuedDto> rotateKioskToken(@PathVariable Long id) {
         return ResponseEntity.ok(

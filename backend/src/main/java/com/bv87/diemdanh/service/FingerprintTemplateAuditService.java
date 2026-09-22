@@ -33,6 +33,7 @@ public class FingerprintTemplateAuditService {
 
     private final FingerprintTemplateAuditLogRepository repository;
     private final DepartmentRepository departmentRepository;
+    private final AccountScreenService accountScreenService;
 
     @Transactional
     public void log(
@@ -71,8 +72,8 @@ public class FingerprintTemplateAuditService {
             Integer deptCode,
             int page,
             int pageSize) {
-        if (!authUser.isAdmin()) {
-            throw new AccessDeniedException("Chỉ Admin được xem lịch sử vân tay");
+        if (!canViewFingerprintHistory(authUser)) {
+            throw new AccessDeniedException("Không có quyền xem lịch sử vân tay");
         }
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
         LocalDate today = LocalDate.now(zone);
@@ -101,6 +102,13 @@ public class FingerprintTemplateAuditService {
                 .totalItems(result.getTotalElements())
                 .totalPages(Math.max(result.getTotalPages(), 1))
                 .build();
+    }
+
+    private boolean canViewFingerprintHistory(AuthUser authUser) {
+        if (authUser.isAdmin()) {
+            return true;
+        }
+        return authUser.isDuty() && accountScreenService.hasScreen(authUser, "admin.fingerprint-history");
     }
 
     private FingerprintTemplateAuditLogItemDto toItem(

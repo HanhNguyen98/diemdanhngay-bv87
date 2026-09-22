@@ -34,6 +34,10 @@ public class Account {
     @JoinColumn(name = "emp_code")
     private Employee employee;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "permission_group_id")
+    private PermissionGroup permissionGroup;
+
     @Column(name = "fullname", nullable = false, length = 100)
     private String fullname;
 

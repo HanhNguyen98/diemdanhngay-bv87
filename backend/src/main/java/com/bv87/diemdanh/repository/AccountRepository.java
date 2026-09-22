@@ -18,6 +18,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
             SELECT a FROM Account a
             LEFT JOIN FETCH a.department
             LEFT JOIN FETCH a.employee
+            LEFT JOIN FETCH a.permissionGroup
             WHERE a.username = :username AND a.active = true
             """)
     Optional<Account> findActiveByUsername(@Param("username") String username);
@@ -25,8 +26,18 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("SELECT a FROM Account a LEFT JOIN FETCH a.department LEFT JOIN FETCH a.employee ORDER BY a.username")
     List<Account> findAllWithDepartment();
 
-    @Query("SELECT a FROM Account a LEFT JOIN FETCH a.department LEFT JOIN FETCH a.employee WHERE a.id = :id")
+    @Query("""
+            SELECT a FROM Account a
+            LEFT JOIN FETCH a.department
+            LEFT JOIN FETCH a.employee
+            LEFT JOIN FETCH a.permissionGroup
+            WHERE a.id = :id
+            """)
     Optional<Account> findByIdWithDepartment(@Param("id") Long id);
+
+    long countByPermissionGroup_Id(Long permissionGroupId);
+
+    List<Account> findAllByPermissionGroup_Id(Long permissionGroupId);
 
     boolean existsByUsername(String username);
 
@@ -87,10 +98,11 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     long countByActiveFalse();
 
     @Query(
-            value = """
+                    value = """
                     SELECT a FROM Account a
                     LEFT JOIN FETCH a.department d
                     LEFT JOIN FETCH a.employee e
+                    LEFT JOIN FETCH a.permissionGroup
                     WHERE (:role IS NULL OR a.role = :role)
                     AND (:active IS NULL OR a.active = :active)
                     AND (:search IS NULL OR LOWER(a.username) LIKE LOWER(CONCAT('%', :search, '%'))

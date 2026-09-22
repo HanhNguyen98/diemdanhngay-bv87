@@ -5,18 +5,105 @@ namespace BV87.App.Shell;
 
 public static class ShellNavigation
 {
-    public static IReadOnlyList<ShellNavGroup> GetNavGroups(AppMode mode) => mode switch
+    public static IReadOnlyList<ShellNavGroup> GetNavGroups(AppMode mode) =>
+        GetNavGroups(mode, screenCodes: null);
+
+    /// <summary>
+    /// Builds sidebar for mode, filtered by effective screen ACL codes (SPEC_DUTY §7).
+    /// Null/empty codes → role default nav (backward compatible).
+    /// </summary>
+    public static IReadOnlyList<ShellNavGroup> GetNavGroups(
+        AppMode mode,
+        IReadOnlyCollection<string>? screenCodes)
     {
-        AppMode.Head => GetHeadNavGroups(),
-        AppMode.Admin => GetAdminNavGroups(),
-        _ =>
-        [
-            new ShellNavGroup { Items = GetHeadNavItemsFlat() }
-        ]
-    };
+        var baseGroups = mode switch
+        {
+            AppMode.Head => GetHeadNavGroups(),
+            AppMode.Admin => GetAdminNavGroups(),
+            AppMode.Duty => GetDutyNavGroups(),
+            _ => new List<ShellNavGroup> { new() { Items = GetHeadNavItemsFlat() } }
+        };
+
+        if (screenCodes == null || screenCodes.Count == 0)
+        {
+            return baseGroups;
+        }
+
+        var codeSet = new HashSet<string>(screenCodes, StringComparer.OrdinalIgnoreCase);
+        var filtered = FilterGroups(baseGroups, mode, codeSet).ToList();
+
+        if (mode == AppMode.Duty)
+        {
+            AppendDutyGrantedUtilities(filtered, codeSet);
+        }
+
+        return filtered.Where(g => g.Items.Count > 0).ToList();
+    }
 
     public static IReadOnlyList<ShellNavItem> GetNavItems(AppMode mode) =>
         GetNavGroups(mode).SelectMany(g => g.Items).ToList();
+
+    public static string ScreenCodeFor(AppMode mode, string navId) =>
+        mode switch
+        {
+            AppMode.Admin => $"admin.{navId}",
+            AppMode.Head => $"head.{navId}",
+            AppMode.Duty => $"duty.{navId}",
+            _ => navId
+        };
+
+    private static IEnumerable<ShellNavGroup> FilterGroups(
+        IReadOnlyList<ShellNavGroup> groups,
+        AppMode mode,
+        HashSet<string> codes)
+    {
+        foreach (var group in groups)
+        {
+            var items = group.Items
+                .Where(i => codes.Contains(ScreenCodeFor(mode, i.Id)))
+                .ToList();
+            yield return new ShellNavGroup
+            {
+                Title = group.Title,
+                Items = items
+            };
+        }
+    }
+
+    private static void AppendDutyGrantedUtilities(List<ShellNavGroup> groups, HashSet<string> codes)
+    {
+        var extras = new List<ShellNavItem>();
+        if (codes.Contains("admin.unlock-requests"))
+        {
+            extras.Add(Nav("unlock-requests", "Yêu cầu mở khóa", "Yêu cầu mở khóa", "Duyệt yêu cầu mở khóa HEAD."));
+        }
+
+        if (codes.Contains("admin.audit-logs"))
+        {
+            extras.Add(Nav("audit-logs", "Nhật ký chỉnh sửa", "Nhật ký chỉnh sửa", "Audit log chấm công."));
+        }
+
+        if (codes.Contains("admin.fingerprint-history"))
+        {
+            extras.Add(Nav("fingerprint-history", "Lịch sử vân tay", "Lịch sử vân tay", "Nhật ký mẫu vân tay."));
+        }
+
+        if (codes.Contains("admin.reminder-history"))
+        {
+            extras.Add(Nav("reminder-history", "Lịch sử nhắc nhở", "Lịch sử nhắc nhở", "Lịch sử gửi nhắc nhở."));
+        }
+
+        if (extras.Count == 0)
+        {
+            return;
+        }
+
+        groups.Add(new ShellNavGroup
+        {
+            Title = AdminUiStrings.NavUtilities,
+            Items = extras
+        });
+    }
 
     private static IReadOnlyList<ShellNavItem> GetHeadNavItemsFlat() =>
     [
@@ -82,10 +169,30 @@ public static class ShellNavigation
             Title = AdminUiStrings.NavSettings,
             Items =
             [
-                Nav("settings-permissions", "Phân quyền", "Phân quyền", "Quản lý tài khoản ADMIN/HEAD — phase D4."),
+                Nav("settings-permissions", "Phân quyền", "Phân quyền", "Tài khoản và nhóm quyền màn hình — D-ACL."),
                 Nav("settings-kiosk", "Token Kiosk", "Token Kiosk", "Cấu hình token kiosk — phase D4."),
                 Nav("settings-system", "Hệ thống", "Cài đặt hệ thống", "Khóa sổ, giờ làm việc — phase D4."),
                 Nav("password", "Đổi mật khẩu", "Đổi mật khẩu", "Đổi mật khẩu tài khoản ADMIN — phase D4.")
+            ]
+        }
+    ];
+
+    private static IReadOnlyList<ShellNavGroup> GetDutyNavGroups() =>
+    [
+        new ShellNavGroup
+        {
+            Title = AdminUiStrings.NavDashboard,
+            Items =
+            [
+                Nav("dashboard-overview", "Tổng quan chung", "Tổng quan chung", "KPI và tiến độ chấm công toàn viện."),
+                Nav("dashboard-dept", "Chi tiết đơn vị", "Chi tiết đơn vị", "Roster chấm công theo khoa và ngày.")
+            ]
+        },
+        new ShellNavGroup
+        {
+            Items =
+            [
+                Nav("password", "Đổi mật khẩu", "Đổi mật khẩu", "Đổi mật khẩu tài khoản Trực ban.")
             ]
         }
     ];
@@ -102,6 +209,7 @@ public static class ShellNavigation
     {
         AppMode.Head => "Trưởng đơn vị",
         AppMode.Admin => "Quản trị viên",
+        AppMode.Duty => "Trực ban bệnh viện",
         _ => "BV87"
     };
 }

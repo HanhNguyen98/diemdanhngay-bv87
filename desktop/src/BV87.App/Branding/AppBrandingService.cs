@@ -96,7 +96,7 @@ public sealed class AppBrandingService
             try
             {
                 var dto = await _publicApi.GetBrandingAsync(cancellationToken);
-                UpdateCurrent(AppBrandingState.FromDto(dto.PortalTitle, dto.LogoUrl, dto.LoginAvatarUrl));
+                UpdateCurrent(AppBrandingState.FromDto(dto));
                 return;
             }
             catch
@@ -114,7 +114,7 @@ public sealed class AppBrandingService
         try
         {
             var dto = await _publicApi.GetBrandingAsync(cancellationToken);
-            UpdateCurrent(AppBrandingState.FromDto(dto.PortalTitle, dto.LogoUrl, dto.LoginAvatarUrl));
+            UpdateCurrent(AppBrandingState.FromDto(dto));
         }
         catch
         {

@@ -18,6 +18,7 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
 
     private readonly AttendanceApiClient _attendanceApi;
     private readonly int _deptCode;
+    private readonly string _pageTitle;
 
     private AttendanceSummary? _summary;
     private List<StaffAttendanceRow> _allStaff = [];
@@ -33,15 +34,18 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
     private bool _isRefreshing;
     private string? _statusMessage;
     private string? _errorMessage;
-    private bool _showLockBanner;
-    private string? _lockBannerText;
     private bool _tableDisabled;
     private bool _incompleteExplainAllowed;
+    private bool _showUnlockRequestButton;
+    private bool _unlockRequestPending;
+    private bool _hasCompleteStaff;
+    private string _unlockRequestButtonTooltip = HeadUiStrings.Attendance.UnlockRequestTooltipDisabledIncomplete;
 
-    public HeadAttendanceViewModel(AttendanceApiClient attendanceApi, int deptCode)
+    public HeadAttendanceViewModel(AttendanceApiClient attendanceApi, int deptCode, string? deptName)
     {
         _attendanceApi = attendanceApi;
         _deptCode = deptCode;
+        _pageTitle = HeadPageTitleFormatter.Format(HeadUiStrings.Attendance.PageTitle, deptName);
         _selectedDate = AttendanceFormatHelper.TodayVietnam();
 
         RecentDates = new ObservableCollection<DatePillItem>(BuildDatePills(_selectedDate));
@@ -67,6 +71,9 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
                 await HandleQuickActionAsync(action);
             }
         }, action => action != null && SelectedStaff != null && CanApply(action));
+        SendUnlockRequestCommand = new RelayCommand(
+            async () => await SendUnlockRequestAsync(),
+            CanSendUnlockRequest);
 
         _ = InitializeAsync();
     }
@@ -82,6 +89,9 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
     public ICommand ApplyFiltersCommand { get; }
     public ICommand GoToPageCommand { get; }
     public ICommand QuickActionCommand { get; }
+    public ICommand SendUnlockRequestCommand { get; }
+
+    public string PageTitle => _pageTitle;
 
     public DateOnly SelectedDate
     {
@@ -139,16 +149,22 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
 
     public string PageSubtitle => $"{ProgressText} · Ngày {AttendanceDateText}";
 
-    public bool ShowLockBanner
+    public bool ShowUnlockRequestButton
     {
-        get => _showLockBanner;
-        private set => SetProperty(ref _showLockBanner, value);
+        get => _showUnlockRequestButton;
+        private set => SetProperty(ref _showUnlockRequestButton, value);
     }
 
-    public string? LockBannerText
+    public bool UnlockRequestPending
     {
-        get => _lockBannerText;
-        private set => SetProperty(ref _lockBannerText, value);
+        get => _unlockRequestPending;
+        private set => SetProperty(ref _unlockRequestPending, value);
+    }
+
+    public string UnlockRequestButtonTooltip
+    {
+        get => _unlockRequestButtonTooltip;
+        private set => SetProperty(ref _unlockRequestButtonTooltip, value);
     }
 
     public string? StatusMessage
@@ -229,16 +245,6 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
     public bool IsCustomDateSelected =>
         !AttendanceFormatHelper.RecentDates(4).Contains(SelectedDate);
 
-    public bool ShowHistoryBanner => !IsToday;
-
-    public string HistoryBannerText =>
-        $"{HeadUiStrings.Attendance.ViewingHistoryPrefix} {AttendanceDateText} "
-        + (_tableDisabled
-            ? HeadUiStrings.Attendance.ViewingHistoryReadOnlySuffix
-            : HeadUiStrings.Attendance.ViewingHistoryEditableSuffix);
-
-    public bool ShowHistoryReadOnlyBadge => !IsToday && _tableDisabled && !_incompleteExplainAllowed;
-
     private async Task InitializeAsync()
     {
         try
@@ -285,9 +291,6 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
         OnPropertyChanged(nameof(PageSubtitle));
         OnPropertyChanged(nameof(SelectedDatePicker));
         OnPropertyChanged(nameof(IsCustomDateSelected));
-        OnPropertyChanged(nameof(ShowHistoryBanner));
-        OnPropertyChanged(nameof(HistoryBannerText));
-        OnPropertyChanged(nameof(ShowHistoryReadOnlyBadge));
     }
 
     private async Task LoadAsync(bool force)
@@ -335,19 +338,61 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
         var editable = _summary?.Editable ?? false;
         var reportBlocked = _summary?.ReportBlocked ?? false;
         _incompleteExplainAllowed = _summary?.IncompleteExplainAllowed ?? false;
-        var isToday = IsToday;
-
-        var todayWriteDisabled = isToday && !editable && !_incompleteExplainAllowed;
+        var unlockStatus = _summary?.UnlockRequestStatus;
+        UnlockRequestPending = string.Equals(unlockStatus, "PENDING", StringComparison.OrdinalIgnoreCase);
         _tableDisabled = reportBlocked;
-        ShowLockBanner = _tableDisabled || todayWriteDisabled || _incompleteExplainAllowed;
-        LockBannerText = _summary?.LockMessage
-            ?? (_incompleteExplainAllowed
-                ? HeadUiStrings.Attendance.IncompleteExplainBanner
-                : ShowLockBanner ? "Không thể chỉnh sửa dữ liệu trong khung thời gian này." : null);
+        _hasCompleteStaff = _allStaff.Any(s => s.IsComplete);
 
-        OnPropertyChanged(nameof(HistoryBannerText));
-        OnPropertyChanged(nameof(ShowHistoryReadOnlyBadge));
+        // Visible when date is soft-locked / past (P15 available); enable only if roster has complete staff
+        ShowUnlockRequestButton = !editable
+            && !reportBlocked
+            && SelectedDate <= AttendanceFormatHelper.TodayVietnam()
+            && (_incompleteExplainAllowed || UnlockRequestPending);
+
+        UnlockRequestButtonTooltip = UnlockRequestPending
+            ? HeadUiStrings.Attendance.UnlockRequestTooltipPending
+            : _hasCompleteStaff
+                ? HeadUiStrings.Attendance.UnlockRequestTooltipEnabled
+                : HeadUiStrings.Attendance.UnlockRequestTooltipDisabledIncomplete;
+
         CommandManager.InvalidateRequerySuggested();
+    }
+
+    private bool CanSendUnlockRequest() =>
+        ShowUnlockRequestButton && !UnlockRequestPending && _hasCompleteStaff;
+
+    private async Task SendUnlockRequestAsync()
+    {
+        if (!CanSendUnlockRequest())
+        {
+            return;
+        }
+
+        var reason = PromptNote(
+            HeadUiStrings.Attendance.UnlockRequestAction,
+            HeadUiStrings.Attendance.UnlockRequestReasonPrompt);
+        if (reason == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            ShellToast.Danger(HeadUiStrings.Attendance.UnlockRequestNeedReason);
+            return;
+        }
+
+        try
+        {
+            await _attendanceApi.CreateUnlockRequestAsync(SelectedDate, reason.Trim());
+            ErrorMessage = null;
+            ShellToast.Success(HeadUiStrings.Attendance.UnlockRequestSent);
+            await LoadAsync(force: true);
+        }
+        catch (ApiException ex)
+        {
+            ShellToast.Danger(ex.Message);
+        }
     }
 
     private void UpdateKpi()
@@ -522,9 +567,9 @@ public sealed class HeadAttendanceViewModel : ViewModelBase
         }
     }
 
-    private static string? PromptNote(string title)
+    private static string? PromptNote(string title, string prompt = "Nhập ghi chú (bắt buộc):")
     {
-        var dialog = new SimpleInputDialog(title, "Nhập ghi chú (bắt buộc):")
+        var dialog = new SimpleInputDialog(title, prompt)
         {
             Owner = Application.Current.MainWindow
         };

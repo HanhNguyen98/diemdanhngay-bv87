@@ -27,6 +27,7 @@ public partial class PermissionsPage : UserControl
 
         _viewModel = new PermissionsViewModel(App.AdminApi);
         _viewModel.FormRequested += OnFormRequested;
+        _viewModel.GrantScreensRequested += OnGrantScreensRequested;
         _viewModel.ResetPasswordRequested += OnResetPasswordRequested;
         _viewModel.DeleteRequested += OnDeleteRequested;
         DataContext = _viewModel;
@@ -40,6 +41,17 @@ public partial class PermissionsPage : UserControl
         }
 
         var dialog = new AccountFormDialog(_viewModel, row) { Owner = Window.GetWindow(this) };
+        dialog.ShowDialog();
+    }
+
+    private void OnGrantScreensRequested(object? sender, AccountRowViewModel row)
+    {
+        if (_viewModel == null)
+        {
+            return;
+        }
+
+        var dialog = new AccountScreensDialog(_viewModel, row) { Owner = Window.GetWindow(this) };
         dialog.ShowDialog();
     }
 
@@ -63,7 +75,7 @@ public partial class PermissionsPage : UserControl
 
         if (row.Id == _viewModel.CurrentAccountId)
         {
-            ShellToast.Warning("Cảnh báo: không thể xóa tài khoản đang đăng nhập.");
+            ShellToast.Warning(SettingsUiStrings.Accounts.CannotDeleteSelf);
             return;
         }
 
@@ -81,9 +93,11 @@ public partial class PermissionsPage : UserControl
         {
             await _viewModel.DeleteAccountAsync(row);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            ShellToast.Danger(ToastCopy.FailItem("xóa", ToastCopy.Account(row.Username)));
+            ShellToast.Danger(string.IsNullOrWhiteSpace(ex.Message)
+                ? SettingsUiStrings.Accounts.FlashDeleteFail
+                : ex.Message.Trim('"', ' '));
         }
     }
 
@@ -99,12 +113,16 @@ public partial class PermissionsPage : UserControl
             SettingsUiStrings.Accounts.ResetPasswordAction,
             () => ExecuteCommand(_viewModel.ResetPasswordCommand, row)));
         menu.Items.Add(CreateMenuItem(
+            SettingsUiStrings.Accounts.GrantScreensAction,
+            () => ExecuteCommand(_viewModel.GrantScreensCommand, row)));
+        menu.Items.Add(CreateMenuItem(
             SettingsUiStrings.Edit,
             () => ExecuteCommand(_viewModel.EditCommand, row)));
         var delete = CreateMenuItem(
             SettingsUiStrings.Delete,
             () => ExecuteCommand(_viewModel.DeleteCommand, row));
         delete.Foreground = (System.Windows.Media.Brush)FindResource("DangerFgBrush");
+        delete.IsEnabled = row.Active && row.Id != _viewModel.CurrentAccountId;
         menu.Items.Add(delete);
         menu.PlacementTarget = button;
         menu.IsOpen = true;

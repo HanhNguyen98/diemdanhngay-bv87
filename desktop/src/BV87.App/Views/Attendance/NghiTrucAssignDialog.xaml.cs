@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.Core.Constants;
 using BV87.Core.Helpers;
@@ -21,8 +22,7 @@ public partial class NghiTrucAssignDialog : AppDialogWindow
         _hasPunches = AttendanceActionHelper.HasPunchTimes(staff);
         MaxHeight = SystemParameters.WorkArea.Height * 0.9;
 
-        TitleText.Text = AttendanceUiStrings.NghiTrucWizardTitle;
-        StaffText.Text = $"{staff.Fullname} · {staff.EmpCodeFormatted ?? staff.EmpCode.ToString()}";
+        DialogContextHeaderHelper.SetPerson(ContextHeader, staff.Fullname, staff.DeptDisplay);
         HintText.Text = AttendanceActionHelper.IsNghiTrucStatus(staff.Status)
             ? AttendanceUiStrings.NghiTrucWizardReassignHint
             : AttendanceUiStrings.NghiTrucWizardHint;

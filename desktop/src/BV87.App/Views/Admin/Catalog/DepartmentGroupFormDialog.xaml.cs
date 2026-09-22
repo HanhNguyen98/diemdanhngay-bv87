@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.App.ViewModels;
 using BV87.Core.Constants;
@@ -25,7 +26,7 @@ public partial class DepartmentGroupFormDialog : AppDialogWindow
         Title = _isEdit
             ? CatalogUiStrings.DepartmentGroups.FormTitleEdit
             : CatalogUiStrings.DepartmentGroups.FormTitleCreate;
-        TitleText.Text = Title;
+        UpdateContextHeader();
 
         if (_isEdit && initial != null)
         {
@@ -40,6 +41,17 @@ public partial class DepartmentGroupFormDialog : AppDialogWindow
         }
 
         Loaded += (_, _) => GroupNameBox.Focus();
+    }
+
+    private void UpdateContextHeader()
+    {
+        if (!_isEdit || _initial == null)
+        {
+            DialogContextHeaderHelper.SetBadge(ContextHeader, CatalogUiStrings.DepartmentGroups.FormHeaderBadgeCreate);
+            return;
+        }
+
+        DialogContextHeaderHelper.SetPerson(ContextHeader, _initial.GroupName, _initial.GroupCodeFormatted);
     }
 
     private async Task LoadNextCodeAsync()

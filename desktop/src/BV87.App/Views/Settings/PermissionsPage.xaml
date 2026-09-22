@@ -131,7 +131,7 @@
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource AdminDataGridTextCellStyle}"/>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColRole}" Binding="{Binding RoleLabel}" Width="*" MinWidth="120">
+                        <DataGridTextColumn Header="{x:Static settings:SettingsUiStrings+Accounts.ColRole}" Binding="{Binding RoleLabel}" Width="*" MinWidth="140">
                             <DataGridTextColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource AdminDataGridColumnHeaderCatalogStyle}"/>
                             </DataGridTextColumn.HeaderStyle>

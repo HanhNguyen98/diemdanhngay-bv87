@@ -355,21 +355,21 @@ Rule P7 đầy đủ: **§4.13.3**. Tóm tắt:
 | UI Admin | Tiện ích → **Lịch sử Chấm công** — bảng `table-fixed` + `colgroup`; tất cả header `whitespace-nowrap` (1 hàng); cột: THỜI GIAN / TÀI KHOẢN / ĐƠN VỊ / NHÂN VIÊN / NGÀY CHẤM CÔNG / HÀNH ĐỘNG / IP; lọc từ–đến + đơn vị |
 | Cấm | Invent màn trùng Chi tiết quét; không log Identify kiosk vào bảng này |
 
-#### 4.7.2a HEAD chấm NV thiếu dữ liệu kèm giải trình — P17-HeadIncompleteExplainWrite
+#### 4.7.2a HEAD chấm NV thiếu dữ liệu kèm lý do chấm bổ sung — P17-HeadIncompleteExplainWrite
 
 HEAD **không chờ Admin duyệt** để chấm nhân viên **còn thiếu dữ liệu** (`!AttendanceValidity.isComplete`) ngày ≤ hôm nay khi ngày bị khóa mềm / chưa `attendance_unlocks`.
 
 | Rule | Chi tiết |
 |------|----------|
 | Điều kiện | HEAD + khoa mình + **không** `reportBlocked` + **không** khóa tay Admin (`manualLocked`) + ngày ≤ hôm nay + `isEditable=false` |
-| NV được ghi | Chỉ record **incomplete** (chưa record / thiếu mốc / thủ công chưa complete). Null record = incomplete |
-| NV cấm | `isComplete` — vẫn P14: cần Admin unlock đúng `dept+date` |
-| `note` bắt buộc | Trim không rỗng. Lưu `note` + `missing_punch_reason`. Wizard N.trực: field `reason` đủ (không bắt `note` thêm) |
+| NV được ghi | Chỉ record **incomplete**: chưa bản ghi / chưa status / có status nhưng chưa đủ (`!isComplete`). Null record = incomplete |
+| NV cấm | `isComplete` — **cấm** HEAD sửa ngày quá khứ / sau khóa mềm; phải P15 yêu cầu mở khóa (hoặc Admin unlock P14) |
+| `note` bắt buộc | **Lý do chấm bổ sung** — trim không rỗng. Lưu `note` + `missing_punch_reason` (Admin đọc trên Chi tiết ĐV / cột lý do). Wizard N.trực: field `reason` đủ (không bắt `note` thêm) |
 | `VE_SOM` | Lý do về sớm vẫn bắt buộc như §4.13 — đủ cho P17 |
 | Summary API | `GET …/page` thêm `incompleteExplainAllowed` (boolean). `editable` **không** đổi nghĩa (full-write khi chưa khóa / đã unlock) |
-| BE | `AttendanceLockService.assertCanWriteStaff` trên PUT 1 ngày / manual-range / `nghi-truc-assign`. `assertCanWrite` (department-level, AI batch) vẫn đòi `editable` |
-| FE / WPF | Dialog / ô **Lý do giải trình** bắt buộc trước Lưu. Nút Lưu disable khi trống. Banner: được chấm NV thiếu; NV đã đủ cần Admin mở khóa |
-| Cấm | Tự tạo `attendance_unlocks`; bỏ `reportBlocked`; cho HEAD sửa NV đã complete |
+| BE | `AttendanceLockService.assertCanWriteStaff` trên PUT 1 ngày / manual-range / `nghi-truc-assign`. `assertCanWrite` (department-level) vẫn đòi `editable` |
+| FE / WPF | Dialog **Lý do chấm bổ sung** bắt buộc trước Lưu. **Cấm** banner chữ P17/history. Nút **Gửi yêu cầu mở khóa** (P15): hiện khi ngày khóa; enable khi có NV đã đủ — §2.18.4 DESKTOP |
+| Cấm | Tự tạo `attendance_unlocks`; bỏ `reportBlocked`; cho HEAD sửa NV đã complete khi chưa unlock |
 
 #### 4.7.2 HEAD gửi yêu cầu mở khóa — P15-HeadUnlockRequest
 
@@ -428,7 +428,7 @@ AI batch preview: nếu target OUT-only (có giờ, `status=null`), vẫn gán �
 
 - **Không** dùng 06:00–lockTime để mô tả “HEAD gửi báo cáo”.
 - `lockTime` = **khóa mềm** HEAD ghi ngày hôm nay (§4.7).
-- `reminderTime` = phút chạy job nhắc theo **hàng đợi thiếu dữ liệu chấm công của ngày hôm qua** (D−1) — không copy “Hoàn thành trước 08:00 hôm nay”.
+- `reminderTime` = **không** chạy job nhắc (D-UAT.4). Admin gửi thủ công theo đơn vị từ Tổng quan. Field DB/API có thể còn — **cấm** cron AUTO.
 - FE HEAD: bỏ nút **Gửi báo cáo**; xem ngày khác / `reportBlocked` → roster read-only; **khóa mềm** → P6-LockSync (§4.7) — không khóa hết quick-action khoảng ngày.
 - Admin dashboard: bỏ phụ thuộc “Đã gửi báo cáo” để vận hành; ưu tiên KPI hợp lệ + missing-punches.
 - Unlock Admin modal: copy **khóa mềm ngày công** + `lockTime` settings — **cấm** “chốt sổ 16:00 / sổ báo cáo quân số”.
@@ -926,6 +926,7 @@ Rule kỹ thuật:
 - Log stderr: `[FingerprintAgent] sound=success|fail source=wav|pcm|toolkit` và `beep failed: …` — không chặn UI.
 - **Cấm** lấy âm từ mạng / CDN lúc runtime.
 - **Lưu ý UX:** máy ZK có thể bíp khi **capture ảnh** OK (trước Identify) — không được hiểu là “chấm thành công”; âm fail phần mềm phải đủ dài/to để nghe sau bíp HW.
+- **WPF (D-UAT.1):** `DesktopSoundService` — peak-normalize success ≥ **0.90 FS** / fail ≥ **0.97 FS**; phát `MediaPlayer.Volume = 1.0` (max player, **không** đổi Windows mixer); enroll + Agent chấm công cùng service. Java Clip/classpath ở trên là lịch sử (D5).
 
 ##### Layout desktop
 
@@ -1649,6 +1650,7 @@ Agent hiện hành: `BV87.exe --agent` + `agent.config.json` (`kioskToken`). PIN
 - [x] **P2.1b:** Kết quả Chấm công **1 dòng** `{mã} - {tên} - {STATUS}` phía trên preview (ẩn meta trùng)
 - [x] **P2.1c:** WAV kiosk `/sounds/scan-success.wav` + `scan-fail.wav`; Clip trước, fallback PCM/`Toolkit`
 - [x] **P2.1i:** Fail sound rõ hơn — WAV 3 buzz thấp + PCM/Toolkit phân biệt success; log `sound=… source=…`
+- [x] **D-UAT.1:** WPF `DesktopSoundService` peak-normalize + `MediaPlayer.Volume = 1.0` — enroll + chấm công (§9.3.1)
 - [x] **P2.1d:** PIN bắt buộc khi vào Đăng ký; `enroll.idleSeconds` idle → về Chấm công
 - [x] **P2.1d:** Dialog PIN idle `enroll.pinIdleSeconds` (mặc định 60) tự đóng → vẫn Chấm công
 - [x] **P2.1e:** Cột/API `enrollPin` trên Quản lý token vân tay; FormModal Đặt PIN; revoke xóa / rotate giữ PIN

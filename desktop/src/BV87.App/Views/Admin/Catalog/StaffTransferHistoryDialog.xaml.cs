@@ -14,8 +14,8 @@ public partial class StaffTransferHistoryDialog : AppDialogWindow
     public StaffTransferHistoryDialog(StaffCatalogViewModel viewModel, StaffCatalogRowViewModel staff)
     {
         InitializeComponent();
-        Title = CatalogUiStrings.Staff.HistoryTitle(staff.Fullname, staff.EmpCodeFormatted);
-        TitleText.Text = Title;
+        Title = "Lịch sử luân chuyển";
+        DialogContextHeaderHelper.SetPerson(ContextHeader, staff.Fullname, staff.DeptDisplay);
         EmptyText.Text = CatalogUiStrings.Staff.HistoryEmpty;
         Loaded += async (_, _) => await LoadHistoryAsync(viewModel, staff.EmpCode);
     }

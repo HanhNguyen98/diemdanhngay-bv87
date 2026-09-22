@@ -2,7 +2,6 @@ package com.bv87.diemdanh.repository;
 
 import com.bv87.diemdanh.entity.AttendanceReminderLog;
 import com.bv87.diemdanh.entity.ReminderLogStatus;
-import com.bv87.diemdanh.entity.ReminderTriggerType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,8 +11,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface AttendanceReminderLogRepository extends JpaRepository<AttendanceReminderLog, Long> {
-
-    boolean existsByAttendanceDateAndTriggerType(LocalDate attendanceDate, ReminderTriggerType triggerType);
 
     List<AttendanceReminderLog> findByDeptCodeGreaterThanAndAttendanceDateBetweenAndStatusOrderByCreatedAtDesc(
             Integer deptCode,

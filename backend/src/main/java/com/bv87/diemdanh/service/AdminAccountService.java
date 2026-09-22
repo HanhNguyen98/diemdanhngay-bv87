@@ -9,11 +9,14 @@ import com.bv87.diemdanh.entity.Account;
 import com.bv87.diemdanh.entity.AccountRole;
 import com.bv87.diemdanh.entity.Department;
 import com.bv87.diemdanh.entity.Employee;
+import com.bv87.diemdanh.entity.PermissionGroup;
 import com.bv87.diemdanh.exception.AccessDeniedException;
 import com.bv87.diemdanh.exception.BusinessException;
 import com.bv87.diemdanh.repository.AccountRepository;
+import com.bv87.diemdanh.repository.AccountScreenRepository;
 import com.bv87.diemdanh.repository.DepartmentRepository;
 import com.bv87.diemdanh.repository.EmployeeRepository;
+import com.bv87.diemdanh.repository.PermissionGroupRepository;
 import com.bv87.diemdanh.security.AuthUser;
 import com.bv87.diemdanh.util.CodeFormatter;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +41,8 @@ public class AdminAccountService {
     private final AccountRepository accountRepository;
     private final DepartmentRepository departmentRepository;
     private final EmployeeRepository employeeRepository;
+    private final PermissionGroupRepository permissionGroupRepository;
+    private final AccountScreenRepository accountScreenRepository;
     private final PasswordEncoder passwordEncoder;
 
     private void assertAdmin(AuthUser authUser) {
@@ -102,8 +107,8 @@ public class AdminAccountService {
         Account account = new Account();
         account.setUsername(username);
         account.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        account.setRole(request.getRole());
         account.setActive(request.getActive() == null || request.getActive());
+        applyPermissionGroup(account, request);
         applyRelations(account, request, null);
 
         Account saved = accountRepository.save(account);
@@ -123,7 +128,6 @@ public class AdminAccountService {
         }
 
         account.setUsername(username);
-        account.setRole(request.getRole());
         if (request.getActive() != null) {
             account.setActive(request.getActive());
         }
@@ -135,6 +139,7 @@ public class AdminAccountService {
         Integer oldDeptCode = account.getDeptCode();
         Integer oldEmpCode = account.getEmployee() != null ? account.getEmployee().getEmpCode() : null;
 
+        applyPermissionGroup(account, request);
         applyRelations(account, request, accountId);
 
         Account saved = accountRepository.save(account);
@@ -160,16 +165,20 @@ public class AdminAccountService {
     public void deleteAccount(AuthUser authUser, Long accountId) {
         assertAdmin(authUser);
         if (authUser.getAccount().getId().equals(accountId)) {
-            throw new BusinessException("Không thể xóa tài khoản đang đăng nhập");
+            throw new BusinessException("Không thể ngưng tài khoản đang đăng nhập");
         }
         Account account = accountRepository.findByIdWithDepartment(accountId)
                 .orElseThrow(() -> new BusinessException("Tài khoản không tồn tại"));
+        if (!account.isActive()) {
+            throw new BusinessException("Tài khoản đã ngưng hoạt động");
+        }
 
         AccountRole oldRole = account.getRole();
         Integer oldDeptCode = account.getDeptCode();
         Integer oldEmpCode = account.getEmployee() != null ? account.getEmployee().getEmpCode() : null;
 
-        accountRepository.deleteById(accountId);
+        account.setActive(false);
+        accountRepository.save(account);
         if (oldRole == AccountRole.HEAD && oldDeptCode != null && oldEmpCode != null) {
             clearDepartmentHeadIfMatches(oldDeptCode, oldEmpCode);
         }
@@ -185,16 +194,31 @@ public class AdminAccountService {
     }
 
     private void applyRelations(Account account, AccountUpsertRequest request, Long accountId) {
-        if (request.getRole() == AccountRole.HEAD) {
-            Employee emp = resolveHeadEmployee(request);
+        boolean bootstrapAdmin = "admin".equalsIgnoreCase(account.getUsername());
+        AccountRole role = account.getRole();
+
+        // Non-bootstrap accounts always link to a catalog employee (SPEC_DUTY §7.1)
+        if (!bootstrapAdmin) {
+            String missingMsg = role == AccountRole.HEAD
+                    ? "Trưởng đơn vị phải chọn nhân viên trong danh mục hành chính"
+                    : role == AccountRole.DUTY
+                    ? "Trực ban phải chọn nhân viên trong danh mục hành chính"
+                    : "Vui lòng chọn nhân viên trong danh mục hành chính";
+            Employee emp = resolveStaffEmployee(request, missingMsg);
             Department dept = emp.getDepartment();
             account.setEmployee(emp);
             account.setDepartment(dept);
             account.setFullname(emp.getFullname());
-            validateHeadUniqueness(account, accountId, emp.getEmpCode(), dept.getDeptCode());
+            if (role == AccountRole.HEAD) {
+                validateHeadUniqueness(account, accountId, emp.getEmpCode(), dept.getDeptCode());
+            } else if (account.isActive()
+                    && accountRepository.existsActiveByEmpCodeExcludingId(emp.getEmpCode(), accountId)) {
+                throw new BusinessException("Nhân viên này đã được gắn với tài khoản đang hoạt động");
+            }
             return;
         }
 
+        // Seed admin: optional employee
         account.setDepartment(null);
         if (request.getEmpCode() != null) {
             Employee emp = employeeRepository.findByEmpCodeWithDept(request.getEmpCode())
@@ -204,28 +228,54 @@ public class AdminAccountService {
             }
             account.setEmployee(emp);
             account.setFullname(emp.getFullname());
-            if (account.isActive()
-                    && accountRepository.existsActiveByEmpCodeExcludingId(emp.getEmpCode(), accountId)) {
-                throw new BusinessException("Nhân viên này đã được gắn với tài khoản đang hoạt động");
-            }
             return;
         }
 
         account.setEmployee(null);
         if (request.getFullname() == null || request.getFullname().isBlank()) {
-            throw new BusinessException("Họ và tên là bắt buộc");
+            account.setFullname("Admin");
+        } else {
+            account.setFullname(request.getFullname().trim());
         }
-        account.setFullname(request.getFullname().trim());
     }
 
-    private Employee resolveHeadEmployee(AccountUpsertRequest request) {
+    /**
+     * Attaches a named permission group; sets {@link Account#role} from group scope.
+     * Bootstrap username {@code admin} may omit group (full ADMIN).
+     */
+    private void applyPermissionGroup(Account account, AccountUpsertRequest request) {
+        Long groupId = request.getPermissionGroupId();
+        boolean bootstrapAdmin = "admin".equalsIgnoreCase(account.getUsername());
+
+        if (groupId == null) {
+            if (!bootstrapAdmin) {
+                throw new BusinessException("Vui lòng chọn nhóm quyền");
+            }
+            account.setPermissionGroup(null);
+            account.setRole(AccountRole.ADMIN);
+            return;
+        }
+
+        PermissionGroup group = permissionGroupRepository.findById(groupId)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy nhóm quyền"));
+        if (!group.isActive()) {
+            throw new BusinessException("Nhóm quyền đã ngưng hoạt động");
+        }
+        account.setPermissionGroup(group);
+        account.setRole(group.getRoleScope());
+        if (account.getId() != null) {
+            accountScreenRepository.deleteByAccountId(account.getId());
+        }
+    }
+
+    private Employee resolveStaffEmployee(AccountUpsertRequest request, String missingEmpMessage) {
         if (request.getEmpCode() == null) {
-            throw new BusinessException("Trưởng phòng phải chọn nhân viên trong danh mục hành chính");
+            throw new BusinessException(missingEmpMessage);
         }
         Employee emp = employeeRepository.findByEmpCodeWithDept(request.getEmpCode())
                 .orElseThrow(() -> new BusinessException("Nhân viên không tồn tại trong danh mục"));
         if (!emp.isActive()) {
-            throw new BusinessException("Nhân viên đã ngưng hoạt động, không thể cấp tài khoản trưởng phòng");
+            throw new BusinessException("Nhân viên đã ngưng hoạt động, không thể cấp tài khoản");
         }
         if (request.getDeptCode() != null
                 && !emp.getDepartment().getDeptCode().equals(request.getDeptCode())) {
@@ -280,6 +330,7 @@ public class AdminAccountService {
         Employee emp = account.getEmployee();
         Integer deptCode = dept != null ? dept.getDeptCode() : null;
         Integer empCode = emp != null ? emp.getEmpCode() : null;
+        PermissionGroup group = account.getPermissionGroup();
 
         return AdminAccountDto.builder()
                 .id(account.getId())
@@ -294,6 +345,8 @@ public class AdminAccountService {
                 .empCode(empCode)
                 .empCodeFormatted(empCode != null ? CodeFormatter.formatEmpCode(empCode) : null)
                 .active(account.isActive())
+                .permissionGroupId(group != null ? group.getId() : null)
+                .permissionGroupName(group != null ? group.getName() : null)
                 .build();
     }
 

@@ -6,7 +6,13 @@ package com.bv87.diemdanh.entity;
 public enum AccountRole {
 
     ADMIN("Quản trị viên"),
+    DUTY("Trực ban bệnh viện"),
     HEAD("Trưởng đơn vị");
+
+    /** Hospital-wide operators — not scoped to one department. */
+    public boolean isHospitalWide() {
+        return this == ADMIN || this == DUTY;
+    }
 
     private final String label;
 

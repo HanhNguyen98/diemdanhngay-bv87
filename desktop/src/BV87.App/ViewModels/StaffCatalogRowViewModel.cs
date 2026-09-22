@@ -70,3 +70,15 @@ public sealed class StaffDeptFilterOption
     public int? DeptCode { get; }
     public string Label { get; }
 }
+
+public sealed class StaffActiveFilterOption
+{
+    public StaffActiveFilterOption(bool? active, string label)
+    {
+        Active = active;
+        Label = label;
+    }
+
+    public bool? Active { get; }
+    public string Label { get; }
+}

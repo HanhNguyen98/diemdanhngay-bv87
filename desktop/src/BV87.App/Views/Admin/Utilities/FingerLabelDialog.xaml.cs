@@ -1,6 +1,6 @@
 using System.Windows;
-using BV87.App.Shell;
 using BV87.App.Helpers;
+using BV87.App.Shell;
 using BV87.Core.Constants;
 
 namespace BV87.App.Views.Admin.Utilities;
@@ -10,7 +10,8 @@ public partial class FingerLabelDialog : AppDialogWindow
     public FingerLabelDialog()
     {
         InitializeComponent();
-        TitleBlock.Text = UtilitiesUiStrings.FingerprintEnroll.FingerLabelTitle;
+        Title = UtilitiesUiStrings.FingerprintEnroll.FingerLabelTitle;
+        DialogContextHeaderHelper.SetBadge(ContextHeader, UtilitiesUiStrings.FingerprintEnroll.FingerLabelBadge);
         HintBlock.Text = UtilitiesUiStrings.FingerprintEnroll.FingerLabelHint;
         LabelBox.Focus();
     }

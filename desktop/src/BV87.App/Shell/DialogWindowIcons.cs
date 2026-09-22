@@ -34,7 +34,7 @@ public static class DialogWindowIcons
         FingerLabelDialog => ShellNavIcons.GetGlyph("fingerprint-enroll"),
         KioskTokenIssueDialog or KioskTokenIssuedDialog or KioskTokenLabelDialog =>
             ShellNavIcons.GetGlyph("settings-kiosk"),
-        AccountFormDialog => ShellNavIcons.GetGlyph("settings-permissions"),
+        AccountFormDialog or AccountScreensDialog or PermissionGroupFormDialog => ShellNavIcons.GetGlyph("settings-permissions"),
         ResetPasswordDialog => ShellNavIcons.GetGlyph("password"),
         UnlockRejectDialog => ShellNavIcons.GetGlyph("unlock-requests"),
         _ => ShellNavIcons.GetGlyph("_")

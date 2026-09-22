@@ -99,4 +99,6 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             @Param("deptCode") Integer deptCode);
+
+    boolean existsByEmployee_EmpCode(Integer empCode);
 }

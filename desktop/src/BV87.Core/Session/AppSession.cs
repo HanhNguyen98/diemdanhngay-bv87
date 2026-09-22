@@ -73,6 +73,7 @@ public sealed class AppSession
         {
             "head" => AppMode.Head,
             "admin" => AppMode.Admin,
+            "duty" => AppMode.Duty,
             _ => null
         };
     }

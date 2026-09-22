@@ -50,6 +50,15 @@ public sealed class PermissionsViewModel : ViewModelBase
         EditCommand = new RelayCommand<AccountRowViewModel>(
             row => FormRequested?.Invoke(this, row),
             row => row != null);
+        GrantScreensCommand = new RelayCommand<AccountRowViewModel>(
+            row =>
+            {
+                if (row != null)
+                {
+                    GrantScreensRequested?.Invoke(this, row);
+                }
+            },
+            row => row != null);
         ResetPasswordCommand = new RelayCommand<AccountRowViewModel>(
             row =>
             {
@@ -67,7 +76,7 @@ public sealed class PermissionsViewModel : ViewModelBase
                     DeleteRequested?.Invoke(this, row);
                 }
             },
-            row => row != null);
+            row => row is { Active: true });
 
         _ = LoadAsync(force: false);
     }
@@ -78,6 +87,7 @@ public sealed class PermissionsViewModel : ViewModelBase
     [
         new AccountFilterOption(string.Empty, SettingsUiStrings.Accounts.RoleAll),
         new AccountFilterOption("ADMIN", SettingsUiStrings.Accounts.RoleAdmin),
+        new AccountFilterOption("DUTY", SettingsUiStrings.Accounts.RoleDuty),
         new AccountFilterOption("HEAD", SettingsUiStrings.Accounts.RoleHead)
     ];
 
@@ -94,10 +104,12 @@ public sealed class PermissionsViewModel : ViewModelBase
     public ICommand GoToPageCommand { get; }
     public ICommand AddCommand { get; }
     public ICommand EditCommand { get; }
+    public ICommand GrantScreensCommand { get; }
     public ICommand ResetPasswordCommand { get; }
     public ICommand DeleteCommand { get; }
 
     public event EventHandler<AccountRowViewModel?>? FormRequested;
+    public event EventHandler<AccountRowViewModel>? GrantScreensRequested;
     public event EventHandler<AccountRowViewModel>? ResetPasswordRequested;
     public event EventHandler<AccountRowViewModel>? DeleteRequested;
 
@@ -258,12 +270,18 @@ public sealed class PermissionsViewModel : ViewModelBase
         }
     }
 
-    public async Task<(List<AdminAccountDto> Accounts, List<AdminStaffDto> Staff)> LoadFormReferencesAsync()
+    public async Task<(
+        List<AdminAccountDto> Accounts,
+        List<AdminStaffDto> Staff,
+        List<PermissionGroupDto> Groups,
+        List<DepartmentListItem> Departments)> LoadFormReferencesAsync()
     {
         var accountsTask = _adminApi.ListAccountsPageAsync(page: 1, pageSize: 500);
         var staffTask = _adminApi.ListStaffPageAsync(page: 1, pageSize: 500);
-        await Task.WhenAll(accountsTask, staffTask);
-        return ((await accountsTask).Items, (await staffTask).Items);
+        var groupsTask = _adminApi.ListPermissionGroupsAsync(activeOnly: true);
+        var deptsTask = _adminApi.ListDepartmentsAsync();
+        await Task.WhenAll(accountsTask, staffTask, groupsTask, deptsTask);
+        return ((await accountsTask).Items, (await staffTask).Items, await groupsTask, await deptsTask);
     }
 
     public async Task SaveAccountAsync(AccountUpsertRequest request, long? editId)
@@ -280,6 +298,21 @@ public sealed class PermissionsViewModel : ViewModelBase
         }
 
         await LoadAsync(force: true);
+    }
+
+    public Task<List<ScreenCatalogItemDto>> LoadScreenCatalogAsync() =>
+        _adminApi.ListScreensAsync();
+
+    public Task<AccountScreensDto> LoadAccountScreensAsync(long accountId) =>
+        _adminApi.GetAccountScreensAsync(accountId);
+
+    public async Task SaveAccountScreensAsync(long accountId, List<string> screenCodes)
+    {
+        await _adminApi.UpdateAccountScreensAsync(accountId, new AccountScreensUpdateRequest
+        {
+            ScreenCodes = screenCodes
+        });
+        ShellToast.Success(SettingsUiStrings.Accounts.GrantScreensFlash);
     }
 
     public async Task ResetPasswordAsync(long accountId, string newPassword, string confirmPassword, string username)
@@ -300,7 +333,7 @@ public sealed class PermissionsViewModel : ViewModelBase
         }
 
         await _adminApi.DeleteAccountAsync(row.Id);
-        ShellToast.Success(ToastCopy.OkItem("xóa", ToastCopy.Account(row.Username)));
+        ShellToast.Success(SettingsUiStrings.Accounts.FlashDeleteSuccess(row.Username));
         await LoadAsync(force: true);
     }
 

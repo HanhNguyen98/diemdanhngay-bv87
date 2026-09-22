@@ -1,3 +1,4 @@
+using BV87.Core.Helpers;
 using BV87.Core.Models.Admin;
 using BV87.Core.Models.Admin.Catalog;
 using BV87.Core.Models.Attendance;
@@ -14,8 +15,13 @@ public sealed class AdminApiClient
         _api = api;
     }
 
-    public Task<AdminDashboardResponse> GetDashboardAsync(CancellationToken cancellationToken = default) =>
-        _api.GetAsync<AdminDashboardResponse>("/api/admin/dashboard", null, cancellationToken);
+    public Task<AdminDashboardResponse> GetDashboardAsync(
+        DateOnly date,
+        CancellationToken cancellationToken = default) =>
+        _api.GetAsync<AdminDashboardResponse>(
+            "/api/admin/dashboard",
+            [new KeyValuePair<string, string?>("date", AttendanceFormatHelper.ToApiDate(date))],
+            cancellationToken);
 
     public Task<ServerStorageResponse> GetServerStorageAsync(CancellationToken cancellationToken = default) =>
         _api.GetAsync<ServerStorageResponse>("/api/admin/system/storage", null, cancellationToken);
@@ -25,9 +31,14 @@ public sealed class AdminApiClient
 
     public Task<SendReminderResult> SendRemindersAsync(
         IReadOnlyList<int> deptCodes,
+        DateOnly date,
         CancellationToken cancellationToken = default)
     {
-        var body = new { deptCodes = deptCodes.ToList() };
+        var body = new
+        {
+            deptCodes = deptCodes.ToList(),
+            date = AttendanceFormatHelper.ToApiDate(date)
+        };
         return _api.PostAsync<object, SendReminderResult>(
             "/api/admin/attendance/reminders",
             body,
@@ -402,6 +413,7 @@ public sealed class AdminApiClient
     public Task<RegistryPageDto<AdminStaffDto>> ListStaffPageAsync(
         string? search = null,
         int? deptCode = null,
+        bool? active = null,
         int page = 1,
         int pageSize = 500,
         CancellationToken cancellationToken = default)
@@ -421,11 +433,24 @@ public sealed class AdminApiClient
             query.Add(new KeyValuePair<string, string?>("deptCode", deptCode.Value.ToString()));
         }
 
+        if (active != null)
+        {
+            query.Add(new KeyValuePair<string, string?>("active", active.Value ? "true" : "false"));
+        }
+
         return _api.GetAsync<RegistryPageDto<AdminStaffDto>>("/api/admin/staff", query, cancellationToken);
     }
 
     public Task<AdminStaffDto> GetStaffAsync(int empCode, CancellationToken cancellationToken = default) =>
         _api.GetAsync<AdminStaffDto>($"/api/admin/staff/{empCode}", null, cancellationToken);
+
+    public Task<StaffDeactivatePreviewDto> GetStaffDeactivatePreviewAsync(
+        int empCode,
+        CancellationToken cancellationToken = default) =>
+        _api.GetAsync<StaffDeactivatePreviewDto>(
+            $"/api/admin/staff/{empCode}/deactivate-preview",
+            null,
+            cancellationToken);
 
     public Task<AdminStaffDto> CreateStaffAsync(
         StaffUpsertRequest request,
@@ -548,6 +573,66 @@ public sealed class AdminApiClient
             request,
             null,
             cancellationToken);
+
+    public Task<List<ScreenCatalogItemDto>> ListScreensAsync(CancellationToken cancellationToken = default) =>
+        _api.GetAsync<List<ScreenCatalogItemDto>>("/api/admin/screens", null, cancellationToken);
+
+    public Task<AccountScreensDto> GetAccountScreensAsync(
+        long accountId,
+        CancellationToken cancellationToken = default) =>
+        _api.GetAsync<AccountScreensDto>($"/api/admin/accounts/{accountId}/screens", null, cancellationToken);
+
+    public Task<AccountScreensDto> UpdateAccountScreensAsync(
+        long accountId,
+        AccountScreensUpdateRequest request,
+        CancellationToken cancellationToken = default) =>
+        _api.PutAsync<AccountScreensUpdateRequest, AccountScreensDto>(
+            $"/api/admin/accounts/{accountId}/screens",
+            request,
+            null,
+            cancellationToken);
+
+    public Task<List<PermissionGroupDto>> ListPermissionGroupsAsync(
+        string? role = null,
+        bool activeOnly = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new Dictionary<string, string?>();
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            query["role"] = role;
+        }
+
+        query["activeOnly"] = activeOnly ? "true" : "false";
+        return _api.GetAsync<List<PermissionGroupDto>>(
+            "/api/admin/permission-groups",
+            query,
+            cancellationToken);
+    }
+
+    public Task<PermissionGroupDto> CreatePermissionGroupAsync(
+        PermissionGroupUpsertRequest request,
+        CancellationToken cancellationToken = default) =>
+        _api.PostAsync<PermissionGroupUpsertRequest, PermissionGroupDto>(
+            "/api/admin/permission-groups",
+            request,
+            null,
+            cancellationToken);
+
+    public Task<PermissionGroupDto> UpdatePermissionGroupAsync(
+        long id,
+        PermissionGroupUpsertRequest request,
+        CancellationToken cancellationToken = default) =>
+        _api.PutAsync<PermissionGroupUpsertRequest, PermissionGroupDto>(
+            $"/api/admin/permission-groups/{id}",
+            request,
+            null,
+            cancellationToken);
+
+    public Task<ApiMessageResult> DeactivatePermissionGroupAsync(
+        long id,
+        CancellationToken cancellationToken = default) =>
+        _api.DeleteAsync<ApiMessageResult>($"/api/admin/permission-groups/{id}", cancellationToken);
 
     public Task<List<KioskTokenDto>> ListKioskTokensAsync(CancellationToken cancellationToken = default) =>
         _api.GetAsync<List<KioskTokenDto>>("/api/admin/fingerprint/kiosk-tokens", null, cancellationToken);

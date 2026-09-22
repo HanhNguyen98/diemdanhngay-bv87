@@ -1,15 +1,21 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.App.ViewModels;
+using BV87.Core.Constants;
 
 namespace BV87.App.Views.Admin;
 
 public partial class ReminderDialog : AppDialogWindow
 {
-    public ReminderDialog(IEnumerable<ReminderDeptItem> items)
+    public ReminderDialog(IEnumerable<ReminderDeptItem> items, DateOnly attendanceDate)
     {
         InitializeComponent();
+        DialogContextHeaderHelper.SetBadge(ContextHeader, AdminUiStrings.ReminderModalBadge);
+        ContextHeader.SecondaryText = string.Format(
+            AdminUiStrings.ReminderDateHint,
+            AdminUtilitiesFormatHelper.FormatDateOnly(attendanceDate));
         DeptList.ItemsSource = new ObservableCollection<ReminderDeptItem>(items);
     }
 

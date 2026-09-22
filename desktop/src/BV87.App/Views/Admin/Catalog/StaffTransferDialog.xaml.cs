@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using BV87.App.Helpers;
 using BV87.App.Shell;
 using BV87.App.ViewModels;
 using BV87.Core.Constants;
@@ -19,8 +20,7 @@ public partial class StaffTransferDialog : AppDialogWindow
         _staff = staff;
 
         Title = CatalogUiStrings.Staff.TransferModalTitle;
-        TitleText.Text = Title;
-        SubtitleText.Text = CatalogUiStrings.Staff.TransferModalSubtitle(staff.Fullname, staff.EmpCodeFormatted);
+        DialogContextHeaderHelper.SetPerson(ContextHeader, staff.Fullname, staff.DeptDisplay);
         FromDeptText.Text = staff.DeptDisplay;
 
         var targets = viewModel.ActiveDepartments

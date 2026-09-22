@@ -13,7 +13,9 @@ public sealed class UserProfile
     public bool Editable { get; set; }
     public bool Locked { get; set; }
     public string? LockMessage { get; set; }
+    public List<string> ScreenCodes { get; set; } = [];
 
     public bool IsAdmin => string.Equals(Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+    public bool IsDuty => string.Equals(Role, "DUTY", StringComparison.OrdinalIgnoreCase);
     public bool IsHead => string.Equals(Role, "HEAD", StringComparison.OrdinalIgnoreCase);
 }
